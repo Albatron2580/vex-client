@@ -253,6 +253,12 @@
   };
 
   // ---------- theme ----------
+  const shadeHex = (hex, k) => {
+    const n = parseInt(hex.slice(1), 16);
+    const f = (v) => Math.max(0, Math.min(255, Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k))));
+    return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => f(v).toString(16).padStart(2, '0')).join('');
+  };
+
   // Biome colours: the theme's own palette, or one built from the accent colour.
   V.biomeFor = (theme, acc) => {
     if (theme.land) return theme.land;
@@ -305,7 +311,9 @@
       land.hidden = picture;
       if (!picture && V.paintBiome) V.paintBiome(land, V.biomeFor(theme, acc));
     }
-    if (V.fx) V.fx.set(s.themeEffects === false ? null : theme.effect, theme.leafColors || [theme.accent]);
+    // Falling Minecraft leaves in every theme, in the theme's colours (plain themes: shades of the accent).
+    const leafColors = theme.leafColors || [acc, shadeHex(acc, 0.3), shadeHex(acc, -0.3), shadeHex(acc, 0.55)];
+    if (V.fx) V.fx.set(s.themeEffects === false ? null : theme.effect || 'leaves', leafColors);
     V.emit('theme');
   };
 

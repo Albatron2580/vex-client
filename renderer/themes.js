@@ -11,7 +11,7 @@
   // effect: optional lightweight animation (see fx.js); leafColors tints the 'leaves' effect. decor: CSS decorations keyed off data-theme.
   const THEMES = [
     {
-      id: 'vex', name: 'Vex', tagline: 'Electric blue, built for PvP', image: true, effect: 'sparks',
+      id: 'vex', name: 'Vex', tagline: 'Electric blue, built for PvP', image: true, effect: 'leaves', leafColors: ['#2f7dff', '#5b9bff', '#1d4fb5', '#8fb8ff', '#3d6ee0'],
       land: {
         sky: ['#030817', '#0b2466', '#3d72dc'], glow: '#5b8cff', body: { color: '#e4ecff', size: 0.055, x: 0.78, y: 0.17 }, stars: true,
         clouds: '#8fa9e8', cloudAlpha: 0.22, far: '#2c4fa4', near: '#071431', fog: '#3a6ad0',
@@ -38,7 +38,7 @@
       fallback: 'radial-gradient(ellipse at 78% 18%, rgba(255,140,40,.45) 0%, transparent 40%), radial-gradient(ellipse at 20% 90%, #3a1250 0%, transparent 55%), linear-gradient(170deg, #12061a 0%, #1d0a24 55%, #060208 100%)',
     },
     {
-      id: 'christmas', name: 'Christmas', tagline: 'Pine green, berry red and a little gold', image: true, seasonal: true, effect: 'snow',
+      id: 'christmas', name: 'Christmas', tagline: 'Pine green, berry red and a little gold', image: true, seasonal: true, effect: 'leaves', leafColors: ['#2b7b47', '#1f6a3e', '#3f9a5c', '#e2333f', '#f2f8f6'],
       land: {
         sky: ['#020b10', '#0e2e3a', '#2f6e70'], glow: '#a6f0d2', body: { color: '#f6f2e0', size: 0.05, x: 0.8, y: 0.15 }, stars: true, aurora: ['#3fd37a', '#2fb8a0', '#7be0b0'],
         clouds: '#d2e6e6', cloudAlpha: 0.16, far: '#355f66', near: '#0a1c1a', fog: '#5a9694',
@@ -51,7 +51,7 @@
       fallback: 'radial-gradient(ellipse at 75% 15%, rgba(226,51,63,.35) 0%, transparent 45%), radial-gradient(ellipse at 20% 85%, #0f4a2f 0%, transparent 55%), linear-gradient(170deg, #06160f 0%, #0a2318 55%, #030a07 100%)',
     },
     {
-      id: 'newyear', name: 'New Year', tagline: 'Midnight blue with silver and gold', image: true, seasonal: true, effect: 'fireworks',
+      id: 'newyear', name: 'New Year', tagline: 'Midnight blue with silver and gold', image: true, seasonal: true, effect: 'leaves', leafColors: ['#e6b84a', '#f4e2a8', '#c9cfe0', '#9fb4ff', '#d9a531'],
       land: {
         sky: ['#01030b', '#0d1a4e', '#454a8a'], glow: '#e6b84a', body: { color: '#f4e2a8', size: 0.05, x: 0.22, y: 0.16 }, stars: true,
         clouds: '#9aa2d0', cloudAlpha: 0.18, far: '#2b3472', near: '#060a1a', fog: '#555a96',

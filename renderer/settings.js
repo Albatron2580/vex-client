@@ -167,7 +167,7 @@
         h('div', { class: 'list tight' },
           h('div', { class: 'row-item' }, h('div', { class: 'grow' }, h('strong', null, 'Seasonal themes'), h('div', { class: 'dim small' }, 'Halloween 1–31 Oct, Christmas 1–26 Dec, New Year 27 Dec–3 Jan, based on this PC\'s date. Your own theme returns afterwards.')),
             V.switch(s.seasonalThemes, (on) => this.save({ seasonalThemes: on, seasonOptOut: '' }, on ? 'Seasonal themes on' : 'Seasonal themes off').then(() => this.render()), 'Seasonal themes')),
-          h('div', { class: 'row-item' }, h('div', { class: 'grow' }, h('strong', null, 'Theme effects'), h('div', { class: 'dim small' }, 'Falling leaves, snow, sparks and fireworks. Light on your PC, and paused while Minecraft is running.')),
+          h('div', { class: 'row-item' }, h('div', { class: 'grow' }, h('strong', null, 'Theme effects'), h('div', { class: 'dim small' }, 'Falling Minecraft leaves in the theme\'s colours. Light on your PC, and paused while Minecraft is running.')),
             V.switch(s.themeEffects !== false, (on) => this.save({ themeEffects: on }, on ? 'Effects on' : 'Effects off'), 'Theme effects')),
           (() => {
             const pics = T.THEMES.filter((t) => t.image && V.themeAssets[t.id]).map((t) => t.name);

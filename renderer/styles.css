@@ -404,3 +404,33 @@ canvas.player { height: min(320px, 36vh); width: auto; image-rendering: pixelate
 .connect-card input { width: 100%; }
 .admin-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .admin-foot .ico { width: 14px; height: 14px; }
+
+/* ---------- featured server on Home ---------- */
+.server-wrap { position: relative; z-index: 2; width: min(640px, calc(100% - 40px)); margin-top: 60px; }
+.srv-card { padding: 12px 14px 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%), color-mix(in srgb, var(--panel) 90%, transparent);
+  backdrop-filter: blur(8px); box-shadow: 0 10px 30px rgba(0,0,0,.35), 0 0 24px -10px var(--accent); }
+.srv-card.offline { border-color: var(--line); }
+.srv-label { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.srv-label .ico { width: 12px; height: 12px; color: var(--accent); }
+.srv-row { display: flex; gap: 12px; align-items: flex-start; }
+.srv-icon { width: 64px; height: 64px; flex: none; border-radius: 8px; image-rendering: pixelated; background: rgba(0,0,0,.35); }
+.srv-fallback { display: grid; place-items: center; font: 600 30px var(--pixel); color: var(--accent); }
+.srv-body { flex: 1; min-width: 0; }
+.srv-head { display: flex; align-items: center; gap: 10px; }
+.srv-name { flex: 1; font: 600 18px var(--pixel); letter-spacing: .02em; }
+.srv-players { display: inline-flex; align-items: center; gap: 8px; font: 500 14px var(--pixel); color: var(--dim); }
+.signal { display: inline-flex; align-items: flex-end; gap: 2px; height: 17px; }
+.signal i { width: 3px; background: rgba(255,255,255,.18); }
+.signal i.on { background: #55ff55; }
+.signal.off i { background: #aa0000; }
+.motd { margin-top: 4px; font: 500 14px/1.35 var(--pixel); color: #aaaaaa; text-shadow: 2px 2px 0 rgba(0,0,0,.45); }
+.motd-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.srv-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.srv-tag { padding: 1px 8px; border-radius: 6px; font-size: 11.5px; border: 1px solid var(--line); background: rgba(0,0,0,.3); color: var(--dim); }
+.srv-tag.addr { font-family: Consolas, "Cascadia Mono", monospace; }
+.srv-actions { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+.srv-join { flex: 1; padding: 10px 16px; font: 600 15px var(--pixel); letter-spacing: .04em; }
+#page-home .figure { padding-top: 8px; }
+#page-home canvas.player { height: min(260px, 28vh); }
+@media (max-height: 700px) { #page-home canvas.player { height: min(200px, 22vh); } .server-wrap { margin-top: 54px; } }

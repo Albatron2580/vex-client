@@ -18,6 +18,7 @@
       const figure = h('canvas', { class: 'player', role: 'img', 'aria-label': 'Your Minecraft skin' });
       const dock = h('div', { class: 'dock' });
       const gate = h('div', { class: 'gate card' });
+      const serverBox = h('div', { class: 'server-wrap' });
       const newsList = h('div', { class: 'news-list' }, V.loading('Loading news…'));
 
       const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'View' },
@@ -29,6 +30,7 @@
       const stage = h('div', { class: 'stage anim' },
         bg,
         h('div', { class: 'stage-top' }, seg, anim),
+        serverBox,
         h('div', { class: 'figure' }, tag, figure),
         gate,
         dock);
@@ -53,6 +55,68 @@
       }
 
       let launching = false;
+      async function startGame(join) {
+        launching = true; V.gameLog.length = 0; renderDock(); renderServer();
+        try { await V.call('game:launch', { join: !!join }); } catch (e) { V.setStatus(e.message); V.error(e); }
+        launching = false; renderDock(); renderServer();
+      }
+
+      // ---------- featured server (package.json -> vexServer), live like the multiplayer list ----------
+      let server = null;
+      let serverStatus = null;
+      const MC = { black: '#000000', dark_blue: '#0000aa', dark_green: '#00aa00', dark_aqua: '#00aaaa', dark_red: '#aa0000', dark_purple: '#aa00aa', gold: '#ffaa00', gray: '#aaaaaa', dark_gray: '#555555', blue: '#5555ff', green: '#55ff55', aqua: '#55ffff', red: '#ff5555', light_purple: '#ff55ff', yellow: '#ffff55', white: '#ffffff' };
+      const motd = (parts) => {
+        const lines = [h('div', { class: 'motd-line' })];
+        for (const p of parts || []) {
+          p.text.split('\n').forEach((chunk, i) => {
+            if (i > 0) lines.push(h('div', { class: 'motd-line' }));
+            if (!chunk) return;
+            const col = MC[p.color] || (/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : '');
+            lines[lines.length - 1].append(h('span', { style: { color: col || '', fontWeight: p.bold ? '700' : '', fontStyle: p.italic ? 'italic' : '' } }, chunk));
+          });
+        }
+        return h('div', { class: 'motd' }, lines.slice(0, 2));
+      };
+      const bars = (ms, online) => {
+        const n = !online ? 0 : ms < 80 ? 5 : ms < 150 ? 4 : ms < 250 ? 3 : ms < 500 ? 2 : 1;
+        return h('span', { class: 'signal' + (online ? '' : ' off'), title: online ? `${ms} ms` : 'Offline' }, [1, 2, 3, 4, 5].map((i) => h('i', { class: i <= n ? 'on' : '', style: { height: `${i * 3 + 2}px` } })));
+      };
+      function renderServer() {
+        if (!server) { serverBox.hidden = true; return; }
+        serverBox.hidden = false;
+        const st = serverStatus;
+        const g = V.state.game.state;
+        const icon = st && st.icon ? h('img', { class: 'srv-icon', src: st.icon, alt: '' }) : h('div', { class: 'srv-icon srv-fallback' }, server.name.slice(0, 1));
+        const canJoin = V.state.active && g === 'idle' && !launching;
+        serverBox.replaceChildren(h('div', { class: 'srv-card' + (st && !st.online ? ' offline' : '') },
+          h('div', { class: 'srv-label' }, V.icon('star'), 'Featured server'),
+          h('div', { class: 'srv-row' },
+            icon,
+            h('div', { class: 'srv-body' },
+              h('div', { class: 'srv-head' }, h('strong', { class: 'srv-name' }, server.name),
+                h('span', { class: 'srv-players' }, st ? (st.online ? `${st.players.online}/${st.players.max}` : 'Offline') : '…', bars(st && st.latency, st && st.online))),
+              st && st.online ? motd(st.motd) : h('div', { class: 'motd dim' }, st ? st.error || 'Offline' : 'Pinging server…'),
+              h('div', { class: 'srv-meta' },
+                server.region ? h('span', { class: 'srv-tag' }, server.region) : null,
+                st && st.version ? h('span', { class: 'srv-tag' }, st.version) : null,
+                h('span', { class: 'srv-tag addr' }, server.host)))),
+          h('div', { class: 'srv-actions' },
+            h('button', {
+              class: 'btn primary srv-join', disabled: !canJoin,
+              title: !V.state.active ? 'Sign in first' : g !== 'idle' ? 'Minecraft is already running' : '',
+              onClick: () => startGame(true),
+            }, V.icon('play'), g === 'running' ? 'Playing' : launching ? 'Starting…' : `Join ${server.name}`),
+            server.discord ? h('button', { class: 'btn srv-discord', onClick: () => V.call('shell:link', server.discord).catch(V.error) }, V.icon('users'), 'Discord') : null,
+            h('button', { class: 'icon-btn', title: 'Refresh', 'aria-label': 'Refresh server status', onClick: () => pingServer(true) }, V.icon('refresh')))));
+      }
+      async function pingServer(force) {
+        try { serverStatus = await V.call('server:status', !!force); } catch (e) { serverStatus = { online: false, error: e.message }; }
+        renderServer();
+      }
+      V.call('server:info').then((s) => { server = s; renderServer(); if (s) pingServer(false); }).catch(() => {});
+      setInterval(() => { if (server && V.current === 'home' && !document.hidden) pingServer(false); }, 60000);
+      for (const ev of ['game', 'accounts']) V.on(ev, renderServer);
+
       function renderDock() {
         const prof = V.profile();
         const g = V.state.game.state;
@@ -69,11 +133,7 @@
         else {
           main = h('button', {
             class: 'launch-btn',
-            onClick: async () => {
-              launching = true; V.gameLog.length = 0; renderDock();
-              try { await V.call('game:launch'); } catch (e) { V.setStatus(e.message); V.error(e); }
-              launching = false; renderDock();
-            },
+            onClick: () => startGame(false),
           }, h('b', null, 'Launch'), h('small', null, prof ? `${V.fmt.loader(prof.loader)} ${prof.version}` : ''));
         }
 

@@ -30,6 +30,9 @@ function mock(signedIn, opts = {}) {
     'updater:state': () => (${JSON.stringify(opts.updater || null)} || { supported: true, configured: true, current: '1.1.0', status: 'idle', latest: null, progress: null, error: '', lastCheck: Date.now() - 600000, history: [] }),
     'updater:check': () => ({ status: 'up-to-date' }),
     'app:ready': () => null,
+    'server:info': () => ({ name: 'VexVanilla', host: 'vexvanilla.net', port: 25565, region: 'EU', discord: 'https://discord.gg/VexVanilla' }),
+    'server:status': () => ({ online: true, players: { online: 67, max: 1000 }, version: 'Velocity 1.8-1.21.x', latency: 38, icon: '',
+      motd: [{ text: '★ ', color: 'gold' }, { text: 'VEX VANILLA', color: 'gold', bold: true }, { text: ' ★ ', color: 'gold' }, { text: '▶ ', color: 'dark_gray' }, { text: '.gg/VexVanilla', color: 'gold' }, { text: '\\n' }, { text: '✷ NEW SEASON OUT ', color: 'yellow', bold: true }, { text: 'JOIN NOW', color: 'green', bold: true }] }),
     'admin:status': () => (${JSON.stringify(opts.adminStatus || {"name": "HAckerbest11", "repo": "lyano/vex-client", "github": {"login": "hackerbest", "repo": "lyano/vex-client", "canPush": true, "branch": "main"}, "secure": true, "version": "1.1.0"})}),
     'admin:overview': () => ({ latest: '1.1.0', totalDownloads: 1843, releases: [
       { id: 3, tag: 'v1.1.0', version: '1.1.0', date: '2026-10-16T12:00:00Z', draft: false, prerelease: false, latest: true, url: 'https://github.com/x/y', downloads: 1204, critical: false, signed: true, notes: '' },

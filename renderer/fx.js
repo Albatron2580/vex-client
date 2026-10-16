@@ -9,6 +9,7 @@
   canvas.id = 'fx';
   canvas.setAttribute('aria-hidden', 'true');
   const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
   let kind = null;
   let palette = ['#ff7a1a', '#c2471a', '#9b4dca'];
   let paused = false;
@@ -25,6 +26,7 @@
   function resize() {
     W = canvas.width = window.innerWidth;
     H = canvas.height = window.innerHeight;
+    ctx.imageSmoothingEnabled = false; // resizing resets it; keep the pixel art crisp
   }
 
   const density = () => Math.min(1.4, Math.max(0.5, (W * H) / (1200 * 760)));
@@ -47,33 +49,50 @@
     nextEvent = performance.now() + 1200;
   }
 
+  // Minecraft-style leaf: a little pixel sprite (like the game's falling-leaf particles), cached per colour.
+  const LEAF = [
+    '......OO',
+    '....OOLO',
+    '...OLOO.',
+    '..OODO..',
+    '.OODOO..',
+    '.ODOO...',
+    'ODO.....',
+    'D.......',
+  ];
+  const sprites = new Map();
+  function shadeHex(hex, k) {
+    const n = parseInt(hex.slice(1), 16);
+    const f = (v) => Math.max(0, Math.min(255, Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k))));
+    return `rgb(${f((n >> 16) & 255)},${f((n >> 8) & 255)},${f(n & 255)})`;
+  }
+  function sprite(color) {
+    if (sprites.has(color)) return sprites.get(color);
+    const c = document.createElement('canvas');
+    c.width = c.height = 8;
+    const x = c.getContext('2d');
+    const tone = { O: color, L: shadeHex(color, 0.35), D: shadeHex(color, -0.35) };
+    LEAF.forEach((row, y) => [...row].forEach((ch, i) => { if (tone[ch]) { x.fillStyle = tone[ch]; x.fillRect(i, y, 1, 1); } }));
+    sprites.set(color, c);
+    return c;
+  }
   function leaf(anywhere) {
     return {
       x: rand(0, W), y: anywhere ? rand(-H * 0.1, H) : rand(-60, -20),
-      s: rand(11, 20), vy: rand(26, 52), drift: rand(-12, 12), sway: rand(0.6, 1.4), ph: rand(0, 6.28),
-      rot: rand(0, 6.28), vr: rand(-1.2, 1.2), flip: rand(0, 6.28), vf: rand(1.5, 3.5),
-      c: palette[Math.floor(Math.random() * palette.length)], a: rand(0.75, 1),
+      s: 3 * Math.round(rand(2, 4)), vy: rand(26, 52), drift: rand(-12, 12), sway: rand(0.6, 1.4), ph: rand(0, 6.28),
+      rot: rand(0, 6.28), vr: rand(-1, 1), flip: rand(0, 6.28), vf: rand(1.2, 3),
+      c: palette[Math.floor(Math.random() * palette.length)], a: rand(0.8, 1),
     };
   }
   function drawLeaf(p) {
+    const img = sprite(p.c);
+    const size = p.s * 8 / 3; // 16, 24 or 32 px: whole pixels like Minecraft
     ctx.save();
-    ctx.translate(p.x, p.y);
+    ctx.translate(Math.round(p.x), Math.round(p.y));
     ctx.rotate(p.rot);
-    ctx.scale(1, Math.max(0.15, Math.abs(Math.cos(p.flip)))); // tumbling: the leaf turns edge-on and back
+    ctx.scale(Math.max(0.2, Math.abs(Math.cos(p.flip))), 1); // tumbling: turns edge-on and back
     ctx.globalAlpha = p.a;
-    ctx.fillStyle = p.c;
-    const s = p.s;
-    ctx.beginPath();
-    ctx.moveTo(-s, 0);
-    ctx.quadraticCurveTo(-s * 0.2, -s * 0.75, s, 0);
-    ctx.quadraticCurveTo(-s * 0.2, s * 0.75, -s, 0);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,.28)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(-s * 1.25, 0);
-    ctx.lineTo(s * 0.85, 0);
-    ctx.stroke();
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
     ctx.restore();
   }
 
@@ -190,6 +209,7 @@
       const pal = colors && colors.length ? colors : palette;
       if (next === kind && pal.join() === palette.join()) return kick();
       palette = pal;
+      sprites.clear();
       kind = next;
       resize();
       seed();

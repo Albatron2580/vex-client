@@ -18,6 +18,7 @@ const livemods = require('./lib/livemods');
 const appstate = require('./lib/appstate');
 const updaterLib = require('./lib/updater');
 const adminLib = require('./lib/admin');
+const mcServer = require('./lib/server');
 
 const PKG = require('./package.json');
 const VERSION = PKG.version;
@@ -89,7 +90,7 @@ async function pick(options) {
   return r.canceled ? [] : r.filePaths;
 }
 
-const ALLOWED_LINKS = ['modrinth.com', 'www.minecraft.net', 'minecraft.net', 'adoptium.net', 'account.microsoft.com', 'github.com'];
+const ALLOWED_LINKS = ['discord.gg', 'discord.com', 'modrinth.com', 'www.minecraft.net', 'minecraft.net', 'adoptium.net', 'account.microsoft.com', 'github.com'];
 function openExternal(url) {
   const u = new URL(url);
   if (u.protocol !== 'https:' || !ALLOWED_LINKS.includes(u.hostname)) throw new Error('That link is not allowed.');
@@ -202,8 +203,21 @@ h('cape:remove', (name) => media.removeCape(name));
 h('cape:select', (name) => media.selectCape(name));
 
 // game
+// ---------- the Vex server (package.json -> vexServer) ----------
+const SERVER = PKG.vexServer || null;
+let serverCache = null;
+h('server:info', () => SERVER);
+h('server:status', async (force) => {
+  if (!SERVER) return null;
+  if (!force && serverCache && Date.now() - serverCache.at < 20000) return serverCache.data;
+  let data;
+  try { data = await mcServer.ping(SERVER.host, SERVER.port || 25565); } catch (e) { data = { online: false, error: e.message }; }
+  serverCache = { at: Date.now(), data };
+  return data;
+});
+
 h('game:state', () => launch.state());
-h('game:launch', async () => {
+h('game:launch', async (opts = {}) => {
   const profile = prof();
   const s = store.settings();
   if (!s.activeAccount) throw new Error('Sign in with a Microsoft account that owns Minecraft: Java Edition first (Account page).');
@@ -216,6 +230,7 @@ h('game:launch', async () => {
     profile,
     session,
     emit,
+    join: opts && opts.join && SERVER ? { host: SERVER.host, port: SERVER.port || 25565 } : null,
     beforeLaunch: async (status) => {
       if (s.modUpdates !== 'auto' || profile.loader === 'vanilla') return;
       status('Updating mods…');

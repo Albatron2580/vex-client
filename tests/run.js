@@ -629,6 +629,40 @@ async function test(name, fn) {
     assert.throws(() => require('child_process').execFileSync(process.execPath, [path.join(work, 'scripts', 'make-manifest.js'), path.join(work, 'dist')], { env: { ...process.env, VEX_UPDATE_PRIVATE_KEY: otherKeys.privateKeyPem }, stdio: 'pipe' }));
   });
 
+  // ---------- server status ping ----------
+  console.log('server');
+  const mcs = lib('server');
+  await test('server list ping: MOTD, players, icon and latency from a fake Minecraft server', async () => {
+    const statusJson = JSON.stringify({ version: { name: '§61.21.x', protocol: 767 }, players: { online: 67, max: 1000 }, favicon: 'data:image/png;base64,AAAA',
+      description: { text: '', extra: [{ text: 'VEX VANILLA', color: 'gold', bold: true }, { text: '\n§eNEW SEASON §aJOIN NOW' }] } });
+    const srv = require('net').createServer((sock) => {
+      let buf = Buffer.alloc(0);
+      sock.on('data', (d) => {
+        buf = Buffer.concat([buf, d]);
+        for (;;) {
+          const len = mcs.readVarint(buf, 0);
+          if (!len || buf.length < len.size + len.value) return;
+          const body = buf.subarray(len.size, len.size + len.value);
+          buf = buf.subarray(len.size + len.value);
+          const id = mcs.readVarint(body, 0).value;
+          const send = (pid, payload) => { const d2 = Buffer.concat([mcs.varint(pid), payload]); sock.write(Buffer.concat([mcs.varint(d2.length), d2])); };
+          if (id === 0 && body.length === 1) { const j = Buffer.from(statusJson); send(0, Buffer.concat([mcs.varint(j.length), j])); }
+          else if (id === 1) send(1, body.subarray(1));
+        }
+      });
+    });
+    await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+    const st = await mcs.ping('127.0.0.1', srv.address().port);
+    srv.close();
+    assert.strictEqual(st.online, true);
+    assert.deepStrictEqual(st.players, { online: 67, max: 1000 });
+    assert.strictEqual(st.version, '1.21.x');
+    assert.strictEqual(st.icon, 'data:image/png;base64,AAAA');
+    assert.ok(st.motd.some((p) => p.text === 'VEX VANILLA' && p.color === 'gold' && p.bold));
+    assert.ok(st.motd.some((p) => p.text === 'JOIN NOW' && p.color === 'green'));
+    await assert.rejects(mcs.ping('127.0.0.1', 1, { timeout: 2000 }), /offline|reach/);
+  });
+
   // ---------- admin panel ----------
   console.log('admin');
   const adminLib = lib('admin');

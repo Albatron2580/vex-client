@@ -58,5 +58,12 @@
     "HAckerbest11",
     "RaxMc",
     "UNCdel"
-  ]
+  ],
+  "vexServer": {
+    "name": "VexVanilla",
+    "host": "vexvanilla.net",
+    "port": 25565,
+    "region": "EU",
+    "discord": "https://discord.gg/VexVanilla"
+  }
 }
