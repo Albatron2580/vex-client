@@ -19,7 +19,7 @@ public final class VexConfig {
     public boolean zoom = true;
     public int zoomLevel = 4;           // 2x .. 8x
     public boolean smoothZoom = true;
-    public boolean vexTitleButtons = true;
+    public boolean menuLeaves = true;       // falling leaves on the menu background
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static VexConfig instance;

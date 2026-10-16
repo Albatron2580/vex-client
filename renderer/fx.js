@@ -50,15 +50,21 @@
   }
 
   // Minecraft-style leaf: a little pixel sprite (like the game's falling-leaf particles), cached per colour.
-  const LEAF = [
-    '......OO',
-    '....OOLO',
-    '...OLOO.',
-    '..OODO..',
-    '.OODOO..',
-    '.ODOO...',
-    'ODO.....',
-    'D.......',
+  const LEAF = [ // a real leaf: pointed tip, wide body, light centre vein, shaded right half, stem
+    '......O.......',
+    '.....OOO......',
+    '....OOLOS.....',
+    '...OOOLOSS....',
+    '..OOOOLOSSS...',
+    '..OOOOLOSSS...',
+    '.OOOOOLOSSSS..',
+    '.OOOOOLOSSSS..',
+    '..OOOOLOSSS...',
+    '..OOOOLOSSS...',
+    '...OOOLOSS....',
+    '....OOLOS.....',
+    '......D.......',
+    '.....D........',
   ];
   const sprites = new Map();
   function shadeHex(hex, k) {
@@ -69,9 +75,9 @@
   function sprite(color) {
     if (sprites.has(color)) return sprites.get(color);
     const c = document.createElement('canvas');
-    c.width = c.height = 8;
+    c.width = c.height = 14;
     const x = c.getContext('2d');
-    const tone = { O: color, L: shadeHex(color, 0.35), D: shadeHex(color, -0.35) };
+    const tone = { O: color, L: shadeHex(color, 0.4), S: shadeHex(color, -0.28), D: shadeHex(color, -0.5) };
     LEAF.forEach((row, y) => [...row].forEach((ch, i) => { if (tone[ch]) { x.fillStyle = tone[ch]; x.fillRect(i, y, 1, 1); } }));
     sprites.set(color, c);
     return c;
@@ -86,7 +92,7 @@
   }
   function drawLeaf(p) {
     const img = sprite(p.c);
-    const size = p.s * 8 / 3; // 16, 24 or 32 px: whole pixels like Minecraft
+    const size = p.s * 14 / 6; // 14 leaf pixels, 2-3 screen px each: crisp pixel art
     ctx.save();
     ctx.translate(Math.round(p.x), Math.round(p.y));
     ctx.rotate(p.rot);

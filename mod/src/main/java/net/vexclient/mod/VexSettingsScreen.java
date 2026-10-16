@@ -54,7 +54,7 @@ public final class VexSettingsScreen extends Screen {
             c.alwaysSprint = v;
             if (!v && this.minecraft != null) this.minecraft.options.keySprint.setDown(false);
         });
-        toggle(1, 5, "Vex menu buttons", () -> c.vexTitleButtons, v -> c.vexTitleButtons = v);
+        toggle(1, 5, "Menu leaves", () -> c.menuLeaves, v -> c.menuLeaves = v);
 
         int x = this.width / 2 - PANEL_W / 2 + 14;
         this.addRenderableWidget(Button.builder(zoomLabel(c), b -> {

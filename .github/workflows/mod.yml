@@ -5,7 +5,7 @@ name: Mod
 on:
   push:
     branches: [main]
-    paths: ['mod/**', 'tools/make-ui-pack.py', '.github/workflows/mod.yml']
+    paths: ['mod/**', 'tools/make-ui-pack.py', 'renderer/themes.js', '.github/workflows/mod.yml']
   workflow_dispatch:
 
 permissions:
@@ -46,7 +46,7 @@ jobs:
         run: gradle build --no-daemon --stacktrace 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
 
       - name: Build UI resource pack
-        run: python3 -m pip install --quiet pillow && python3 tools/make-ui-pack.py dist-vex-ui-pack.zip
+        run: python3 -m pip install --quiet pillow && python3 tools/make-ui-pack.py ui-packs && (cd ui-packs && zip -q ../vex-ui-packs.zip *.zip)
 
       - name: Publish
         env:
@@ -54,10 +54,10 @@ jobs:
         run: |
           set -e
           cp mod/build/libs/vex-client-mod-*[0-9].jar vex-client-mod.jar
-          cp dist-vex-ui-pack.zip vex-ui-pack.zip
-          sha256sum vex-client-mod.jar vex-ui-pack.zip > SHA256SUMS.txt
+          cp ui-packs/vex.zip vex-ui-pack.zip
+          sha256sum vex-client-mod.jar vex-ui-pack.zip vex-ui-packs.zip > SHA256SUMS.txt
           gh release view vex-mod >/dev/null 2>&1 || gh release create vex-mod --prerelease --latest=false --title "Vex Client mod + UI pack" --notes "In-game settings mod for Fabric 1.21.11 (needs Fabric API) and the Vex UI resource pack. The launcher installs these automatically."
-          gh release upload vex-mod vex-client-mod.jar vex-ui-pack.zip SHA256SUMS.txt --clobber
+          gh release upload vex-mod vex-client-mod.jar vex-ui-pack.zip vex-ui-packs.zip SHA256SUMS.txt --clobber
           gh release edit vex-mod --notes "Built from ${GITHUB_SHA::7} on $(date -u +%F). In-game settings mod for Fabric 1.21.11 (needs Fabric API) and the Vex UI resource pack. The launcher installs these automatically."
 
       - name: Save the build log where it can be read (on failure)
