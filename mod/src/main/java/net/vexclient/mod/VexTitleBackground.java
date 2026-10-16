@@ -123,9 +123,9 @@ public final class VexTitleBackground {
         }
         // moon with a soft glow
         int ms = Math.max(10, h / 14), mx = (int) (w * 0.78f), my = (int) (h * 0.16f);
-        for (int r = 6; r >= 1; r--) {
-            int gr = ms / 2 + r * ms / 3;
-            g.fill(mx - gr, my - gr, mx + gr, my + gr, alpha(glow, 10 + (6 - r) * 4));
+        for (int r = 14; r >= 1; r--) {          // soft glow: many faint rings
+            int gr = ms / 2 + r * ms / 6;
+            g.fill(mx - gr, my - gr, mx + gr, my + gr, alpha(glow, 5 + (14 - r)));
         }
         g.fill(mx - ms / 2, my - ms / 2, mx + ms / 2, my + ms / 2, moon);
         int q = Math.max(1, ms / 8);
