@@ -1,0 +1,8 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "net.vexclient.mod.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["GuiMixin", "GameRendererMixin"],
+  "injectors": { "defaultRequire": 0 }
+}

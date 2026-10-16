@@ -1,0 +1,70 @@
+# Builds the Vex Client Fabric mod (in-game settings, HUD, zoom) and the Vex UI resource pack,
+# and publishes both on the "vex-mod" pre-release (never marked latest, so launcher updates are unaffected).
+name: Mod
+
+on:
+  push:
+    branches: [main]
+    paths: ['mod/**', 'tools/make-ui-pack.py', '.github/workflows/mod.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mod
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+
+      - name: Pick Loom, Fabric Loader and Fabric API for this Minecraft version
+        working-directory: mod
+        run: |
+          set -e
+          MC=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
+          LOOM=$(curl -fsSL https://maven.fabricmc.net/net/fabricmc/fabric-loom/maven-metadata.xml | grep -oP '(?<=<version>)[0-9.]+(?=</version>)' | sort -V | tail -1)
+          LOADER=$(curl -fsSL https://meta.fabricmc.net/v2/versions/loader | python3 -c "import json,sys; print(next(v['version'] for v in json.load(sys.stdin) if v.get('stable')))")
+          API=$(curl -fsSL "https://api.modrinth.com/v2/project/fabric-api/version?game_versions=%5B%22$MC%22%5D&loaders=%5B%22fabric%22%5D" | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['version_number'])")
+          echo "Minecraft $MC  Loom $LOOM  Loader $LOADER  Fabric API $API"
+          sed -i "s/^loom_version=.*/loom_version=$LOOM/; s/^loader_version=.*/loader_version=$LOADER/; s/^fabric_version=.*/fabric_version=$API/" gradle.properties
+
+      - name: Build mod
+        working-directory: mod
+        run: gradle build --no-daemon --stacktrace 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
+
+      - name: Build UI resource pack
+        run: python3 -m pip install --quiet pillow && python3 tools/make-ui-pack.py dist-vex-ui-pack.zip
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cp mod/build/libs/vex-client-mod-*[0-9].jar vex-client-mod.jar
+          cp dist-vex-ui-pack.zip vex-ui-pack.zip
+          sha256sum vex-client-mod.jar vex-ui-pack.zip > SHA256SUMS.txt
+          gh release view vex-mod >/dev/null 2>&1 || gh release create vex-mod --prerelease --latest=false --title "Vex Client mod + UI pack" --notes "In-game settings mod for Fabric 1.21.11 (needs Fabric API) and the Vex UI resource pack. The launcher installs these automatically."
+          gh release upload vex-mod vex-client-mod.jar vex-ui-pack.zip SHA256SUMS.txt --clobber
+          gh release edit vex-mod --notes "Built from ${GITHUB_SHA::7} on $(date -u +%F). In-game settings mod for Fabric 1.21.11 (needs Fabric API) and the Vex UI resource pack. The launcher installs these automatically."
+
+      - name: Save the build log where it can be read (on failure)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          (echo '```'; tail -c 60000 mod/build.log 2>/dev/null || echo 'no build log'; echo '```') > ci-log.md
+          gh release view mod-ci-log >/dev/null 2>&1 || gh release create mod-ci-log --prerelease --latest=false --title "Mod build log" --notes "log"
+          gh release edit mod-ci-log --notes-file ci-log.md
