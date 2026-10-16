@@ -82,6 +82,14 @@ jobs:
           echo "TAG=v$v" >> "$GITHUB_ENV"
           if [ "${{ github.event_name }}" = "push" ] && [ "v$v" != "${GITHUB_REF_NAME}" ]; then echo "Tag ${GITHUB_REF_NAME} but package.json is $v"; exit 1; fi
 
+      - name: Bundle the Vex Client mod (built by the Mod workflow)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download vex-mod -p vex-client-mod.jar -D assets --clobber || echo "No mod build yet: the installer ships without it"
+          ls -la assets
+
       - name: Install
         run: npm install --no-audit --no-fund
 

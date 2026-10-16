@@ -39,7 +39,7 @@
     const ctx = canvas.getContext('2d');
     const R = rng(opts.seed || 20261016);
     const small = W < 400; // theme previews
-    const unit = Math.max(0.35, Math.min(W, Hh * 1.6) / 1400);
+    const unit = opts.unit || Math.max(0.35, Math.min(W, Hh * 1.6) / 1400);
 
     // ---- sky ----
     const sky = ctx.createLinearGradient(0, 0, 0, Hh * 0.75);
@@ -80,10 +80,11 @@
     }
 
     // sun / moon with a soft glow (square, like Minecraft's)
-    const b = P.body || {};
+    const b = opts.noBody ? { color: 'rgba(0,0,0,0)', size: 0 } : P.body || {};
     const bs = Math.round(Math.min(W, Hh) * (b.size || 0.06));
     const bx = W * (b.x || 0.76);
     const by = Hh * (b.y || 0.18);
+    if (!opts.noBody) {
     const glow = ctx.createRadialGradient(bx, by, bs * 0.3, bx, by, bs * 6);
     glow.addColorStop(0, alpha(P.glow, 0.55));
     glow.addColorStop(0.35, alpha(P.glow, 0.16));
@@ -97,6 +98,7 @@
     ctx.fillRect(bx - bs / 2 + q, by - bs / 2 + q * 2, q * 2, q * 2);
     ctx.fillRect(bx + q, by + q, q * 2, q);
     ctx.fillRect(bx - q, by - bs / 2 + q * 5, q, q);
+    }
 
     // flat blocky clouds
     const cb = Math.max(4, Math.round(14 * unit));
@@ -137,10 +139,13 @@
       const heights = [];
       for (let c = 0; c < cols; c++) {
         const x = c / cols;
-        const n = Math.sin(x * 5.1 + ph[0]) * 0.55 + Math.sin(x * 11.7 + ph[1]) * 0.3 + Math.sin(x * 23.3 + ph[2]) * 0.15;
+        const T2 = Math.PI * 2;
+        const n = opts.periodic
+          ? Math.sin(x * T2 * 2 + ph[0]) * 0.55 + Math.sin(x * T2 * 5 + ph[1]) * 0.3 + Math.sin(x * T2 * 11 + ph[2]) * 0.15
+          : Math.sin(x * 5.1 + ph[0]) * 0.55 + Math.sin(x * 11.7 + ph[1]) * 0.3 + Math.sin(x * 23.3 + ph[2]) * 0.15;
         let y = Hh * L.base - n * Hh * L.amp;
         y = Math.round(y / blk) * blk;
-        if (c > 0) y = Math.max(heights[c - 1] - blk * 2, Math.min(heights[c - 1] + blk * 2, y)); // max 2-block steps
+        if (c > 0 && !opts.periodic) y = Math.max(heights[c - 1] - blk * 2, Math.min(heights[c - 1] + blk * 2, y)); // max 2-block steps
         heights.push(y);
       }
       tops.push(heights);
@@ -225,6 +230,7 @@
       ctx.fillStyle = ctx.createPattern(n, 'repeat');
       ctx.fillRect(0, 0, W, Hh);
     }
+    if (opts.noVignette) return;
     const v = ctx.createRadialGradient(W / 2, Hh * 0.45, Math.min(W, Hh) * 0.35, W / 2, Hh * 0.5, Math.max(W, Hh) * 0.8);
     v.addColorStop(0, 'rgba(0,0,0,0)');
     v.addColorStop(1, 'rgba(0,0,0,0.45)');

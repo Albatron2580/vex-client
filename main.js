@@ -19,6 +19,7 @@ const appstate = require('./lib/appstate');
 const updaterLib = require('./lib/updater');
 const adminLib = require('./lib/admin');
 const mcServer = require('./lib/server');
+const vexAssets = require('./lib/vexassets');
 
 const PKG = require('./package.json');
 const VERSION = PKG.version;
@@ -232,6 +233,7 @@ h('game:launch', async (opts = {}) => {
     emit,
     join: opts && opts.join && SERVER ? { host: SERVER.host, port: SERVER.port || 25565 } : null,
     beforeLaunch: async (status) => {
+      try { await vexAssets.prepare(profile, { log: (l) => status(l), ctx }); } catch { /* never block a launch on the extras */ }
       if (s.modUpdates !== 'auto' || profile.loader === 'vanilla') return;
       status('Updating mods…');
       try { await modrinth.updateAll(profile, ctx); } catch { /* offline: launch with what is installed */ }

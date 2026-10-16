@@ -27,7 +27,8 @@
       "preload.js",
       "package.json",
       "lib/**",
-      "renderer/**"
+      "renderer/**",
+      "assets/**"
     ],
     "win": {
       "target": "nsis"
