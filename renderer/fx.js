@@ -38,7 +38,7 @@
     if (kind === 'snow') {
       for (let i = 0; i < n(70); i++) parts.push({ x: rand(0, W), y: rand(0, H), r: rand(0.8, 2.6), vy: rand(18, 45), sway: rand(0.4, 1.4), ph: rand(0, 6.28), a: rand(0.35, 0.85) });
     } else if (kind === 'leaves') {
-      for (let i = 0; i < n(34); i++) parts.push(leaf(true));
+      for (let i = 0; i < n(42); i++) parts.push(leaf(true));
     } else if (kind === 'embers') {
       for (let i = 0; i < n(30); i++) parts.push({ x: rand(0, W), y: rand(0, H), r: rand(0.8, 2.2), vy: -rand(8, 22), sway: rand(0.3, 1), ph: rand(0, 6.28), purple: Math.random() < 0.3, a: rand(0.25, 0.7) });
     } else if (kind === 'sparks') {
@@ -79,7 +79,7 @@
   function leaf(anywhere) {
     return {
       x: rand(0, W), y: anywhere ? rand(-H * 0.1, H) : rand(-60, -20),
-      s: 3 * Math.round(rand(2, 4)), vy: rand(26, 52), drift: rand(-12, 12), sway: rand(0.6, 1.4), ph: rand(0, 6.28),
+      s: 3 * Math.round(rand(3, 5)), vy: rand(26, 52), drift: rand(-12, 12), sway: rand(0.6, 1.4), ph: rand(0, 6.28),
       rot: rand(0, 6.28), vr: rand(-1, 1), flip: rand(0, 6.28), vf: rand(1.2, 3),
       c: palette[Math.floor(Math.random() * palette.length)], a: rand(0.8, 1),
     };
@@ -90,7 +90,7 @@
     ctx.save();
     ctx.translate(Math.round(p.x), Math.round(p.y));
     ctx.rotate(p.rot);
-    ctx.scale(Math.max(0.2, Math.abs(Math.cos(p.flip))), 1); // tumbling: turns edge-on and back
+    ctx.scale(Math.max(0.55, Math.abs(Math.cos(p.flip))), 1); // tumbling: turns edge-on and back
     ctx.globalAlpha = p.a;
     ctx.drawImage(img, -size / 2, -size / 2, size, size);
     ctx.restore();

@@ -295,21 +295,25 @@
     r.style.setProperty('--accent-rgb', `${R},${G},${B}`);
     r.style.setProperty('--on-accent', (0.299 * R + 0.587 * G + 0.114 * B) / 255 > 0.62 ? '#06101f' : '#ffffff');
 
-    // Background: the pixel-art landscape in the theme's colours, or (if chosen) the theme's picture.
+    // Background: by default just the theme's colours with falling leaves on top;
+    // optionally the painted biome landscape or the theme's picture.
     const img = theme.image ? V.themeImage(theme.id) : '';
-    const picture = s.themeBackground === 'picture' && !!img;
-    r.dataset.bg = picture ? 'image' : 'land';
+    const mode = s.bgMode === 'picture' && img ? 'picture' : s.bgMode === 'landscape' ? 'landscape' : 'leaves';
+    r.dataset.bg = mode === 'picture' ? 'image' : mode === 'landscape' ? 'land' : 'leaves';
     const bg = V.$('#theme-bg');
     if (bg) {
-      bg.style.backgroundImage = picture ? `${theme.overlay}, url("${img}")` : '';
-      bg.style.backgroundPosition = theme.position || 'center';
-      bg.hidden = !picture;
+      const sky = theme.land ? theme.land.sky : [v.bgSolid, v.bgSolid, shadeHex(acc, -0.75)];
+      bg.style.backgroundImage = mode === 'picture'
+        ? `${theme.overlay}, url("${img}")`
+        : `radial-gradient(ellipse 80% 55% at 50% -5%, rgba(${R},${G},${B},.30), transparent 70%), radial-gradient(ellipse 70% 50% at 50% 115%, rgba(${R},${G},${B},.18), transparent 70%), linear-gradient(180deg, ${sky[0]} 0%, ${sky[1]} 100%)`;
+      bg.style.backgroundPosition = mode === 'picture' ? theme.position || 'center' : 'center';
+      bg.hidden = mode === 'landscape';
     }
     V.currentTheme = theme;
     const land = V.$('#land');
     if (land) {
-      land.hidden = picture;
-      if (!picture && V.paintBiome) V.paintBiome(land, V.biomeFor(theme, acc));
+      land.hidden = mode !== 'landscape';
+      if (mode === 'landscape' && V.paintBiome) V.paintBiome(land, V.biomeFor(theme, acc));
     }
     // Falling Minecraft leaves in every theme, in the theme's colours (plain themes: shades of the accent).
     const leafColors = theme.leafColors || [acc, shadeHex(acc, 0.3), shadeHex(acc, -0.3), shadeHex(acc, 0.55)];
@@ -323,7 +327,7 @@
     clearTimeout(landTimer);
     landTimer = setTimeout(() => {
       const land = V.$('#land');
-      if (land && !land.hidden && V.paintBiome && V.currentTheme) V.paintBiome(land, V.biomeFor(V.currentTheme, getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()));
+      if (land && !land.hidden && V.paintBiome && V.currentTheme && document.documentElement.dataset.bg === 'land') V.paintBiome(land, V.biomeFor(V.currentTheme, getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()));
     }, 120);
   });
 

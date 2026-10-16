@@ -122,26 +122,35 @@ ed_text = logo('JAVA EDITION', 512, 56, 6, 4, 4, top=(255, 255, 255), bottom=(15
 ed.alpha_composite(ed_text, (0, 0))
 
 # ---------- widgets (exact vanilla sizes so the vanilla nine-slice settings still match) ----------
-def panel(w, h, top, bottom, border, inner=None, shine=None, alpha=235):
+def panel(w, h, top, bottom, border, alpha=235, shine=None, shade=None, rounded=True):
+    """Sleek widget: vertical gradient, 1px border with rounded (cut) corners, soft top shine and bottom shade."""
     im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    px = im.load()
+    for y in range(h):
+        for x in range(w):
+            edge = x in (0, w - 1) or y in (0, h - 1)
+            corner = rounded and (x in (0, w - 1)) and (y in (0, h - 1))
+            if corner:
+                continue
+            if edge:
+                px[x, y] = border
+            else:
+                c = lerp(top, bottom, (y - 1) / max(1, h - 3))
+                px[x, y] = c + (alpha,)
     d = ImageDraw.Draw(im)
-    d.rectangle([0, 0, w - 1, h - 1], fill=border)
-    for y in range(1, h - 1):
-        d.line([(1, y), (w - 2, y)], fill=lerp(top, bottom, (y - 1) / max(1, h - 3)) + (alpha,))
-    if inner:
-        d.rectangle([1, 1, w - 2, h - 2], outline=inner)
     if shine:
-        d.line([(2, 2), (w - 3, 2)], fill=shine)
+        d.line([(2, 1), (w - 3, 1)], fill=shine)
+    if shade:
+        d.line([(2, h - 2), (w - 3, h - 2)], fill=shade)
     return im
 
-ACC = (47, 125, 255, 255)
-button = panel(200, 20, (22, 42, 96), (8, 16, 42), ACC, inner=(20, 40, 100, 255), shine=(90, 150, 255, 90))
-button_hl = panel(200, 20, (70, 150, 255), (24, 84, 220), (200, 230, 255, 255), inner=(130, 195, 255, 255), shine=(220, 240, 255, 170), alpha=245)
-button_off = panel(200, 20, (26, 30, 44), (16, 18, 28), (55, 65, 90, 220), alpha=170)
-slider = panel(200, 20, (10, 18, 44), (6, 12, 30), (40, 95, 210, 255))
-slider_hl = panel(200, 20, (16, 30, 70), (10, 20, 48), (120, 175, 255, 255))
-handle = panel(8, 20, (120, 175, 255), (47, 125, 255), (220, 236, 255, 255), shine=(240, 248, 255, 255), alpha=255)
-handle_hl = panel(8, 20, (190, 220, 255), (100, 160, 255), (255, 255, 255, 255), shine=(255, 255, 255, 255), alpha=255)
+button = panel(200, 20, (30, 52, 108), (12, 22, 54), (66, 132, 255, 255), alpha=230, shine=(140, 185, 255, 70), shade=(4, 8, 24, 160))
+button_hl = panel(200, 20, (84, 160, 255), (34, 98, 235), (210, 232, 255, 255), alpha=245, shine=(235, 245, 255, 190), shade=(16, 52, 150, 220))
+button_off = panel(200, 20, (34, 38, 52), (22, 24, 34), (70, 78, 100, 200), alpha=160)
+slider = panel(200, 20, (12, 22, 52), (8, 14, 36), (52, 110, 230, 255), alpha=225, shade=(4, 8, 24, 160))
+slider_hl = panel(200, 20, (20, 36, 82), (12, 24, 58), (130, 180, 255, 255), alpha=235, shade=(4, 8, 24, 160))
+handle = panel(8, 20, (150, 195, 255), (58, 130, 255), (230, 242, 255, 255), alpha=255, shine=(255, 255, 255, 200))
+handle_hl = panel(8, 20, (215, 233, 255), (120, 178, 255), (255, 255, 255, 255), alpha=255, shine=(255, 255, 255, 255))
 
 NINE = lambda w, h, b: json.dumps({'gui': {'scaling': {'type': 'nine_slice', 'width': w, 'height': h, 'border': b}}}, indent=2)
 
@@ -189,12 +198,18 @@ files = {
     'assets/minecraft/textures/gui/sprites/widget/slider_handle_highlighted.png.mcmeta': NINE(8, 20, 2).encode(),
     'assets/minecraft/texts/splashes.txt': ('\n'.join(splashes) + '\n').encode(),
 }
-import os
-pano_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'panorama')
-for i in range(6):
-    f = os.path.join(pano_dir, f'panorama_{i}.png')
-    if os.path.exists(f):
-        files[f'assets/minecraft/textures/gui/title/background/panorama_{i}.png'] = open(f, 'rb').read()
+# Title background: only the Vex colours (no world). The Vex Client mod draws falling leaves over it.
+def grad_face(top, bottom, size=256):
+    im = Image.new('RGB', (size, size))
+    d = ImageDraw.Draw(im)
+    for y in range(size):
+        d.line([(0, y), (size, y)], fill=lerp(top, bottom, y / (size - 1)))
+    return im
+SKY_TOP, SKY_MID, SKY_LOW = (3, 8, 23), (10, 30, 90), (24, 66, 170)
+for i in range(4):
+    files[f'assets/minecraft/textures/gui/title/background/panorama_{i}.png'] = png(grad_face(SKY_MID, SKY_LOW))
+files['assets/minecraft/textures/gui/title/background/panorama_4.png'] = png(grad_face(SKY_MID, SKY_MID))
+files['assets/minecraft/textures/gui/title/background/panorama_5.png'] = png(grad_face(SKY_LOW, SKY_LOW))
 with zipfile.ZipFile(OUT, 'w', zipfile.ZIP_DEFLATED) as z:
     for name, data in files.items():
         zi = zipfile.ZipInfo(name, date_time=(2026, 10, 16, 0, 0, 0))

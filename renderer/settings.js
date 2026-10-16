@@ -115,7 +115,7 @@
       const pick = (id) => this.save(T.choosePatch(s, id, now), `${T.get(id).name} theme`).then(() => this.render());
 
       const preview = (t) => {
-        const img = t.image && s.themeBackground === 'picture' ? V.themeImage(t.id) : '';
+        const img = t.image && s.bgMode === 'picture' ? V.themeImage(t.id) : '';
         const v = t.vars;
         const box = h('div', { class: 'theme-prev', style: { backgroundColor: v.bgSolid, backgroundImage: img ? `${t.overlay}, url("${img}")` : 'none' } });
         if (!img) {
@@ -173,11 +173,12 @@
             V.switch(s.vexInGame !== false, (on) => this.save({ vexInGame: on }, on ? 'Vex look on: applied at the next launch' : 'Vex look off for new launches'), 'Vex look in Minecraft')),
           (() => {
             const pics = T.THEMES.filter((t) => t.image && V.themeAssets[t.id]).map((t) => t.name);
-            const setBg = (v) => this.save({ themeBackground: v }, v === 'picture' ? 'Using the theme picture' : 'Using the pixel landscape').then(() => this.render());
-            const mode = s.themeBackground === 'picture' ? 'picture' : 'landscape';
+            const setBg = (v) => this.save({ bgMode: v }, v === 'picture' ? 'Using the theme picture' : v === 'landscape' ? 'Using the painted landscape' : 'Just falling leaves').then(() => this.render());
+            const mode = s.bgMode === 'picture' ? 'picture' : s.bgMode === 'landscape' ? 'landscape' : 'leaves';
             return h('div', { class: 'row-item' }, h('div', { class: 'grow' }, h('strong', null, 'Background'),
-              h('div', { class: 'dim small' }, pics.length ? `Pixel landscape in the theme's colours, or the theme's own picture (available for ${pics.join(', ')}; other themes keep the landscape).` : 'A pixel-art landscape in the theme\'s colours.')),
+              h('div', { class: 'dim small' }, 'Leaves: the theme\'s colours with falling leaves, nothing else. Landscape: a painted Minecraft biome. Picture: the theme\'s own image' + (pics.length ? ` (${pics.join(', ')})` : ' (none added yet)') + '.')),
             h('div', { class: 'seg', role: 'group', 'aria-label': 'Background' },
+              h('button', { class: mode === 'leaves' ? 'on' : '', onClick: () => setBg('leaves') }, 'Leaves'),
               h('button', { class: mode === 'landscape' ? 'on' : '', onClick: () => setBg('landscape') }, 'Landscape'),
               h('button', { class: mode === 'picture' ? 'on' : '', disabled: !pics.length, onClick: () => setBg('picture') }, 'Picture')));
           })()),
