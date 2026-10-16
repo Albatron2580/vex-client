@@ -22,7 +22,9 @@ processResources {
 }
 
 java {
-    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    // Gradle/Loom may run on a newer JDK; the mod itself is compiled for Java 21 (what Minecraft 1.21.11 uses).
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
     withSourcesJar()
 }
 tasks.withType(JavaCompile).configureEach { it.options.release = 21 }
