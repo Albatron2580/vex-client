@@ -4,3 +4,4 @@ tests/screens/
 # private update signing key: never commit
 update-signing-key.pem
 *.pem
+assets/vex-client-mod.jar
