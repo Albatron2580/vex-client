@@ -248,6 +248,10 @@ h('game:launch', async (opts = {}) => {
     perf: perfLib.launchOptions(profile),
     beforeLaunch: async (status) => {
       try { await vexAssets.prepare(profile, { log: (l) => status(l), ctx }); } catch { /* never block a launch on the extras */ }
+      try {
+        const added = await perfLib.ensureModsOnce(store.getProfile(profile.id), ctx, (l) => status(l));
+        if (added.length) emit({ type: 'mods', profileId: profile.id, applied: added, failed: [] });
+      } catch { /* FPS mods are a bonus, never a reason not to start */ }
       if (s.modUpdates !== 'auto' || profile.loader === 'vanilla') return;
       status('Updating mods…');
       try { await modrinth.updateAll(profile, ctx); } catch { /* offline: launch with what is installed */ }

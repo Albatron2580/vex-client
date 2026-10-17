@@ -21,7 +21,10 @@ const versions = require('../lib/versions');
 
 const lines = [];
 const seen = { vexMod: false, sodium: false, title: false, error: null };
+let reported = false;
 const report = (ok, why) => {
+  if (reported) return;
+  reported = true;
   fs.writeFileSync(path.join(out, 'game.log'), lines.join('\n'));
   fs.writeFileSync(path.join(out, 'result.json'), JSON.stringify({ ok, why, seen }, null, 2));
   console.log((ok ? 'GAME OK: ' : 'GAME FAILED: ') + why);
@@ -48,6 +51,10 @@ setTimeout(() => report(false, 'timed out after 12 minutes'), 12 * 60 * 1000);
   const exe = await javadl.ensure(store.getBaseDir(), meta);
   console.log('java:', exe);
   store.saveSettings({ javaPath: exe });
+
+  // skip Minecraft's first-run accessibility screen so the screenshot shows the title screen
+  const packs = require('../lib/packs');
+  if (await packs.ensureOptions(store.getProfile(profile.id))) fs.appendFileSync(path.join(store.profileDir(profile.id), 'options.txt'), 'onboardAccessibility:false\n');
 
   const session = { access_token: '0', client_token: '0', uuid: '0a1b2c3d4e5f60718293a4b5c6d7e8f9', name: 'VexTester', user_properties: '{}', meta: { type: 'msa', demo: false } };
   const fresh = store.getProfile(profile.id);

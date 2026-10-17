@@ -721,6 +721,25 @@ async function test(name, fn) {
     assert.ok(r.notes.some((n) => /Vanilla/.test(n)));
   });
 
+  await test('first launch adds missing FPS mods once; no preset still gets the tuned Java flags', async () => {
+    const p = store.createProfile({ name: 'Auto perf', version: '1.21.1', loader: 'fabric' });
+    assert.ok(perfLib.launchOptions(store.getProfile(p.id)).jvmArgs.includes('-XX:+UseG1GC'));
+    const calls = [];
+    const orig = modrinth.installMod;
+    modrinth.installMod = async (prof, slug) => { calls.push(slug); if (slug === 'immediatelyfast') throw new Error('No version of ImmediatelyFast is compatible'); return { installed: [{ slug }] }; };
+    try {
+      const added = await perfLib.ensureModsOnce(store.getProfile(p.id), {});
+      assert.deepStrictEqual(added, ['Sodium', 'Lithium', 'FerriteCore', 'EntityCulling']);
+      assert.ok(store.getProfile(p.id).perfModsDone);
+      calls.length = 0;
+      assert.deepStrictEqual(await perfLib.ensureModsOnce(store.getProfile(p.id), {}), []);
+      assert.strictEqual(calls.length, 0, 'never again for this profile');
+      const v = store.createProfile({ name: 'Vanilla', version: '1.21.1', loader: 'vanilla' });
+      assert.deepStrictEqual(await perfLib.ensureModsOnce(store.getProfile(v.id), {}), []);
+      assert.strictEqual(calls.length, 0);
+    } finally { modrinth.installMod = orig; }
+  });
+
   // ---------- server status ping ----------
   console.log('server');
   const mcs = lib('server');

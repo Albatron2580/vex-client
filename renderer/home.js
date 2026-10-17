@@ -31,8 +31,7 @@
         bg,
         h('div', { class: 'stage-top' }, seg, anim),
         serverBox,
-        h('div', { class: 'figure' }, tag, figure),
-        gate,
+        h('div', { class: 'figure' }, tag, figure, gate),
         dock);
       el.append(h('div', { class: 'home' }, stage, h('aside', { class: 'news' }, h('h3', null, 'Minecraft news'), newsList)));
 
@@ -47,6 +46,8 @@
       function renderGate() {
         gate.replaceChildren();
         gate.hidden = !!V.state.active;
+        // signed out: the sign-in card takes the skin's place instead of covering the page
+        tag.hidden = figure.hidden = !V.state.active;
         if (V.state.active) return;
         gate.append(
           h('strong', null, 'Sign in to play'),
