@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "vexclient-gametest",
+  "version": "1.0.0",
+  "name": "Vex Client screenshot tests",
+  "environment": "client",
+  "entrypoints": { "fabric-client-gametest": ["net.vexclient.mod.test.VexScreenshots"] },
+  "depends": { "vexclient": "*" }
+}

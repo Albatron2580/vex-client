@@ -15,6 +15,21 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
+// Client game tests: start the real game in CI, open the Vex menus and take screenshots
+// (src/gametest). Run with: gradle runClientGameTest (needs a screen; CI uses xvfb).
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'vexclient-gametest'
+        enableGameTests = false
+        enableClientGameTests = true
+        eula = true
+    }
+}
+loom.runs.matching { it.name == 'clientGameTest' }.configureEach {
+    vmArg '-Dfabric.client.gametest.disableNetworkSynchronizer=true'
+}
+
 processResources {
     inputs.property 'version', project.version
     inputs.property 'minecraft_version', project.minecraft_version

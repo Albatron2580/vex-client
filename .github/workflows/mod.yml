@@ -60,11 +60,27 @@ jobs:
           gh release upload vex-mod vex-client-mod.jar vex-ui-pack.zip vex-ui-packs.zip SHA256SUMS.txt --clobber
           gh release edit vex-mod --notes "Built from ${GITHUB_SHA::7} on $(date -u +%F). In-game settings mod for Fabric 1.21.11 (needs Fabric API) and the Vex UI resource pack. The launcher installs these automatically."
 
+      - name: Start the game and screenshot every Vex screen
+        working-directory: mod
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri > /dev/null
+          xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX" gradle runClientGameTest --no-daemon --stacktrace 2>&1 | tee gametest.log; exit ${PIPESTATUS[0]}
+
+      - name: Upload screenshots
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shots=$(find mod -path '*screenshots*' -name '*.png' | sort)
+          [ -n "$shots" ] || exit 0
+          mkdir -p shots && cp $shots shots/ && (cd shots && zip -q ../mod-screenshots.zip *.png)
+          gh release upload vex-mod mod-screenshots.zip --clobber
+
       - name: Save the build log where it can be read (on failure)
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          (echo '```'; tail -c 60000 mod/build.log 2>/dev/null || echo 'no build log'; echo '```') > ci-log.md
+          (echo '```'; tail -c 30000 mod/build.log 2>/dev/null || echo 'no build log'; echo '--- game test ---'; grep -vE '^\s+at ' mod/gametest.log 2>/dev/null | tail -c 28000; echo '```') > ci-log.md
           gh release view mod-ci-log >/dev/null 2>&1 || gh release create mod-ci-log --prerelease --latest=false --title "Mod build log" --notes "log"
           gh release edit mod-ci-log --notes-file ci-log.md
