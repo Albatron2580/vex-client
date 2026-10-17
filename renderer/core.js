@@ -361,7 +361,9 @@
     V.emit('settings');
     return V.state.settings;
   };
-  V.versions = () => (V.state.versions ||= V.call('versions:list').then((v) => { V.state.versions = v; return v; }, (e) => { V.state.versions = null; throw e; }));
+  // One request for the version list, shared by every page; a failed request is retried next time.
+  let versionsP = null;
+  V.versions = () => (versionsP ||= V.call('versions:list').catch((e) => { versionsP = null; throw e; }));
   V.selectProfile = async (id) => {
     V.state.settings = await V.call('profiles:select', id);
     await V.refreshProfiles();

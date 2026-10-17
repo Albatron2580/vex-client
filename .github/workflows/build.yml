@@ -38,8 +38,35 @@ jobs:
         run: |
           [ -d smoke ] || exit 0
           (cd smoke && zip -q ../launcher-smoke.zip *)
-          gh release view nightly >/dev/null 2>&1 || gh release create nightly --prerelease --latest=false --title "Nightly build" --notes "Automatic test build of the newest code. Not an update: installed launchers ignore it."
+          gh release view nightly >/dev/null 2>&1 || gh release create nightly --prerelease --latest=false --title "Nightly build" --notes "Automatic test build of the newest code. Not an update: installed launchers ignore it." || true
           gh release upload nightly launcher-smoke.zip --clobber
+
+  game:
+    # Starts real Minecraft 1.21.11 + Fabric through the launcher code with an offline test account.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - name: Bundle the Vex Client mod
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download vex-mod -p vex-client-mod.jar -D assets --clobber
+      - name: Launch Minecraft
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb imagemagick libgl1-mesa-dri mesa-utils > /dev/null
+          xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX" node tests/game-smoke.js game-smoke
+      - name: Upload result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d game-smoke ] || exit 0
+          (cd game-smoke && zip -q ../game-smoke.zip *)
+          gh release view nightly >/dev/null 2>&1 || gh release create nightly --prerelease --latest=false --title "Nightly build" --notes "Automatic test build of the newest code." || true
+          gh release upload nightly game-smoke.zip --clobber
 
   windows:
     runs-on: windows-latest
@@ -64,5 +91,5 @@ jobs:
         run: |
           cd dist
           cp Vex-Client-Setup-*.exe Vex-Client-Setup-nightly.exe
-          gh release view nightly >/dev/null 2>&1 || gh release create nightly --prerelease --latest=false --title "Nightly build" --notes "Automatic test build of the newest code. Not an update: installed launchers ignore it."
+          gh release view nightly >/dev/null 2>&1 || gh release create nightly --prerelease --latest=false --title "Nightly build" --notes "Automatic test build of the newest code. Not an update: installed launchers ignore it." || true
           gh release upload nightly Vex-Client-Setup-nightly.exe --clobber

@@ -233,7 +233,8 @@ public final class VexTitleBackground {
 
     private static final class Leaf {
         float x, y, vy, drift, phase, sway, angle, spin;
-        int size, color;
+        int size, color, shadesFor;
+        int[] shades;
     }
 
     private static final List<Leaf> leaves = new ArrayList<>();
@@ -256,20 +257,39 @@ public final class VexTitleBackground {
         return l;
     }
 
+    // Each rotated sprite as horizontal runs of one colour: {y, x0, x1, kind}. A leaf is ~20 quads instead of ~100.
+    private static int[][][] runs;
+
+    private static void buildRuns() {
+        runs = new int[ANGLES][][];
+        for (int a = 0; a < ANGLES; a++) {
+            List<int[]> out = new ArrayList<>();
+            for (int y = 0; y < N; y++) {
+                char[] row = rotated[a][y];
+                int x = 0;
+                while (x < N) {
+                    char ch = row[x];
+                    if (ch == '.') { x++; continue; }
+                    int x1 = x + 1;
+                    while (x1 < N && row[x1] == ch) x1++;
+                    out.add(new int[]{y, x, x1, ch == 'L' ? 1 : ch == 'S' ? 2 : ch == 'D' ? 3 : 0});
+                    x = x1;
+                }
+            }
+            runs[a] = out.toArray(new int[0][]);
+        }
+    }
+
     private static void drawLeaf(GuiGraphics g, Leaf l) {
-        char[][] sprite = rotated[((int) Math.floor(l.angle) % ANGLES + ANGLES) % ANGLES];
+        if (runs == null) buildRuns();
+        int[][] sprite = runs[((int) Math.floor(l.angle) % ANGLES + ANGLES) % ANGLES];
         int s = l.size;
         int x0 = Math.round(l.x), y0 = Math.round(l.y);
-        int light = shade(l.color, 0.4f), dark = shade(l.color, -0.28f), stem = shade(l.color, -0.5f);
-        for (int y = 0; y < N; y++) {
-            char[] row = sprite[y];
-            for (int x = 0; x < N; x++) {
-                char ch = row[x];
-                if (ch == '.') continue;
-                int c = ch == 'L' ? light : ch == 'S' ? dark : ch == 'D' ? stem : l.color;
-                g.fill(x0 + x * s, y0 + y * s, x0 + x * s + s, y0 + y * s + s, c);
-            }
+        if (l.shades == null || l.shadesFor != l.color) {
+            l.shades = new int[]{l.color, shade(l.color, 0.4f), shade(l.color, -0.28f), shade(l.color, -0.5f)};
+            l.shadesFor = l.color;
         }
+        for (int[] r : sprite) g.fill(x0 + r[1] * s, y0 + r[0] * s, x0 + r[2] * s, y0 + r[0] * s + s, l.shades[r[3]]);
     }
 
     public static void render(GuiGraphics g, int w, int h) {

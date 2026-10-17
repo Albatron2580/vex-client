@@ -480,6 +480,7 @@ async function offerRecovery() {
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   store.init(baseDir);
+  javaLib.addRuntimeRoot(path.join(baseDir, 'runtime'));
   startInfo = appstate.onStart(VERSION); // backs up settings/profiles/sign-ins when the version changed
   livemods.init({ state: () => launch.state() });
   setupUpdater();

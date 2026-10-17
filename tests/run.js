@@ -823,6 +823,41 @@ async function test(name, fn) {
   });
   gh.close();
 
+  // ---------- java download ----------
+  console.log('java');
+  await test('downloads Mojang\'s Java runtime once, verifies every file, blocks path tricks', async () => {
+    const javadl = lib('javadl');
+    const exeName = process.platform === 'win32' ? 'java.exe' : 'java';
+    const bin = Buffer.from('#!/bin/sh\necho fake java\n');
+    const lib1 = Buffer.from('library');
+    const key = javadl.platformKey();
+    files['/rt/bin-java'] = bin; files['/rt/lib1'] = lib1;
+    const manifest = { files: {
+      bin: { type: 'directory' },
+      ['bin/' + exeName]: { type: 'file', executable: true, downloads: { raw: { url: `${base}/rt/bin-java`, sha1: sha1(bin), size: bin.length } } },
+      'lib/modules': { type: 'file', downloads: { raw: { url: `${base}/rt/lib1`, sha1: sha1(lib1), size: lib1.length } } },
+    } };
+    files['/rt/manifest.json'] = Buffer.from(JSON.stringify(manifest));
+    files['/rt/all.json'] = Buffer.from(JSON.stringify({ [key]: { 'java-runtime-delta': [{ manifest: { url: `${base}/rt/manifest.json` }, version: { name: '21.0.7' } }] } }));
+    net.endpoints.javaRuntimes = `${base}/rt/all.json`;
+    const root = tmp();
+    const meta = { javaVersion: { component: 'java-runtime-delta', majorVersion: 21 } };
+    let progress = 0;
+    const exe = await javadl.ensure(root, meta, { onProgress: (r) => { progress = r; } });
+    assert.ok(exe.endsWith(exeName) && fs.existsSync(exe));
+    assert.strictEqual(fs.readFileSync(path.join(root, 'runtime', 'java-runtime-delta', 'lib', 'modules'), 'utf8'), 'library');
+    assert.strictEqual(progress, bin.length + lib1.length);
+    delete files['/rt/all.json']; // second call must not hit the network
+    assert.strictEqual(await javadl.ensure(root, meta), exe);
+    assert.strictEqual(javadl.componentFor({ javaVersion: { majorVersion: 17 } }), 'java-runtime-gamma');
+    // a corrupted file is refused
+    files['/rt/all.json'] = Buffer.from(JSON.stringify({ [key]: { 'java-runtime-gamma': [{ manifest: { url: `${base}/rt/bad.json` } }] } }));
+    files['/rt/bad.json'] = Buffer.from(JSON.stringify({ files: { ['bin/' + exeName]: { type: 'file', downloads: { raw: { url: `${base}/rt/lib1`, sha1: sha1(bin), size: 3 } } } } }));
+    await assert.rejects(javadl.ensure(tmp(), { javaVersion: { component: 'java-runtime-gamma' } }), /corrupted/);
+    files['/rt/bad.json'] = Buffer.from(JSON.stringify({ files: { '../../evil': { type: 'file', downloads: { raw: { url: `${base}/rt/lib1`, sha1: sha1(lib1), size: lib1.length } } } } }));
+    await assert.rejects(javadl.ensure(tmp(), { javaVersion: { component: 'java-runtime-gamma' } }), /Bad path/);
+  });
+
   server.close();
   console.log(`\n${pass} passed, ${failures.length} failed`);
   if (failures.length) { console.log('Failed: ' + failures.join('; ')); process.exit(1); }
