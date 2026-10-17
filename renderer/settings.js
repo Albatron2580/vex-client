@@ -145,7 +145,7 @@
       });
 
       let seasonNote = null;
-      if (s.seasonalThemes && season) {
+      if (season) {
         const st = T.get(season.theme);
         const ends = season.ends.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
         seasonNote = eff.auto
@@ -167,6 +167,8 @@
         h('div', { class: 'list tight' },
           h('div', { class: 'row-item' }, h('div', { class: 'grow' }, h('strong', null, 'Seasonal themes'), h('div', { class: 'dim small' }, 'Halloween 1–31 Oct, Christmas 1–26 Dec, New Year 27 Dec–3 Jan, based on this PC\'s date. Your own theme returns afterwards.')),
             V.switch(s.seasonalThemes, (on) => this.save({ seasonalThemes: on, seasonOptOut: '' }, on ? 'Seasonal themes on' : 'Seasonal themes off').then(() => this.render()), 'Seasonal themes')),
+          h('div', { class: 'row-item' }, h('div', { class: 'grow' }, h('strong', null, 'Spring, summer and autumn'), h('div', { class: 'dim small' }, 'Spring Mar–May, Summer Jun–Aug, Autumn Sep–Nov. Holiday themes still win on their dates. Off by default because these cover most of the year.')),
+            V.switch(!!s.natureSeasons, (on) => this.save({ natureSeasons: on, seasonOptOut: '' }, on ? 'Nature seasons on' : 'Nature seasons off').then(() => this.render()), 'Spring, summer and autumn themes')),
           h('div', { class: 'row-item' }, h('div', { class: 'grow' }, h('strong', null, 'Theme effects'), h('div', { class: 'dim small' }, 'Falling Minecraft leaves in the theme\'s colours. Light on your PC, and paused while Minecraft is running.')),
             V.switch(s.themeEffects !== false, (on) => this.save({ themeEffects: on }, on ? 'Effects on' : 'Effects off'), 'Theme effects')),
           h('div', { class: 'row-item' }, h('div', { class: 'grow' }, h('strong', null, 'Vex look in Minecraft'), h('div', { class: 'dim small' }, 'VEX CLIENT title logo, Vex buttons and panorama in every profile, plus the in-game settings mod (Right Shift: HUD, zoom, sprint) on Fabric 1.21.11.')),

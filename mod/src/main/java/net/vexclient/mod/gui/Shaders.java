@@ -119,7 +119,7 @@ public final class Shaders {
     public static void openFolder() {
         try {
             Files.createDirectories(dir());
-            net.minecraft.Util.getPlatform().openPath(dir());
+            net.minecraft.util.Util.getPlatform().openPath(dir());
         } catch (Throwable ignored) {}
     }
 

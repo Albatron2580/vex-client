@@ -64,6 +64,48 @@
       fallback: 'radial-gradient(ellipse at 70% 15%, rgba(230,184,74,.3) 0%, transparent 40%), radial-gradient(ellipse at 20% 80%, #14204e 0%, transparent 55%), linear-gradient(170deg, #050a1e 0%, #0a1232 55%, #010309 100%)',
     },
     {
+      id: 'spring', name: 'Spring', tagline: 'Cherry blossom pink and fresh green', image: true, seasonal: true, nature: true, effect: 'leaves',
+      leafColors: ['#ffb7d5', '#ff8fbf', '#ffd6e7', '#f7a1c4', '#9be37a'],
+      land: {
+        sky: ['#2a1e4a', '#7a5aa8', '#ffb0c8'], glow: '#ffd0e0', body: { color: '#fff4d6', size: 0.06, x: 0.76, y: 0.2 }, stars: false,
+        clouds: '#ffe6f0', cloudAlpha: 0.32, far: '#8a6aa8', near: '#1e2a22', fog: '#d89ab8',
+        grass: ['#7fd16a', '#9be37a'], dirt: '#3a2a22',
+        trees: { type: 'oak', trunk: '#3a2228', leaves: ['#ffb7d5', '#ff8fbf', '#f7a1c4', '#ffd6e7'] },
+      },
+      accent: '#ff7eb6', position: 'center',
+      vars: { bg: 'rgba(22,10,24,.72)', bgSolid: '#160a18', panel: 'rgba(34,16,36,.86)', panel2: 'rgba(52,24,54,.92)', line: 'rgba(255,140,190,.36)', text: '#fff2f8', dim: '#d6aec4' },
+      overlay: 'linear-gradient(180deg, rgba(18,6,20,.42) 0%, rgba(18,6,20,.6) 55%, rgba(12,4,14,.84) 100%)',
+      fallback: 'radial-gradient(ellipse at 75% 18%, rgba(255,140,190,.4) 0%, transparent 45%), radial-gradient(ellipse at 20% 85%, #2e5a2a 0%, transparent 55%), linear-gradient(170deg, #1c0c20 0%, #2a1230 55%, #0c050e 100%)',
+    },
+    {
+      id: 'summer', name: 'Summer', tagline: 'Sunset orange over a warm purple sky', image: true, seasonal: true, nature: true, effect: 'leaves',
+      leafColors: ['#5fc94a', '#3fa83a', '#8ee05a', '#ffd34f', '#ff9a3c'],
+      land: {
+        sky: ['#1a0d3a', '#8a2f78', '#ffa64a'], glow: '#ffcc66', body: { color: '#ffe08a', size: 0.09, x: 0.7, y: 0.3 }, stars: false,
+        clouds: '#ffc9a0', cloudAlpha: 0.3, far: '#7a3a6a', near: '#14200e', fog: '#e07a50',
+        grass: ['#5fc94a', '#8ee05a'], dirt: '#3a2414',
+        trees: { type: 'oak', trunk: '#2a1a0e', leaves: ['#3fa83a', '#5fc94a', '#2e8a30'] },
+      },
+      accent: '#ff9a3c', position: 'center',
+      vars: { bg: 'rgba(20,8,26,.72)', bgSolid: '#14081a', panel: 'rgba(30,12,38,.86)', panel2: 'rgba(48,20,56,.92)', line: 'rgba(255,154,60,.36)', text: '#fff5ec', dim: '#d4b0c0' },
+      overlay: 'linear-gradient(180deg, rgba(16,6,22,.4) 0%, rgba(16,6,22,.58) 55%, rgba(10,4,14,.84) 100%)',
+      fallback: 'radial-gradient(ellipse at 70% 30%, rgba(255,166,74,.45) 0%, transparent 45%), radial-gradient(ellipse at 20% 85%, #4a1a50 0%, transparent 55%), linear-gradient(170deg, #1a0a26 0%, #2a0f30 55%, #0a0410 100%)',
+    },
+    {
+      id: 'autumn', name: 'Autumn', tagline: 'Copper leaves and a purple dusk', image: true, seasonal: true, nature: true, effect: 'leaves',
+      leafColors: ['#d9622b', '#b8461f', '#e8a23a', '#9c3a1a', '#c97a2a'],
+      land: {
+        sky: ['#140a24', '#4a2250', '#c8683a'], glow: '#e89a50', body: { color: '#ffd9a0', size: 0.07, x: 0.24, y: 0.22 }, stars: true,
+        clouds: '#b07a6a', cloudAlpha: 0.28, far: '#5a3048', near: '#1a0e0a', fog: '#a85a3a',
+        grass: ['#a8802a', '#c99a3a'], dirt: '#2e1a10',
+        trees: { type: 'oak', trunk: '#24140c', leaves: ['#d9622b', '#b8461f', '#e8a23a', '#9c3a1a'] },
+      },
+      accent: '#e07a2e', position: 'center',
+      vars: { bg: 'rgba(18,8,12,.72)', bgSolid: '#12080c', panel: 'rgba(30,14,18,.86)', panel2: 'rgba(46,22,26,.92)', line: 'rgba(224,122,46,.36)', text: '#fff2e8', dim: '#cfaea0' },
+      overlay: 'linear-gradient(180deg, rgba(14,6,10,.42) 0%, rgba(14,6,10,.6) 55%, rgba(8,4,6,.84) 100%)',
+      fallback: 'radial-gradient(ellipse at 25% 20%, rgba(232,154,80,.4) 0%, transparent 45%), radial-gradient(ellipse at 80% 85%, #4a1e24 0%, transparent 55%), linear-gradient(170deg, #160a12 0%, #24101a 55%, #0a0408 100%)',
+    },
+    {
       id: 'navy', name: 'Classic', tagline: 'The original Vex Client look', accent: '#3d7bff',
       vars: { bg: '#050b1a', bgSolid: '#050b1a', panel: '#0a1530', panel2: '#0f1e42', line: '#1b3470', text: '#e8efff', dim: '#8a9cc8' },
     },
@@ -82,12 +124,14 @@
   const get = (id) => byId[id] || byId[DEFAULT_THEME];
 
   // Seasons use the computer's local date. Ranges are inclusive.
+  // Holidays (the "Seasonal themes" switch):
   //   Halloween  1 Oct – 31 Oct
   //   Christmas  1 Dec – 26 Dec
   //   New Year  27 Dec –  3 Jan
+  // Nature seasons (the separate "Spring, summer, autumn" switch, off by default; holidays win):
+  //   Spring  1 Mar – 31 May,  Summer  1 Jun – 31 Aug,  Autumn  1 Sep – 30 Nov (Halloween wins in October when both are on)
   // The key names one occurrence (e.g. "newyear-2026" runs 27 Dec 2026 – 3 Jan 2027).
-  function seasonFor(date) {
-    const d = date || new Date();
+  function holidayFor(d) {
     const m = d.getMonth() + 1;
     const day = d.getDate();
     const y = d.getFullYear();
@@ -98,16 +142,35 @@
     return null;
   }
 
+  function natureFor(d) {
+    const m = d.getMonth() + 1;
+    const y = d.getFullYear();
+    if (m >= 3 && m <= 5) return { theme: 'spring', key: `spring-${y}`, ends: new Date(y, 5, 1) };
+    if (m >= 6 && m <= 8) return { theme: 'summer', key: `summer-${y}`, ends: new Date(y, 8, 1) };
+    if (m >= 9 && m <= 11) return { theme: 'autumn', key: `autumn-${y}`, ends: new Date(y, 11, 1) };
+    return null;
+  }
+
+  // opts.holidays (default true) and opts.nature (default false) pick which kinds of season count.
+  function seasonFor(date, opts) {
+    const d = date || new Date();
+    const o = opts || {};
+    return (o.holidays !== false ? holidayFor(d) : null) || (o.nature ? natureFor(d) : null);
+  }
+
+  const seasonOpts = (s) => ({ holidays: !!s.seasonalThemes, nature: !!s.natureSeasons });
+  const anySeasons = (s) => !!(s && (s.seasonalThemes || s.natureSeasons));
+
   // Which theme is on screen right now, and why.
-  // settings: { theme, seasonalThemes, seasonOptOut }
+  // settings: { theme, seasonalThemes, natureSeasons, seasonOptOut }
   function effective(settings, date) {
     const s = settings || {};
     const preferred = byId[s.theme] ? s.theme : DEFAULT_THEME;
-    const season = seasonFor(date);
-    if (s.seasonalThemes && season && s.seasonOptOut !== season.key) {
+    const season = anySeasons(s) ? seasonFor(date, seasonOpts(s)) : null;
+    if (season && s.seasonOptOut !== season.key) {
       return { id: season.theme, auto: true, season, preferred };
     }
-    return { id: preferred, auto: false, season: s.seasonalThemes ? season : null, preferred };
+    return { id: preferred, auto: false, season, preferred };
   }
 
   // Settings patch for "the user picked this theme by hand".
@@ -115,8 +178,8 @@
   // of the rest of that season only; picking the seasonal theme itself opts back in.
   function choosePatch(settings, id, date) {
     const patch = { theme: id, accent: '' };
-    const season = seasonFor(date);
-    if (settings && settings.seasonalThemes && season) patch.seasonOptOut = id === season.theme ? '' : season.key;
+    const season = anySeasons(settings) ? seasonFor(date, seasonOpts(settings)) : null;
+    if (season) patch.seasonOptOut = id === season.theme ? '' : season.key;
     return patch;
   }
 

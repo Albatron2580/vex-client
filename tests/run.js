@@ -275,6 +275,29 @@ async function test(name, fn) {
     assert.strictEqual(at(2027, 1, 3), 'newyear');
     assert.strictEqual(at(2027, 1, 4), null);
     assert.strictEqual(T.seasonFor(new Date(2027, 0, 2)).key, 'newyear-2026');
+    const nat = (y, m, d) => (T.seasonFor(new Date(y, m - 1, d), { nature: true }) || {}).theme || null;
+    assert.strictEqual(nat(2026, 2, 28), null);
+    assert.strictEqual(nat(2026, 3, 1), 'spring');
+    assert.strictEqual(nat(2026, 5, 31), 'spring');
+    assert.strictEqual(nat(2026, 6, 1), 'summer');
+    assert.strictEqual(nat(2026, 8, 31), 'summer');
+    assert.strictEqual(nat(2026, 9, 1), 'autumn');
+    assert.strictEqual(nat(2026, 10, 15), 'halloween'); // holidays win
+    assert.strictEqual(nat(2026, 11, 20), 'autumn');
+    assert.strictEqual(nat(2026, 12, 5), 'christmas');
+    assert.strictEqual((T.seasonFor(new Date(2026, 6, 1), { holidays: false, nature: true }) || {}).theme, 'summer');
+    assert.strictEqual(T.seasonFor(new Date(2026, 9, 15), { holidays: false }), null);
+  });
+  await test('nature seasons only switch when turned on, and can be opted out', () => {
+    const jul = new Date(2026, 6, 10);
+    assert.strictEqual(T.effective({ theme: 'vex', seasonalThemes: true }, jul).id, 'vex');
+    let s = { theme: 'vex', seasonalThemes: true, natureSeasons: true, seasonOptOut: '' };
+    assert.deepStrictEqual([T.effective(s, jul).id, T.effective(s, jul).auto], ['summer', true]);
+    s = { ...s, ...T.choosePatch(s, 'violet', jul) };
+    assert.strictEqual(s.seasonOptOut, 'summer-2026');
+    assert.strictEqual(T.effective(s, jul).id, 'violet');
+    assert.strictEqual(T.effective(s, new Date(2026, 9, 2)).id, 'halloween');
+    assert.strictEqual(T.effective({ theme: 'vex', seasonalThemes: false, natureSeasons: true }, new Date(2026, 9, 2)).id, 'autumn');
   });
   await test('automatic switching, manual choice, opt-out and restore', () => {
     const oct = new Date(2026, 9, 16);

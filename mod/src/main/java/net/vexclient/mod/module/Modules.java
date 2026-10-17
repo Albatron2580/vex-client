@@ -54,10 +54,10 @@ public final class Modules {
             if (!Files.exists(file())) {
                 // first run: carry over the old settings from vex-client.json
                 net.vexclient.mod.VexConfig c = net.vexclient.mod.VexConfig.get();
-                zoom.loadEnabled(c.zoom);
+                ((Module) zoom).loadEnabled(c.zoom);
                 zoom.level.set((double) c.zoomLevel);
                 zoom.smooth.set(c.smoothZoom);
-                sprint.loadEnabled(c.alwaysSprint);
+                ((Module) sprint).loadEnabled(c.alwaysSprint);
                 save();
                 return;
             }
