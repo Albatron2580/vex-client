@@ -1,21 +1,24 @@
 package net.vexclient.mod.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.vexclient.mod.hud.Hud;
 import net.vexclient.mod.hud.HudElement;
 import net.vexclient.mod.module.Setting;
 import org.lwjgl.glfw.GLFW;
 
-/** Drag HUD elements to move them; the buttons at the bottom change the selected one. Saved on close. */
+import java.util.ArrayList;
+import java.util.List;
+
+/** Drag HUD elements to move them; the bar at the bottom changes the selected one. Saved as you go. */
 public final class HudEditorScreen extends Screen {
     private final Screen parent;
     private HudElement selected, dragging;
     private double grabX, grabY;
-    private boolean wasDown;
-    private Button scaleDown, scaleUp, colorBtn, bgBtn, hideBtn;
+    private boolean wasDown = true;
 
     public HudEditorScreen(Screen parent) {
         super(Component.literal("Edit HUD"));
@@ -24,45 +27,13 @@ public final class HudEditorScreen extends Screen {
 
     @Override public boolean isPauseScreen() { return false; }
 
-    @Override
-    protected void init() {
-        int y = this.height - 28, cx = this.width / 2;
-        scaleDown = addRenderableWidget(Button.builder(Component.literal("Smaller"), b -> scale(-0.1f)).bounds(cx - 212, y, 60, 20).build());
-        scaleUp = addRenderableWidget(Button.builder(Component.literal("Bigger"), b -> scale(0.1f)).bounds(cx - 150, y, 60, 20).build());
-        colorBtn = addRenderableWidget(Button.builder(Component.literal("Colour"), b -> { if (selected != null) { selected.color = nextColor(selected.color); Hud.save(); } refresh(); }).bounds(cx - 88, y, 80, 20).build());
-        bgBtn = addRenderableWidget(Button.builder(Component.literal("Background"), b -> { if (selected != null) { selected.background = !selected.background; Hud.save(); } refresh(); }).bounds(cx - 6, y, 86, 20).build());
-        hideBtn = addRenderableWidget(Button.builder(Component.literal("Hide"), b -> { if (selected != null) { selected.enabled = false; selected = null; Hud.save(); } refresh(); }).bounds(cx + 82, y, 50, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(cx + 140, y, 72, 20).build());
-        refresh();
-    }
-
     private static int nextColor(int c) {
         int[] p = Setting.Color.PALETTE;
         for (int i = 0; i < p.length; i++) if (p[i] == c) return p[(i + 1) % p.length];
         return p[0];
     }
 
-    private void scale(float d) {
-        if (selected == null) return;
-        selected.scale = Math.max(0.5f, Math.min(3f, Math.round((selected.scale + d) * 10) / 10f));
-        Hud.save();
-        refresh();
-    }
-
-    private void refresh() {
-        boolean on = selected != null;
-        for (Button b : new Button[]{scaleDown, scaleUp, colorBtn, bgBtn, hideBtn}) if (b != null) b.active = on;
-        if (on) {
-            colorBtn.setMessage(Component.literal("Colour: " + colorName(selected.color)));
-            bgBtn.setMessage(Component.literal("Background: " + (selected.background ? "ON" : "OFF")));
-        }
-    }
-
-    private static String colorName(int c) {
-        int[] p = Setting.Color.PALETTE;
-        for (int i = 0; i < p.length; i++) if (p[i] == c) return Setting.Color.NAMES[i];
-        return "Custom";
-    }
+    private void click() { this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F)); }
 
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float pt) {
@@ -78,14 +49,16 @@ public final class HudEditorScreen extends Screen {
         super.render(g, mouseX, mouseY, pt);
         long win = GLFW.glfwGetCurrentContext();
         boolean down = win != 0 && GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-        boolean overWidget = false;
-        for (var c : children()) if (c.isMouseOver(mouseX, mouseY)) overWidget = true;
+        boolean pressed = down && !wasDown;
 
+        // elements
         HudElement hover = null;
+        List<int[]> placed = new ArrayList<>();
         for (HudElement e : Hud.ELEMENTS) {
             if (!e.enabled) continue;
-            int[] box = Hud.drawElement(g, this.minecraft, e, true);
+            int[] box = Hud.drawElement(g, this.minecraft, e, true, e == dragging ? null : placed);
             if (box == null) continue;
+            placed.add(box);
             boolean in = mouseX >= box[0] && mouseX <= box[0] + box[2] && mouseY >= box[1] && mouseY <= box[1] + box[3];
             if (in) hover = e;
             int col = e == selected ? Ui.ORANGE : in ? 0xFFFFFFFF : 0x88B46CFF;
@@ -93,33 +66,71 @@ public final class HudEditorScreen extends Screen {
             g.fill(box[0] - 1, box[1] + box[3], box[0] + box[2] + 1, box[1] + box[3] + 1, col);
             g.fill(box[0] - 1, box[1], box[0], box[1] + box[3], col);
             g.fill(box[0] + box[2], box[1], box[0] + box[2] + 1, box[1] + box[3], col);
-            if (e == selected) g.drawString(this.font, e.name + "  " + Math.round(e.scale * 100) + "%", box[0], Math.max(2, box[1] - 11), Ui.ORANGE, true);
         }
 
-        if (down && !wasDown && !overWidget) {
+        // hint pill at the top
+        int hidden = 0;
+        for (HudElement e : Hud.ELEMENTS) if (!e.enabled) hidden++;
+        String hint = selected == null ? "Drag to move · click one to change it" : selected.name + " · " + Math.round(selected.scale * 100) + "%";
+        int hw = this.font.width(hint) + 16;
+        Ui.card(g, this.width / 2 - hw / 2, 6, this.width / 2 + hw / 2, 22, Ui.PANEL, Ui.EDGE);
+        g.drawString(this.font, hint, this.width / 2 - this.font.width(hint) / 2, 10, selected == null ? Ui.TEXT : Ui.ORANGE, false);
+        if (hidden > 0) {
+            String h2 = hidden + " hidden · turn them on in the Display tab";
+            g.drawString(this.font, h2, this.width / 2 - this.font.width(h2) / 2, 26, Ui.DIM, true);
+        }
+
+        // bottom bar
+        String[] labels = {"Smaller", "Bigger", selected == null ? "Colour" : "Colour: " + colorName(selected.color), "Box: " + (selected != null && selected.background ? "on" : "off"), "Hide", "Done"};
+        int[] widths = new int[labels.length];
+        int total = 0;
+        for (int i = 0; i < labels.length; i++) { widths[i] = this.font.width(labels[i]) + 16; total += widths[i] + 4; }
+        int bx = this.width / 2 - total / 2, by = this.height - 26;
+        Ui.card(g, bx - 6, by - 5, bx + total + 2, by + 19, Ui.PANEL, Ui.EDGE);
+        int clicked = -1;
+        boolean overBar = mouseX >= bx - 6 && mouseX < bx + total + 2 && mouseY >= by - 5 && mouseY < by + 19;
+        for (int i = 0; i < labels.length; i++) {
+            boolean enabled = i == labels.length - 1 || selected != null;
+            boolean hv = enabled && mouseX >= bx && mouseX < bx + widths[i] && mouseY >= by && mouseY < by + 14;
+            Ui.chip(g, this.font, bx, by, bx + widths[i], by + 14, labels[i], i == labels.length - 1 ? 1 : 0, hv, enabled);
+            if (pressed && hv) clicked = i;
+            bx += widths[i] + 4;
+        }
+
+        if (clicked >= 0) {
+            click();
+            switch (clicked) {
+                case 0 -> selected.scale = Math.max(0.5f, Math.round((selected.scale - 0.1f) * 10) / 10f);
+                case 1 -> selected.scale = Math.min(3f, Math.round((selected.scale + 0.1f) * 10) / 10f);
+                case 2 -> selected.color = nextColor(selected.color);
+                case 3 -> selected.background = !selected.background;
+                case 4 -> { selected.enabled = false; selected = null; }
+                default -> { onClose(); wasDown = down; return; }
+            }
+            Hud.save();
+        } else if (pressed && !overBar) {
             selected = hover;
             dragging = hover;
             if (hover != null) {
                 grabX = mouseX - hover.x * this.width;
                 grabY = mouseY - hover.y * this.height;
             }
-            refresh();
         }
         if (down && dragging != null) {
             double nx = mouseX - grabX, ny = mouseY - grabY;
-            // snap to the grid when close
-            if (Math.abs(nx % 20) < 3) nx -= nx % 20;
+            if (Math.abs(nx % 20) < 3) nx -= nx % 20; // snap to the grid when close
             if (Math.abs(ny % 20) < 3) ny -= ny % 20;
             dragging.x = (float) Math.max(0, Math.min(1, nx / this.width));
             dragging.y = (float) Math.max(0, Math.min(1, ny / this.height));
         }
         if (!down && wasDown && dragging != null) { dragging = null; Hud.save(); }
         wasDown = down;
+    }
 
-        g.drawCenteredString(this.font, "Drag to move · click one to select it · layout " + Hud.activeSlot(), this.width / 2, 8, Ui.TEXT);
-        int hidden = 0;
-        for (HudElement e : Hud.ELEMENTS) if (!e.enabled) hidden++;
-        if (hidden > 0) g.drawCenteredString(this.font, hidden + " hidden: turn them on in the Display tab", this.width / 2, 20, Ui.DIM);
+    private static String colorName(int c) {
+        int[] p = Setting.Color.PALETTE;
+        for (int i = 0; i < p.length; i++) if (p[i] == c) return Setting.Color.NAMES[i];
+        return "Custom";
     }
 
     @Override

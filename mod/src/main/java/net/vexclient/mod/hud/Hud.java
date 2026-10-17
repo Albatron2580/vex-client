@@ -31,15 +31,29 @@ public final class Hud {
         Minecraft mc = Minecraft.getInstance();
         if (!loaded) load();
         if (mc.player == null || mc.options.hideGui || mc.screen instanceof HudEditorScreen) return;
-        for (HudElement e : ELEMENTS) if (e.enabled) drawElement(g, mc, e, false);
+        List<int[]> placed = new ArrayList<>();
+        for (HudElement e : ELEMENTS) if (e.enabled) { int[] r = drawElement(g, mc, e, false, placed); if (r != null) placed.add(r); }
     }
 
-    /** Draws one element at its saved place; returns its on-screen box {x, y, w, h} or null. */
-    public static int[] drawElement(GuiGraphics g, Minecraft mc, HudElement e, boolean editing) {
+    public static int[] drawElement(GuiGraphics g, Minecraft mc, HudElement e, boolean editing) { return drawElement(g, mc, e, editing, null); }
+
+    /**
+     * Draws one element at its saved place; returns its on-screen box {x, y, w, h} or null.
+     * When it would overlap an element already drawn this frame, it slides down below it, so elements never cover each other.
+     */
+    public static int[] drawElement(GuiGraphics g, Minecraft mc, HudElement e, boolean editing, List<int[]> placed) {
         int sw = g.guiWidth(), sh = g.guiHeight();
         int bw = Math.round(e.lastW * e.scale), bh = Math.round(e.lastH * e.scale);
         int px = Math.max(2, Math.min(sw - bw, Math.round(e.x * sw)));
         int py = Math.max(2, Math.min(sh - bh, Math.round(e.y * sh)));
+        if (placed != null) {
+            for (int guard = 0; guard < 12; guard++) {
+                int[] hit = null;
+                for (int[] r : placed) if (px < r[0] + r[2] && px + bw > r[0] && py < r[1] + r[3] && py + bh > r[1]) { hit = r; break; }
+                if (hit == null) break;
+                py = hit[1] + hit[3] + 2;
+            }
+        }
         var pose = g.pose();
         pose.pushMatrix();
         pose.translate(px + 3 * e.scale, py + 3 * e.scale);

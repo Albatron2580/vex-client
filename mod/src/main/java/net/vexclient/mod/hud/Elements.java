@@ -26,7 +26,7 @@ public final class Elements {
 
     public static final class Coords extends HudElement {
         final Setting.Bool decimals = add(new Setting.Bool("decimals", "Decimals", false));
-        public Coords() { super("coords", "Coordinates", true, 0.005f, 0.04f); }
+        public Coords() { super("coords", "Coordinates", true, 0.005f, 0.06f); }
         protected List<String> lines(Minecraft mc) {
             if (mc.player == null) return null;
             String f = decimals.get() ? "%.1f" : "%.0f";
@@ -36,7 +36,7 @@ public final class Elements {
     }
 
     public static final class Position extends HudElement {
-        public Position() { super("position", "Position (facing, biome)", false, 0.005f, 0.072f); }
+        public Position() { super("position", "Position", false, 0.005f, 0.12f); }
         protected List<String> lines(Minecraft mc) {
             if (mc.player == null || mc.level == null) return null;
             List<String> l = new ArrayList<>();
@@ -52,7 +52,7 @@ public final class Elements {
     }
 
     public static final class Ping extends HudElement {
-        public Ping() { super("ping", "Ping", false, 0.005f, 0.14f); }
+        public Ping() { super("ping", "Ping", false, 0.005f, 0.26f); }
         protected List<String> lines(Minecraft mc) {
             if (mc.player == null || mc.getConnection() == null) return null;
             if (mc.hasSingleplayerServer()) return List.of("Ping: singleplayer");

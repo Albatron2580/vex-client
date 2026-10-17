@@ -34,36 +34,41 @@ public final class VexClientMod implements ClientModInitializer {
     }
 
     /**
-     * Adds a full-width "Vex Client" button to a menu: on the pause menu right under
-     * "Back to Game", on the title screen above the Options row. Buttons below it move down one row.
+     * Adds the "Vex Client" button to a menu.
+     * Title screen: right under Minecraft Realms, using the gap above the Options row (that row moves down
+     * only as far as needed). Pause menu: full width right under "Back to Game"; the grid moves down one row.
      */
     public static void addSettingsButton(net.minecraft.client.gui.screens.Screen screen, java.util.List<? extends net.minecraft.client.gui.components.events.GuiEventListener> children,
                                          java.util.function.Consumer<net.minecraft.client.gui.components.Button> add, boolean title) {
-        java.util.List<net.minecraft.client.gui.components.AbstractWidget> widgets = new java.util.ArrayList<>();
-        for (var c : children) if (c instanceof net.minecraft.client.gui.components.AbstractWidget w) widgets.add(w);
-        if (widgets.isEmpty()) return;
-        int x = screen.width / 2 - 102, width = 204, y;
+        java.util.List<net.minecraft.client.gui.components.AbstractWidget> buttons = new java.util.ArrayList<>();
+        for (var c : children) if (c instanceof net.minecraft.client.gui.components.AbstractButton w && w.visible) buttons.add(w);
+        if (buttons.isEmpty()) return;
+        int x, width, y, shift;
         if (title) {
-            // the bottom row (Options / Quit and the two icon buttons)
+            // the Options / Quit row is the lowest row of 20px-high buttons; the row above it is Realms
             int rowY = Integer.MIN_VALUE;
-            for (var w : widgets) if (w.getY() > rowY && w.getHeight() == 20) rowY = w.getY();
-            y = rowY;
-            x = screen.width / 2 - 100;
-            width = 200;
+            for (var w : buttons) if (w.getY() > rowY && w.getHeight() == 20) rowY = w.getY();
+            net.minecraft.client.gui.components.AbstractWidget above = null;
+            for (var w : buttons) if (w.getY() < rowY && w.getWidth() >= 150 && (above == null || w.getY() > above.getY())) above = w;
+            if (above == null) return;
+            x = above.getX();
+            width = above.getWidth();
+            y = above.getY() + 24;
+            shift = Math.max(0, y + 24 - rowY);
         } else {
-            // the first button of the pause menu ("Back to Game")
-            net.minecraft.client.gui.components.AbstractWidget first = null;
-            for (var w : widgets) if (first == null || w.getY() < first.getY()) first = w;
+            net.minecraft.client.gui.components.AbstractWidget first = null; // "Back to Game"
+            for (var w : buttons) if (w.getWidth() >= 150 && (first == null || w.getY() < first.getY())) first = w;
+            if (first == null) return;
             x = first.getX();
             width = first.getWidth();
             y = first.getY() + first.getHeight() + 4;
+            shift = 24;
         }
         final int insertY = y;
-        for (var w : widgets) if (w.getY() >= insertY) w.setY(w.getY() + 24);
+        if (shift > 0) for (var c : children) if (c instanceof net.minecraft.client.gui.components.AbstractWidget w && w.getY() >= insertY) w.setY(w.getY() + shift);
         var mc = Minecraft.getInstance();
         add.accept(net.minecraft.client.gui.components.Button.builder(
                 net.minecraft.network.chat.Component.literal("Vex Client"),
                 b -> mc.setScreen(new net.vexclient.mod.gui.VexMenuScreen(screen))).bounds(x, insertY, width, 20).build());
     }
-
 }

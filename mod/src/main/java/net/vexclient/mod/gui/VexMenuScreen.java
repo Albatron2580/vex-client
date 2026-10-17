@@ -193,17 +193,18 @@ public final class VexMenuScreen extends Screen {
             g.fill(px0 + 1, py0 + 34, sx1, py1 - 1, Ui.SIDE);
             g.fill(sx1, py0 + 34, sx1 + 1, py1 - 1, Ui.EDGE);
             int y = py0 + 40;
+            int step = Math.max(14, Math.min(20, (py1 - 8 - y) / items.length));
+            int ih = step - 2;
             int cur = Math.min(side[tab.ordinal()], items.length - 1);
             for (int i = 0; i < items.length; i++) {
                 boolean sel = i == cur;
-                boolean hv = over(px0 + 4, y, sx1 - 4, y + 18);
-                if (sel) { Ui.round(g, px0 + 4, y, sx1 - 4, y + 18, 0xFF2A1A4B); g.fill(px0 + 4, y + 3, px0 + 6, y + 15, Ui.ORANGE); }
-                else if (hv) Ui.round(g, px0 + 4, y, sx1 - 4, y + 18, 0xFF1D1333);
+                boolean hv = over(px0 + 4, y, sx1 - 4, y + ih);
+                if (sel) { Ui.round(g, px0 + 4, y, sx1 - 4, y + ih, 0xFF2A1A4B); g.fill(px0 + 4, y + 3, px0 + 6, y + ih - 3, Ui.ORANGE); }
+                else if (hv) Ui.round(g, px0 + 4, y, sx1 - 4, y + ih, 0xFF1D1333);
                 String label = this.font.plainSubstrByWidth(items[i], sx1 - px0 - 20);
-                g.drawString(this.font, label, px0 + 12, y + 5, sel ? Ui.TEXT : hv ? Ui.TEXT : Ui.DIM, false);
+                g.drawString(this.font, label, px0 + 12, y + ih / 2 - 4, sel ? Ui.TEXT : hv ? Ui.TEXT : Ui.DIM, false);
                 if (pressed && hv && !sel) { side[tab.ordinal()] = i; scroll = 0; binding = null; input.setValue(""); sound(); }
-                y += 20;
-                if (y > py1 - 22) break;
+                y += step;
             }
         }
 
@@ -261,11 +262,12 @@ public final class VexMenuScreen extends Screen {
     private boolean visible(int y, int h) { return y + h > vy0 - 4 && y < vy1 + 4; }
 
     private void heading(String title, String sub) {
-        int y = rowY(), h = sub == null ? 18 : 30;
+        List<FormattedCharSequence> lines = sub == null ? List.of() : this.font.split(Component.literal(sub), vx1 - vx0 - 4);
+        int y = rowY(), h = 18 + lines.size() * 10;
         if (visible(y, h)) {
             g().drawString(this.font, title, vx0, y + 2, Ui.TEXT, true);
             g().fill(vx0, y + 12, vx0 + this.font.width(title), y + 13, Ui.ORANGE);
-            if (sub != null) g().drawString(this.font, this.font.plainSubstrByWidth(sub, vx1 - vx0), vx0, y + 18, Ui.DIM, false);
+            for (int i = 0; i < lines.size(); i++) g().drawString(this.font, lines.get(i), vx0, y + 18 + i * 10, Ui.DIM, false);
         }
         cursor += h + 4;
     }
@@ -291,12 +293,25 @@ public final class VexMenuScreen extends Screen {
         if (desc == null) g().drawString(this.font, this.font.plainSubstrByWidth(title, maxW), vx0 + 8, y + h / 2 - 4, Ui.TEXT, false);
         else {
             g().drawString(this.font, this.font.plainSubstrByWidth(title, maxW), vx0 + 8, y + 6, Ui.TEXT, false);
-            g().drawString(this.font, this.font.plainSubstrByWidth(desc, maxW), vx0 + 8, y + 17, Ui.DIM, false);
+            List<FormattedCharSequence> lines = descLines(desc, maxW);
+            for (int i = 0; i < lines.size(); i++) g().drawString(this.font, lines.get(i), vx0 + 8, y + 17 + i * 10, Ui.DIM, false);
         }
     }
 
+    /** Description wrapped to at most two lines. */
+    private List<FormattedCharSequence> descLines(String desc, int maxW) {
+        List<FormattedCharSequence> l = this.font.split(Component.literal(desc), Math.max(40, maxW));
+        return l.size() > 2 ? l.subList(0, 2) : l;
+    }
+
+    /** Card height for a title plus a (wrapped) description. */
+    private int cardH(String desc, int rightSpace) {
+        if (desc == null) return 22;
+        return 20 + descLines(desc, vx1 - vx0 - 16 - rightSpace).size() * 10;
+    }
+
     private boolean toggleRow(String id, String title, String desc, boolean on) {
-        int h = desc == null ? 22 : 30;
+        int h = cardH(desc, 30);
         int y = cardStart(h, true);
         boolean clicked = false;
         if (visible(y, h)) {
@@ -334,7 +349,7 @@ public final class VexMenuScreen extends Screen {
 
     /** Value chip on the right: left click = next, right click = previous. Returns -1, 0 or +1. */
     private int cycleRow(String title, String desc, String value) {
-        int h = desc == null ? 22 : 30;
+        int h = cardH(desc, Math.max(60, this.font.width(value) + 24) + 4);
         int y = cardStart(h, true);
         int r = 0;
         if (visible(y, h)) {
@@ -386,14 +401,14 @@ public final class VexMenuScreen extends Screen {
 
     /** Card with a title, a line under it and one chip on the right; true when the chip was clicked. */
     private boolean itemRow(String title, String desc, int titleColor, String action, int style, boolean enabled) {
-        int h = desc == null ? 22 : 30;
+        int cw = Math.max(48, this.font.width(action) + 16);
+        int h = cardH(desc, cw + 4);
         int y = cardStart(h, false);
         boolean clicked = false;
         if (visible(y, h)) {
-            int cw = Math.max(48, this.font.width(action) + 16);
             int maxW = vx1 - vx0 - cw - 20;
             g().drawString(this.font, this.font.plainSubstrByWidth(title, maxW), vx0 + 8, desc == null ? y + 7 : y + 6, titleColor, false);
-            if (desc != null) g().drawString(this.font, this.font.plainSubstrByWidth(desc, maxW), vx0 + 8, y + 17, Ui.DIM, false);
+            if (desc != null) { List<FormattedCharSequence> dl = descLines(desc, maxW); for (int i = 0; i < dl.size(); i++) g().drawString(this.font, dl.get(i), vx0 + 8, y + 17 + i * 10, Ui.DIM, false); }
             int x0 = vx1 - 6 - cw, y0 = y + h / 2 - 7;
             boolean hv = enabled && hot(x0, y0, vx1 - 6, y0 + 14);
             Ui.chip(g(), this.font, x0, y0, vx1 - 6, y0 + 14, action, style, hv, enabled);
@@ -425,16 +440,17 @@ public final class VexMenuScreen extends Screen {
 
     private void moduleRow(Module m) {
         String tag = m.singleplayerOnly ? (Module.allowedHere() ? "Singleplayer only · active here" : "Singleplayer only · off on servers") : m.description;
-        int h = 30;
+        String keyLabel = binding == m ? "Press a key…" : Modules.keyName(m.key);
+        int h = cardH(tag, Math.max(36, this.font.width(keyLabel) + 12) + 40);
         int y = cardStart(h, true);
         if (visible(y, h)) {
             String key = binding == m ? "Press a key…" : Modules.keyName(m.key);
             int kw = Math.max(36, this.font.width(key) + 12);
             titleAndDesc(y, h, m.name, tag, kw + 40);
-            int kx0 = vx1 - 36 - kw, ky0 = y + 8;
+            int kx0 = vx1 - 36 - kw, ky0 = y + h / 2 - 7;
             boolean khv = hot(kx0, ky0, kx0 + kw, ky0 + 14);
             Ui.chip(g(), this.font, kx0, ky0, kx0 + kw, ky0 + 14, key, binding == m ? 1 : 0, khv, true);
-            Ui.toggle(g(), vx1 - 30, y + 10, animate("m." + m.id, m.isEnabled()), hot(vx0, y, vx1, y + h) && !khv);
+            Ui.toggle(g(), vx1 - 30, y + h / 2 - 5, animate("m." + m.id, m.isEnabled()), hot(vx0, y, vx1, y + h) && !khv);
             if (click(kx0, ky0, kx0 + kw, ky0 + 14)) { binding = m; say("Press a key for " + m.name + " (Esc = no key)", Ui.WARN); sound(); }
             else if (click(vx0, y, vx1, y + h)) { m.toggle(); Modules.save(); sound(); }
         }
@@ -555,13 +571,13 @@ public final class VexMenuScreen extends Screen {
     // ---------- Display tab ----------
     private void displayContent(int idx) {
         if (idx <= 0) {
-            heading("HUD layout", "Drag elements around, keep up to three layouts.");
+            heading("HUD layout", "Drag elements around and keep up to three layouts (a dot = empty, starts as a copy).");
             int b = buttons(new String[]{"Edit layout (drag)", "Reset positions"}, new int[]{1, 0});
             if (b == 0) { this.minecraft.setScreen(new HudEditorScreen(this)); return; }
             if (b == 1) { Hud.resetPositions(); say("Positions and colours reset", Ui.GOOD); }
             String[] slots = new String[Hud.SLOTS];
             int[] st = new int[Hud.SLOTS];
-            for (int s = 1; s <= Hud.SLOTS; s++) { slots[s - 1] = "Layout " + s + (Hud.slotUsed(s) ? "" : " (empty)"); st[s - 1] = Hud.activeSlot() == s ? 1 : 0; }
+            for (int s = 1; s <= Hud.SLOTS; s++) { slots[s - 1] = "Layout " + s + (Hud.slotUsed(s) || Hud.activeSlot() == s ? "" : " ·"); st[s - 1] = Hud.activeSlot() == s ? 1 : 0; }
             int pick = buttons(slots, st);
             if (pick >= 0) { Hud.selectSlot(pick + 1); say("Layout " + (pick + 1) + " loaded", Ui.GOOD); }
             heading("Elements", null);
