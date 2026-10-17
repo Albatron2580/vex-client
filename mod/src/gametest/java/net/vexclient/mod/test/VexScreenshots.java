@@ -24,7 +24,7 @@ public final class VexScreenshots implements FabricClientGameTest {
         ctx.takeScreenshot("02-menu-from-title");
 
         try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
-            sp.getClientLevel().waitForChunksRender();
+            sp.getClientWorld().waitForChunksRender();
             ctx.runOnClient(mc -> {
                 for (HudElement e : Hud.ELEMENTS) e.enabled = true;
                 Friends.add("RaxMc");
