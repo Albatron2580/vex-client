@@ -842,6 +842,32 @@ async function test(name, fn) {
   });
   gh.close();
 
+  // ---------- Vex mod in profiles ----------
+  await test('Vex mod: one copy only, the newest wins, never downgraded', async () => {
+    const va = lib('vexassets');
+    const assets = tmp();
+    const vexJar = (v) => makeZip({ 'fabric.mod.json': JSON.stringify({ schemaVersion: 1, id: 'vexclient', version: v }) });
+    fs.writeFileSync(path.join(assets, 'vex-client-mod.jar'), vexJar('1.3.0'));
+    const oldAssets = va.paths.assets; va.paths.assets = assets;
+    try {
+      const p = store.createProfile({ name: 'Vex mod', version: va.MOD_MC, loader: 'fabric' });
+      const mods = path.join(store.profileDir(p.id), 'mods');
+      fs.mkdirSync(mods, { recursive: true });
+      fs.writeFileSync(path.join(mods, 'fabric-api.jar'), apiJar);
+      fs.writeFileSync(path.join(mods, 'vex-client-mod-1.2.0.jar'), vexJar('1.2.0')); // an old copy dropped in by hand
+      await va.prepare(store.getProfile(p.id), {});
+      const ver = () => lib('modrinth').inspectJar(path.join(mods, 'vex-client-mod.jar')).version;
+      assert.deepStrictEqual(fs.readdirSync(mods).filter((n) => /vex/.test(n)), ['vex-client-mod.jar']);
+      assert.strictEqual(ver(), '1.3.0');
+      fs.writeFileSync(path.join(mods, 'vex-client-mod-1.4.0.jar'), vexJar('1.4.0')); // a newer one dropped in by hand
+      await va.prepare(store.getProfile(p.id), {});
+      assert.deepStrictEqual(fs.readdirSync(mods).filter((n) => /vex/.test(n)), ['vex-client-mod.jar']);
+      assert.strictEqual(ver(), '1.4.0');
+      await va.prepare(store.getProfile(p.id), {}); // the older bundled 1.3.0 must not replace it
+      assert.strictEqual(ver(), '1.4.0');
+    } finally { va.paths.assets = oldAssets; }
+  });
+
   // ---------- java download ----------
   console.log('java');
   await test('downloads Mojang\'s Java runtime once, verifies every file, blocks path tricks', async () => {

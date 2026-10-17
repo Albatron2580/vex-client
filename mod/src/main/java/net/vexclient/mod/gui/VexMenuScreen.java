@@ -43,6 +43,8 @@ public final class VexMenuScreen extends Screen {
     private static Tab tab = Tab.SETTINGS;
     private static final int[] side = new int[3];
 
+    /** The mod version, shown in the footer so you can see which build is running. */
+    private static final String VERSION = FabricLoader.getInstance().getModContainer("vexclient").map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("?");
     private final Screen parent;
     private final Minecraft mc = Minecraft.getInstance();
 
@@ -238,7 +240,7 @@ public final class VexMenuScreen extends Screen {
         // footer
         g.fill(sx1 + 1, py1 - 22, px1 - 1, py1 - 21, Ui.EDGE_SOFT);
         if (status != null && System.currentTimeMillis() < statusUntil) g.drawString(this.font, this.font.plainSubstrByWidth(status, px1 - sx1 - 90), sx1 + 10, py1 - 15, statusColor, false);
-        else g.drawString(this.font, "Right Shift or Esc to close", sx1 + 10, py1 - 15, 0xFF6E5F92, false);
+        else g.drawString(this.font, "v" + VERSION + " · Right Shift or Esc to close", sx1 + 10, py1 - 15, 0xFF6E5F92, false);
         boolean hv = over(px1 - 62, py1 - 19, px1 - 8, py1 - 5);
         Ui.chip(g, this.font, px1 - 62, py1 - 19, px1 - 8, py1 - 5, "Done", 1, hv, true);
         if (pressed && hv) { sound(); onClose(); }
