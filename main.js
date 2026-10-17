@@ -137,6 +137,7 @@ h('app:info', () => ({
   gameRoot: store.gameRoot(),
   totalMemGb: Math.floor(os.totalmem() / 1024 ** 3),
   admins: PKG.vexAdmins || [],
+  vexMod: vexAssets.bundledModVersion(),
 }));
 
 h('settings:get', () => store.settings());
