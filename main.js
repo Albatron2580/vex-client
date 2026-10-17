@@ -425,6 +425,7 @@ function createWindow() {
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.once('ready-to-show', () => win.show());
   win.webContents.on('render-process-gone', (_e, d) => { try { fs.appendFileSync(launch.logPath(), `RENDERER GONE: ${d.reason}\n`); } catch { /* ignore */ } });
+  if (process.env.VEX_SMOKE) require('./lib/smoke').run(app, win, process.env.VEX_SMOKE);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   if (process.env.VEX_DEBUG) win.webContents.openDevTools({ mode: 'detach' });
 }

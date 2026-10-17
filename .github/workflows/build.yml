@@ -1,0 +1,68 @@
+# On every push: start the real launcher (Electron) on a Linux machine with a virtual screen, open every
+# page and fail on any error (screenshots + log go to the "nightly" pre-release), and build a Windows
+# installer you can try right away. Nightly builds are pre-releases, so installed launchers never update to them.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['mod/**', '**.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - name: Start the real app and open every page
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb > /dev/null
+          VEX_SMOKE="$PWD/smoke" xvfb-run -a -s "-screen 0 1400x900x24" npx electron --no-sandbox --disable-gpu . 2>&1 | tail -40
+          node -e "process.exit(require('./smoke/result.json').ok ? 0 : 1)"
+      - name: Upload screenshots
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d smoke ] || exit 0
+          (cd smoke && zip -q ../launcher-smoke.zip *)
+          gh release view nightly >/dev/null 2>&1 || gh release create nightly --prerelease --latest=false --title "Nightly build" --notes "Automatic test build of the newest code. Not an update: installed launchers ignore it."
+          gh release upload nightly launcher-smoke.zip --clobber
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Bundle the Vex Client mod
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download vex-mod -p vex-client-mod.jar -D assets --clobber || echo "no mod build yet"
+      - run: npm install --no-audit --no-fund
+      - name: Build installer
+        shell: bash
+        run: npx electron-builder --win nsis --x64 --publish never
+      - name: Upload installer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          cp Vex-Client-Setup-*.exe Vex-Client-Setup-nightly.exe
+          gh release view nightly >/dev/null 2>&1 || gh release create nightly --prerelease --latest=false --title "Nightly build" --notes "Automatic test build of the newest code. Not an update: installed launchers ignore it."
+          gh release upload nightly Vex-Client-Setup-nightly.exe --clobber
