@@ -629,6 +629,75 @@ async function test(name, fn) {
     assert.throws(() => require('child_process').execFileSync(process.execPath, [path.join(work, 'scripts', 'make-manifest.js'), path.join(work, 'dist')], { env: { ...process.env, VEX_UPDATE_PRIVATE_KEY: otherKeys.privateKeyPem }, stdio: 'pipe' }));
   });
 
+  // ---------- import from other launchers ----------
+  console.log('import');
+  const importer = lib('importer');
+  await test('version ids from the official launcher are understood', () => {
+    assert.deepStrictEqual(importer.fromVersionId('fabric-loader-0.16.9-1.21.1'), { loader: 'fabric', loaderVersion: '0.16.9', version: '1.21.1' });
+    assert.deepStrictEqual(importer.fromVersionId('1.20.1-forge-47.3.0'), { loader: 'forge', loaderVersion: '47.3.0', version: '1.20.1' });
+    assert.strictEqual(importer.fromVersionId('neoforge-21.1.77').version, '1.21.1');
+    assert.strictEqual(importer.fromVersionId('1.21.11').loader, 'vanilla');
+  });
+  await test('finds Minecraft Launcher, Modrinth App and NoRisk instances and imports one safely', async () => {
+    const root = tmp();
+    const mk = (dir, files) => { for (const [f, c] of Object.entries(files)) { fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true }); fs.writeFileSync(path.join(dir, f), c); } };
+    const mc = path.join(root, '.minecraft');
+    mk(mc, {
+      'launcher_profiles.json': JSON.stringify({ profiles: { a: { name: 'Fabric', lastVersionId: 'fabric-loader-0.16.9-1.21.1', lastUsed: '2026-10-01T00:00:00Z' } } }),
+      'options.txt': 'version:3955\nrenderDistance:12\n', 'servers.dat': 'x', 'mods/moda.jar': modAJar, 'mods/readme.txt': 'not a mod',
+      'resourcepacks/p.zip': 'zip', 'config/moda.json': '{}', 'saves/World/level.dat': 'lvl',
+    });
+    const mr = path.join(root, 'ModrinthApp', 'profiles');
+    mk(path.join(mr, 'PvP Pack'), { 'profile.json': JSON.stringify({ metadata: { name: 'PvP Pack', game_version: '1.21.4', loader: 'fabric' } }), 'mods/moda.jar': modAJar });
+    mk(path.join(mr, 'NoMeta'), { 'options.txt': 'version:1\n', 'logs/latest.log': '[main/INFO]: Loading Minecraft 1.21.11 with Fabric Loader 0.17.2\n' });
+    const nr = path.join(root, 'norisk');
+    mk(path.join(nr, 'profiles', 'NoRisk 1.21'), { 'options.txt': 'version:1\n', 'mods/moda.jar': modAJar });
+    const r = importer.scan({ minecraft: mc, modrinth: mr, norisk: nr });
+    const [off, mrg, nrg] = r.groups;
+    assert.strictEqual(off.items[0].version, '1.21.1');
+    assert.strictEqual(off.items[0].loader, 'fabric');
+    assert.ok(off.items[0].parts.mods && off.items[0].parts.saves && off.items[0].parts.servers);
+    assert.deepStrictEqual(mrg.items.map((i) => [i.name, i.version, i.loader]).sort(), [['NoMeta', '1.21.11', 'fabric'], ['PvP Pack', '1.21.4', 'fabric']]);
+    assert.strictEqual(nrg.items.length, 1);
+    assert.strictEqual(nrg.items[0].version, '1.21', 'guessed from the mods (~1.21)');
+    const before = fs.readdirSync(path.join(mc, 'mods')).length;
+    const res = await importer.importInstance({ ...off.items[0], name: 'From launcher', parts: { mods: true, options: true, servers: true, config: true, saves: false } }, {});
+    const d = store.profileDir(res.profile.id);
+    assert.ok(fs.existsSync(path.join(d, 'mods', 'moda.jar')));
+    assert.ok(!fs.existsSync(path.join(d, 'mods', 'readme.txt')));
+    assert.ok(fs.existsSync(path.join(d, 'options.txt')) && fs.existsSync(path.join(d, 'servers.dat')) && fs.existsSync(path.join(d, 'config', 'moda.json')));
+    assert.ok(!fs.existsSync(path.join(d, 'saves')), 'worlds only when asked');
+    assert.strictEqual(fs.readdirSync(path.join(mc, 'mods')).length, before, 'source untouched');
+    assert.strictEqual(res.profile.loader, 'fabric');
+    importer.undoImport(res.profile.id);
+    assert.ok(!store.listProfiles().some((p) => p.id === res.profile.id));
+    assert.throws(() => importer.undoImport(store.listProfiles()[0].id), /not created by an import/);
+  });
+
+  // ---------- performance presets ----------
+  console.log('performance');
+  const perfLib = lib('perf');
+  await test('presets write video settings with a backup, and set memory + JVM flags for launch', async () => {
+    const p = store.createProfile({ name: 'Perf', version: '1.21.1', loader: 'vanilla' });
+    const opts = path.join(store.profileDir(p.id), 'options.txt');
+    let r = await perfLib.apply(p.id, { preset: 'potato' }, {});
+    assert.strictEqual(r.video, false, 'no options.txt yet: applied at next launch');
+    fs.writeFileSync(opts, 'version:3955\nrenderDistance:12\ngraphicsMode:1\nlang:en_us\n');
+    const lo = perfLib.launchOptions(store.getProfile(p.id));
+    assert.strictEqual(lo.ram, 3);
+    assert.ok(lo.jvmArgs.includes('-XX:+UseG1GC'));
+    const txt = fs.readFileSync(opts, 'utf8');
+    assert.ok(/renderDistance:6/.test(txt) && /graphicsMode:0/.test(txt) && /lang:en_us/.test(txt), txt);
+    r = await perfLib.apply(p.id, { preset: 'custom', ram: 999, jvmFlags: false, video: { renderDistance: 64, particles: 7 } }, {});
+    const pp = store.getProfile(p.id).perf;
+    assert.strictEqual(pp.ram, 64);
+    assert.strictEqual(pp.video.renderDistance, 32);
+    assert.strictEqual(pp.video.particles, 2);
+    assert.deepStrictEqual(perfLib.launchOptions(store.getProfile(p.id)).jvmArgs, []);
+    assert.ok(fs.existsSync(opts + '.vexbak'));
+    assert.ok(r.notes.some((n) => /Vanilla/.test(n)));
+  });
+
   // ---------- server status ping ----------
   console.log('server');
   const mcs = lib('server');

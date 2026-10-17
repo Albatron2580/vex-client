@@ -20,6 +20,8 @@ const updaterLib = require('./lib/updater');
 const adminLib = require('./lib/admin');
 const mcServer = require('./lib/server');
 const vexAssets = require('./lib/vexassets');
+const importer = require('./lib/importer');
+const perfLib = require('./lib/perf');
 
 const PKG = require('./package.json');
 const VERSION = PKG.version;
@@ -174,6 +176,17 @@ h('profiles:create', async (data) => {
 h('profiles:update', (id, patch) => store.updateProfile(id, patch));
 h('profiles:duplicate', (id) => store.duplicateProfile(id));
 h('profiles:delete', (id) => store.deleteProfile(id));
+// import from other launchers
+h('import:scan', () => importer.scan());
+h('import:folder', async () => {
+  const [d] = await pick({ title: 'Choose a Minecraft instance folder (or a launcher folder)', properties: ['openDirectory'] });
+  return d ? importer.scanFolder(d) : null;
+});
+h('import:run', (opts) => importer.importInstance(opts || {}, ctx));
+h('import:undo', (id) => importer.undoImport(String(id)));
+// performance presets
+h('perf:presets', () => ({ presets: perfLib.PRESETS, mods: perfLib.PERF_MODS, totalMemGb: Math.floor(os.totalmem() / 1024 ** 3) }));
+h('perf:apply', (id, perf) => perfLib.apply(String(id), perf, ctx));
 h('profiles:select', (id) => { store.getProfile(id); return store.saveSettings({ selectedProfile: id }); });
 
 h('java:detect', (force) => javaLib.detect(!!force));
@@ -232,6 +245,7 @@ h('game:launch', async (opts = {}) => {
     session,
     emit,
     join: opts && opts.join && SERVER ? { host: SERVER.host, port: SERVER.port || 25565 } : null,
+    perf: perfLib.launchOptions(profile),
     beforeLaunch: async (status) => {
       try { await vexAssets.prepare(profile, { log: (l) => status(l), ctx }); } catch { /* never block a launch on the extras */ }
       if (s.modUpdates !== 'auto' || profile.loader === 'vanilla') return;

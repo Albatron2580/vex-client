@@ -10,38 +10,31 @@ import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Vex Client: in-game settings menu, HUD (FPS, coordinates), zoom and always-sprint. */
+/** Vex Client: the Right Shift menu, movable HUD, modules (zoom, sprint, fullbright, singleplayer cheats), shaders page. */
 public final class VexClientMod implements ClientModInitializer {
     public static final Logger LOG = LoggerFactory.getLogger("vexclient");
 
     public static KeyMapping openSettings;
-    public static KeyMapping zoomKey;
-
-    /** 1.0 = no zoom; eases towards the target each frame when smooth zoom is on. */
-    public static float zoomFactor = 1.0f;
 
     @Override
     public void onInitializeClient() {
         VexConfig.load();
+        net.vexclient.mod.module.Modules.init();
 
         openSettings = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.vexclient.settings", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, KeyMapping.Category.MISC));
-        zoomKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.vexclient.zoom", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, KeyMapping.Category.MISC));
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             while (openSettings.consumeClick()) {
-                if (mc.screen == null) mc.setScreen(new VexSettingsScreen(null));
+                if (mc.screen == null) mc.setScreen(new net.vexclient.mod.gui.VexMenuScreen(null));
             }
-            VexConfig c = VexConfig.get();
-            if (c.alwaysSprint && mc.player != null && mc.screen == null) {
-                mc.options.keySprint.setDown(true);
-            }
+            net.vexclient.mod.module.Modules.tick(mc);
         });
 
         LOG.info("Vex Client mod loaded");
     }
 
     /**
-     * Adds a full-width "Vex Client Settings" button to a menu: on the pause menu right under
+     * Adds a full-width "Vex Client" button to a menu: on the pause menu right under
      * "Back to Game", on the title screen above the Options row. Buttons below it move down one row.
      */
     public static void addSettingsButton(net.minecraft.client.gui.screens.Screen screen, java.util.List<? extends net.minecraft.client.gui.components.events.GuiEventListener> children,
@@ -69,19 +62,8 @@ public final class VexClientMod implements ClientModInitializer {
         for (var w : widgets) if (w.getY() >= insertY) w.setY(w.getY() + 24);
         var mc = Minecraft.getInstance();
         add.accept(net.minecraft.client.gui.components.Button.builder(
-                net.minecraft.network.chat.Component.literal("Vex Client Settings"),
-                b -> mc.setScreen(new VexSettingsScreen(screen))).bounds(x, insertY, width, 20).build());
+                net.minecraft.network.chat.Component.literal("Vex Client"),
+                b -> mc.setScreen(new net.vexclient.mod.gui.VexMenuScreen(screen))).bounds(x, insertY, width, 20).build());
     }
 
-    /** Called every frame by the FOV mixin. */
-    public static float zoomMultiplier() {
-        VexConfig c = VexConfig.get();
-        Minecraft mc = Minecraft.getInstance();
-        boolean held = c.zoom && zoomKey != null && zoomKey.isDown() && mc.screen == null;
-        float target = held ? 1.0f / c.zoomLevel : 1.0f;
-        if (c.smoothZoom) zoomFactor += (target - zoomFactor) * 0.25f;
-        else zoomFactor = target;
-        if (Math.abs(zoomFactor - target) < 0.001f) zoomFactor = target;
-        return zoomFactor;
-    }
 }

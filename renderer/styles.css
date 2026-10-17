@@ -434,3 +434,17 @@ canvas.player { height: min(320px, 36vh); width: auto; image-rendering: pixelate
 #page-home .figure { padding-top: 8px; }
 #page-home canvas.player { height: min(260px, 28vh); }
 @media (max-height: 700px) { #page-home canvas.player { height: min(200px, 22vh); } .server-wrap { margin-top: 54px; } }
+
+/* ---------- import + performance ---------- */
+.import-group { margin: 14px 0; }
+.import-group h4 { margin: 0 0 8px; font-size: 14px; }
+.import-item { display: flex; flex-direction: column; gap: 8px; padding: 12px; margin-bottom: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); }
+.import-item label { display: flex; flex-direction: column; gap: 2px; }
+.import-item input[type=text] { width: 100%; }
+.import-item .path { margin: 0; }
+.import-parts { display: flex; flex-wrap: wrap; gap: 6px; }
+.import-parts .chip { cursor: pointer; }
+.perf-cards { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.perf .field { margin-bottom: 10px; }
+.perf .field input[type=range] { width: 100%; }
+.perf .row .check { margin-right: 12px; }

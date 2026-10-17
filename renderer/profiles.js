@@ -109,6 +109,7 @@
       const grid = h('div', { class: 'grid cards' });
       el.append(
         V.pageHeader('Profiles', 'Each profile keeps its own Minecraft version, mod loader, mods, resource packs, shaders and worlds.',
+          h('button', { class: 'btn', onClick: () => V.openImport() }, V.icon('download'), 'Import from other launchers'),
           h('button', { class: 'btn primary', onClick: () => openForm() }, V.icon('plus'), 'New profile')),
         grid);
 
@@ -123,6 +124,7 @@
             h('div', { class: 'row wrap' },
               h('button', { class: 'btn sm' + (sel ? '' : ' primary'), disabled: sel, onClick: () => V.selectProfile(p.id).then(() => V.toast(`Selected "${p.name}"`, 'ok')).catch(V.error) }, sel ? 'In use' : 'Select'),
               h('button', { class: 'btn sm', onClick: () => openForm(p) }, V.icon('edit'), 'Edit'),
+              h('button', { class: 'btn sm', title: 'Potato, Balanced, Performance, Visual or Custom', onClick: () => V.openPerformance(p).catch(V.error) }, V.icon('zap'), p.perf ? `Performance: ${p.perf.preset[0].toUpperCase()}${p.perf.preset.slice(1)}` : 'Performance'),
               h('button', { class: 'btn sm', onClick: (e) => V.busy(e.currentTarget, async () => { await V.call('profiles:duplicate', p.id); await V.refreshProfiles(); V.toast('Profile duplicated', 'ok'); }) }, V.icon('copy'), 'Duplicate'),
               h('button', {
                 class: 'btn sm danger',
