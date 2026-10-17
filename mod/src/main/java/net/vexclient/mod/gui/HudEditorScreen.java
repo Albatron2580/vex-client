@@ -73,11 +73,13 @@ public final class HudEditorScreen extends Screen {
         for (HudElement e : Hud.ELEMENTS) if (!e.enabled) hidden++;
         String hint = selected == null ? "Drag to move · click one to change it" : selected.name + " · " + Math.round(selected.scale * 100) + "%";
         int hw = this.font.width(hint) + 16;
-        Ui.card(g, this.width / 2 - hw / 2, 6, this.width / 2 + hw / 2, 22, Ui.PANEL, Ui.EDGE);
-        g.drawString(this.font, hint, this.width / 2 - this.font.width(hint) / 2, 10, selected == null ? Ui.TEXT : Ui.ORANGE, false);
+        // just above the bottom bar, so it never covers elements placed at the top of the screen
+        int hy = this.height - 50;
+        Ui.card(g, this.width / 2 - hw / 2, hy, this.width / 2 + hw / 2, hy + 16, Ui.PANEL, Ui.EDGE);
+        g.drawString(this.font, hint, this.width / 2 - this.font.width(hint) / 2, hy + 4, selected == null ? Ui.TEXT : Ui.ORANGE, false);
         if (hidden > 0) {
             String h2 = hidden + " hidden · turn them on in the Display tab";
-            g.drawString(this.font, h2, this.width / 2 - this.font.width(h2) / 2, 26, Ui.DIM, true);
+            g.drawString(this.font, h2, this.width / 2 - this.font.width(h2) / 2, hy - 11, Ui.DIM, true);
         }
 
         // bottom bar
