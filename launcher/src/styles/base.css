@@ -345,33 +345,52 @@ a { color: var(--accent); }
 .mod-row:hover { background: color-mix(in oklab, var(--accent) 6%, transparent); border-color: var(--line); }
 .mod-row img { border-radius: 8px; flex: none; image-rendering: auto; }
 .mod-row.off { opacity: 0.55; }
-/* Minecraft Logs window */
-.logs-app { height: 100%; display: flex; flex-direction: column; background: #0c0f14; color: #d7dde8; font-family: var(--font-display); }
-.logs-titlebar { height: 38px; flex: none; display: flex; align-items: center; justify-content: space-between; padding-left: 14px; -webkit-app-region: drag; background: #12161e; border-bottom: 1px solid #1d2330; }
-.logs-titlebar > span { display: inline-flex; gap: 8px; align-items: center; color: #6ea8ff; font-weight: 600; font-size: 14px; letter-spacing: 0.03em; }
+/* Minecraft Logs window — VEX look, follows the chosen theme */
+.logs-app { position: relative; height: 100%; display: flex; flex-direction: column; color: var(--text); font-family: var(--font-body);
+  background: radial-gradient(700px 400px at 90% -10%, color-mix(in oklab, var(--accent-2) 18%, transparent), transparent 60%), var(--bg); }
+.logs-titlebar { height: 40px; flex: none; display: flex; align-items: center; justify-content: space-between; padding-left: 14px; -webkit-app-region: drag; border-bottom: 1px solid var(--line); }
+.logs-titlebar > span { display: inline-flex; gap: 10px; align-items: center; font: 700 13px var(--font-display); letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
+.logs-titlebar > span .v { color: var(--accent); }
 .logs-titlebar .win-btns { display: flex; height: 100%; -webkit-app-region: no-drag; }
-.logs-titlebar .win-btns button { width: 46px; height: 100%; border: 0; background: transparent; color: #8a93a6; cursor: pointer; display: grid; place-items: center; }
-.logs-titlebar .win-btns button:hover { background: #1b2130; color: #fff; }
-.logs-titlebar .win-btns button.close:hover { background: #e5484d; color: #fff; }
-.logs-body { flex: 1; display: grid; grid-template-columns: 1fr 340px; min-height: 0; }
-.logs-main { margin: 10px 0 10px 10px; border-radius: 10px; background: linear-gradient(160deg, #0a0d12, #0d1117); border: 1px solid #1a2030; display: flex; flex-direction: column; min-height: 0; }
-.logs-empty { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #6f7889; text-align: center; }
-.logs-empty b { font-size: 18px; color: #8b94a7; font-weight: 600; } .logs-empty span { font-size: 12px; }
-.logs-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #1a2030; font-size: 13px; }
-.logs-toolbar .input { background: #0f131b; border-color: #232a3a; color: #d7dde8; }
-.logs-toolbar .btn { background: #141a25; border-color: #263048; color: #cdd5e3; }
-.logs-state { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid #2a3348; color: #8a93a6; }
-.logs-state.running { color: #5fe3a1; border-color: #1f5a3e; } .logs-state.starting { color: #ffc46b; border-color: #5a4720; }
-.logs-check { display: inline-flex; gap: 6px; align-items: center; color: #8a93a6; font-size: 12px; cursor: pointer; }
-.logs-lines { flex: 1; overflow: auto; padding: 10px 12px; font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; user-select: text; color: #c5ccd8; }
-.logs-lines .err { color: #ff6b6b; } .logs-lines .warn { color: #ffc46b; } .logs-lines .vex { color: #6ea8ff; }
-.logs-side { display: flex; flex-direction: column; padding: 14px 14px 12px; gap: 6px; background: #12161e; border-left: 1px solid #1d2330; min-height: 0; overflow: auto; }
-.logs-side-title { display: flex; gap: 8px; align-items: center; color: #6ea8ff; font-weight: 600; margin: 6px 0 10px; }
-.logs-none { margin: 50px auto 0; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #8b94a7; font-size: 15px; }
-.logs-inst { display: flex; gap: 10px; align-items: center; text-align: left; padding: 9px 10px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #d7dde8; cursor: pointer; font: inherit; }
-.logs-inst:hover { background: #171d29; } .logs-inst.on { background: #182033; border-color: #2a3a5c; }
-.logs-inst b { display: block; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.logs-inst span span { font-size: 11px; color: #7d879b; }
-.logs-inst .dot { width: 9px; height: 9px; border-radius: 50%; background: #4a5265; flex: none; }
-.logs-inst .dot.running { background: #5fe3a1; box-shadow: 0 0 8px #5fe3a1; } .logs-inst .dot.starting { background: #ffc46b; }
-.logs-count { margin-top: auto; color: #8a93a6; font-size: 13px; padding-top: 8px; }
+.logs-titlebar .win-btns button { width: 46px; height: 100%; border: 0; background: transparent; color: var(--text-dim); cursor: pointer; display: grid; place-items: center; }
+.logs-titlebar .win-btns button:hover { background: color-mix(in oklab, var(--text) 8%, transparent); color: var(--text); }
+.logs-titlebar .win-btns button.close:hover { background: var(--danger); color: #fff; }
+.logs-body { flex: 1; display: grid; grid-template-columns: 1fr 300px; gap: 12px; padding: 12px; min-height: 0; }
+.logs-main { border-radius: var(--r-xl); background: color-mix(in oklab, var(--panel) calc(var(--panel-alpha) * 100%), transparent); border: 1px solid var(--line);
+  box-shadow: var(--shadow); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.logs-empty { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-faint); text-align: center; }
+.logs-empty svg { color: var(--accent); } .logs-empty b { font: 600 18px var(--font-display); color: var(--text-dim); } .logs-empty span { font-size: 12px; }
+.logs-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13px; background: color-mix(in oklab, var(--bg) 25%, transparent); }
+.logs-toolbar > b { font: 600 15px var(--font-display); }
+.logs-state { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 99px; border: 1px solid var(--line); color: var(--text-faint); }
+.logs-state.running { color: var(--ok); border-color: color-mix(in oklab, var(--ok) 40%, transparent); }
+.logs-state.starting { color: var(--accent); border-color: var(--line-strong); }
+.logs-check { display: inline-flex; gap: 6px; align-items: center; color: var(--text-dim); font-size: 12px; cursor: pointer; }
+.logs-check input { accent-color: var(--accent); }
+.logs-lines { flex: 1; overflow: auto; padding: 12px 14px; font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; user-select: text;
+  color: color-mix(in oklab, var(--text) 85%, transparent); background: color-mix(in oklab, var(--bg) 55%, transparent); }
+.logs-lines .err { color: var(--danger); } .logs-lines .warn { color: var(--warn); } .logs-lines .vex { color: var(--accent); font-weight: 600; }
+.logs-side { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: var(--r-xl); border: 1px solid var(--line); min-height: 0; overflow: auto;
+  background: color-mix(in oklab, var(--panel) calc(var(--panel-alpha) * 100%), transparent); box-shadow: var(--shadow); }
+.logs-side-title { font: 700 10.5px var(--font-display); letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-faint); margin: 2px 2px 8px; display: flex; gap: 8px; align-items: center; }
+.logs-none { margin: 40px auto 0; display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-faint); font-size: 14px; }
+.logs-none svg { color: var(--accent); }
+.logs-inst { display: flex; gap: 10px; align-items: center; text-align: left; padding: 9px 10px; border-radius: var(--r-md); border: 1px solid transparent; background: transparent; color: var(--text); cursor: pointer; font: inherit; }
+.logs-inst:hover { background: color-mix(in oklab, var(--accent) 7%, transparent); }
+.logs-inst.on { border-color: var(--line-strong); background: color-mix(in oklab, var(--accent) 14%, transparent); box-shadow: var(--glow-sm); }
+.logs-inst b { display: block; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logs-inst span span { font-size: 11px; color: var(--text-faint); }
+.logs-inst .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-faint); flex: none; }
+.logs-inst .dot.running { background: var(--ok); box-shadow: 0 0 8px var(--ok); } .logs-inst .dot.starting { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.logs-count { margin-top: auto; color: var(--text-faint); font-size: 12px; padding: 8px 2px 0; display: flex; gap: 8px; align-items: center; }
+.logs-count .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+
+/* Login screen */
+.login-screen { position: fixed; inset: 38px 0 0 0; z-index: 75; display: grid; place-items: center; padding: 24px;
+  background: radial-gradient(800px 500px at 50% 30%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 70%), color-mix(in oklab, var(--bg) 92%, black); animation: fade var(--dur-slow) ease; }
+.login-card { width: min(460px, 100%); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 40px 36px 24px; animation: pop var(--dur-slow) var(--ease); }
+.login-card h1 { font: 700 34px var(--font-display); letter-spacing: 0.08em; }
+.login-card h1 span { background: var(--gradient); -webkit-background-clip: text; color: transparent; }
+.login-btn { height: 48px; width: 100%; font-size: 16px; }
+.login-points { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.login-points li { display: flex; gap: 10px; align-items: flex-start; } .login-points svg { color: var(--accent); flex: none; margin-top: 2px; }

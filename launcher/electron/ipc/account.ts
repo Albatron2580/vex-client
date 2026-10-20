@@ -36,10 +36,11 @@ export async function initAccount(url: string) {
   if (token) await refreshProfile().catch(() => {});
 }
 
-export async function setServiceUrl(url: string) {
+export async function setServiceUrl(url: string): Promise<boolean> {
   const next = url || DEFAULT_ONLINE_URL;
-  if (next === serviceUrl) return;
+  if (next === serviceUrl) return false;
   await logout(true); serviceUrl = next; broadcast();
+  return true;
 }
 
 async function call<T>(method: string, p: string, body?: unknown): Promise<T> {
@@ -131,48 +132,44 @@ const PAGE = (title: string, msg: string) => `<!doctype html><meta charset="utf-
 <div style="font:700 28px system-ui;letter-spacing:.12em;background:linear-gradient(135deg,#ff6fb5,#b77dff);-webkit-background-clip:text;color:transparent">VEX CLIENT</div>
 <h2 style="margin:12px 0 6px">${title}</h2><p style="opacity:.7;margin:0">${msg}</p></div></body>`;
 
+// Sign in to VEX online with the Minecraft account used to play. The server checks the
+// Minecraft token with Mojang, then the token is dropped — nothing to register anywhere.
+let loginBusy: Promise<AccountState> | null = null;
 export function login(): Promise<AccountState> {
   if (!serviceUrl) return Promise.reject(new Error("The VEX online service isn't set up yet."));
-  pendingLogin?.reject(new Error("Sign-in restarted."));
-  const state = crypto.randomBytes(24).toString("base64url");
-  return new Promise((resolve, reject) => {
-    const server = http.createServer(async (req, res) => {
-      const u = new URL(req.url ?? "/", "http://127.0.0.1");
-      if (u.pathname !== "/callback") { res.writeHead(404).end(); return; }
-      if (u.searchParams.get("state") !== state) { res.writeHead(400, { "content-type": "text/html" }).end(PAGE("Sign-in didn't match", "Go back to VEX and try again.")); return; }
-      const err = u.searchParams.get("error"), t = u.searchParams.get("token");
-      done();
-      if (err || !t) {
-        res.writeHead(200, { "content-type": "text/html" }).end(PAGE("Sign-in cancelled", "You can close this tab."));
-        reject(new Error(err === "modrinth_failed" ? "Modrinth didn't accept the sign-in. Try again in a minute." : "Sign-in was cancelled.")); return;
-      }
-      try {
-        token = t;
-        if (canEncrypt()) fs.writeFileSync(tokenFile(), safeStorage.encryptString(t));
-        await refreshProfile();
-        log("info", `Signed in to VEX online as ${profile?.username}`);
-        res.writeHead(200, { "content-type": "text/html" }).end(PAGE(`Signed in as ${escapeHtml(profile!.username)}`, "You can close this tab and go back to VEX CLIENT."));
-        BrowserWindow.getAllWindows()[0]?.focus();
-        resolve(accountState());
-      } catch (e: any) {
-        clearToken();
-        res.writeHead(200, { "content-type": "text/html" }).end(PAGE("Sign-in failed", "Go back to VEX and try again."));
-        reject(e);
-      }
-    });
-    const timer = setTimeout(() => { done(); reject(new Error("Sign-in timed out. Try again.")); }, 5 * 60_000);
-    const done = () => { clearTimeout(timer); server.close(); pendingLogin = null; };
-    pendingLogin = { server, reject: (e) => { done(); reject(e); } };
-    server.listen(0, "127.0.0.1", () => {
-      const port = (server.address() as any).port;
-      shell.openExternal(`${serviceUrl}/auth/start?port=${port}&state=${state}`);
-    });
-    server.on("error", (e) => { done(); reject(e); });
-  });
+  if (loginBusy) return loginBusy;
+  loginBusy = (async () => {
+    const mc = await mcTokenSource().catch((e: Error) => { throw new Error(e.message || "Sign in with Microsoft again."); });
+    if (!mc) throw new Error("Sign in with a Microsoft account first.");
+    let res: Response;
+    try {
+      res = await fetch(`${serviceUrl}/auth/minecraft`, { method: "POST", headers: { "content-type": "application/json", "user-agent": `VEX-CLIENT/${app.getVersion()}` },
+        body: JSON.stringify({ token: mc.token }), signal: AbortSignal.timeout(20_000) });
+    } catch { throw new Error("Couldn't reach the VEX server. Check your internet connection."); }
+    const data: any = await res.json().catch(() => ({}));
+    if (res.status === 404) throw new Error("Your online service is older than this VEX. Update it: Settings → VEX online → Update online service.");
+    if (!res.ok || !data.token) throw new Error(data.error ?? `VEX server error (${res.status})`);
+    token = data.token;
+    if (canEncrypt()) fs.writeFileSync(tokenFile(), safeStorage.encryptString(data.token));
+    await refreshProfile();
+    log("info", `Signed in to VEX online as ${profile?.username}`);
+    return accountState();
+  })().finally(() => { loginBusy = null; });
+  return loginBusy;
 }
+
+/** Login check: makes sure VEX online is signed in as the active Microsoft account. Quiet on failure. */
+export async function ensureSignedIn(activeName: string | null) {
+  if (!serviceUrl) return accountState();
+  if (!activeName) { if (token) await logout(true); return accountState(); }
+  if (token && profile && (profile.mcName ?? profile.username)?.toLowerCase() === activeName.toLowerCase()) return accountState();
+  try { return await login(); }
+  catch (e: any) { log("warn", `Automatic VEX online sign-in failed: ${e.message}`); broadcast(); return accountState(); }
+}
+
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-export function cancelLogin() { pendingLogin?.reject(new Error("Sign-in cancelled.")); }
+export function cancelLogin() { /* Minecraft sign-in has no browser step to cancel */ }
 
 export async function logout(silent = false) {
   if (token && serviceUrl) await call("POST", "/v1/logout").catch(() => {});

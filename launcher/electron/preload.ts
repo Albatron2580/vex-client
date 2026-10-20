@@ -22,6 +22,7 @@ const api = {
   skins: {
     lookup: (name: string) => ipcRenderer.invoke("skins:lookup", name),
     library: () => ipcRenderer.invoke("skins:library"),
+    texture: (url: string) => ipcRenderer.invoke("skins:texture", url),
     add: (name: string, model: string, bytes: Uint8Array) => ipcRenderer.invoke("skins:add", name, model, bytes),
     remove: (id: string) => ipcRenderer.invoke("skins:remove", id),
   },
@@ -77,6 +78,7 @@ const api = {
     serviceVersion: () => ipcRenderer.invoke("online:serviceVersion"),
     bundledServerVersion: () => ipcRenderer.invoke("online:bundledServerVersion"),
     link: () => ipcRenderer.invoke("online:link"),
+    loginCheck: () => ipcRenderer.invoke("online:loginCheck"),
     reportBug: (title: string, body: string) => ipcRenderer.invoke("online:reportBug", title, body),
     serverStatus: (address: string) => ipcRenderer.invoke("online:serverStatus", address),
   },
@@ -127,7 +129,6 @@ const api = {
     state: () => ipcRenderer.invoke("online-setup:state"),
     progress: () => ipcRenderer.invoke("online-setup:progress"),
     start: () => ipcRenderer.invoke("online-setup:start"),
-    modrinth: (clientId: string, secret: string) => ipcRenderer.invoke("online-setup:modrinth", clientId, secret),
     open: (which: "modrinth" | "cloudflare") => ipcRenderer.invoke("online-setup:open", which),
     onState: (cb: (s: unknown) => void) => {
       const h = (_e: unknown, s: unknown) => cb(s);

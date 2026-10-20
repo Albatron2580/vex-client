@@ -3,9 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2026-06-01"
 
 [vars]
-# Your Modrinth application's Client ID (modrinth.com/settings/applications). Not secret.
+# Players sign in with their Minecraft account (verified with Mojang) — nothing to register.
+# Optional, older sign-in with Modrinth: set a Modrinth app's Client ID here and the secret with
+#   npx wrangler secret put MODRINTH_CLIENT_SECRET
 MODRINTH_CLIENT_ID = "REPLACE_WITH_CLIENT_ID"
-# Set MODRINTH_CLIENT_SECRET with:  npx wrangler secret put MODRINTH_CLIENT_SECRET
 
 [[d1_databases]]
 binding = "DB"

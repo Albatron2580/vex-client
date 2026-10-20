@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "../components/Icon";
+import { Logo } from "../components/Logo";
 import type { GameEvent, LogSession } from "../vex";
 
 // Separate "Minecraft Logs" window. Closing it never stops the game.
@@ -41,7 +42,7 @@ export function LogsApp() {
   return (
     <div className="logs-app">
       <header className="logs-titlebar">
-        <span><Icon name="server" size={16} />Minecraft Logs</span>
+        <span><Logo size={18} glow={false} /><span>Minecraft <span className="v">Logs</span></span></span>
         <div className="win-btns">
           <button onClick={() => window.vex?.win.minimize()} aria-label="Minimise"><Icon name="min" size={14} /></button>
           <button onClick={() => window.vex?.win.maximize()} aria-label="Maximise"><Icon name="max" size={12} /></button>
@@ -51,7 +52,7 @@ export function LogsApp() {
       <div className="logs-body">
         <main className="logs-main">
           {!s ? (
-            <div className="logs-empty"><Icon name="server" size={40} /><b>Select an instance</b><span>Choose an instance from the sidebar to view logs</span></div>
+            <div className="logs-empty"><Icon name="server" size={36} /><b>No game running</b><span>Press Play in VEX — its log shows up here live.</span></div>
           ) : (
             <>
               <div className="logs-toolbar">
@@ -71,7 +72,7 @@ export function LogsApp() {
           )}
         </main>
         <aside className="logs-side">
-          <div className="logs-side-title"><Icon name="server" size={15} />Instances</div>
+          <div className="logs-side-title">Instances</div>
           {!sessions.length ? (
             <div className="logs-none"><Icon name="play" size={24} /><span>No active instances</span></div>
           ) : sessions.map((x) => (
@@ -80,7 +81,7 @@ export function LogsApp() {
               <span style={{ flex: 1, minWidth: 0 }}><b>{x.name}</b><span>{x.state === "closed" ? `Closed · ${time(x.endedAt ?? x.startedAt)}` : `${x.state === "running" ? "Running" : "Starting"} · since ${time(x.startedAt)}`}</span></span>
             </button>
           ))}
-          <div className="logs-count">{running} Running</div>
+          <div className="logs-count">{running > 0 && <i className="dot" />}{running} running</div>
         </aside>
       </div>
     </div>

@@ -12,6 +12,16 @@ async function getJson(url: string, timeoutMs = 10_000): Promise<{ status: numbe
   return { status: res.status, body: text ? JSON.parse(text) : null };
 }
 
+const textureCache = new Map<string, string>();
+/** A skin texture from textures.minecraft.net as a data URL (for friends' faces). Cached for this run. */
+export async function textureDataUrl(url: string): Promise<string> {
+  if (!/^https:\/\/textures\.minecraft\.net\/texture\/[0-9a-f]{20,80}$/.test(String(url))) throw new Error("Not a Minecraft skin.");
+  const hit = textureCache.get(url); if (hit) return hit;
+  const data = await toDataUrl(url); textureCache.set(url, data);
+  if (textureCache.size > 300) textureCache.delete(textureCache.keys().next().value!);
+  return data;
+}
+
 async function toDataUrl(url: string): Promise<string> {
   // Only ever fetch textures from Mojang's texture host.
   const u = new URL(url);

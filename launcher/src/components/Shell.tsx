@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { isAdminName } from "../../electron/shared/settingsModel";
-import { McHead } from "./McHead";
+import { McHead, SkinFace } from "./McHead";
 import { errMsg } from "../lib/bridge";
 import { useApp, type PageId } from "../state/AppState";
 import { Icon } from "./Icon";
@@ -64,6 +64,7 @@ export function Sidebar() {
 
 export function Avatar({ name, url, size = 32 }: { name: string; url: string | null; size?: number }) {
   const [broken, setBroken] = useState(false);
+  if (url && /^https:\/\/textures\.minecraft\.net\/texture\//.test(url)) return <SkinFace url={url} name={name} size={size} />;
   return url && !broken
     ? <img src={url} alt="" width={size} height={size} style={{ width: size, height: size, borderRadius: size * 0.28, flex: "none", objectFit: "cover" }} onError={() => setBroken(true)} />
     : <span className="inst-tile" style={{ width: size, height: size, borderRadius: size * 0.28, background: "var(--gradient)", color: "#fff", fontSize: size * 0.45 }}>{name[0]?.toUpperCase()}</span>;
@@ -103,10 +104,11 @@ function AccountBox({ collapsed }: { collapsed: boolean }) {
           ))}
           <button className="list-item" disabled={busy} onClick={addMs}><span className="nav-tile">{busy ? <span className="spinner" /> : <Icon name="plus" size={15} />}</span><span className="small">{busy ? "Waiting for Microsoft…" : "Add Microsoft account"}</span></button>
           <hr className="divider" />
-          <div className="label" style={{ padding: "4px 8px" }}>Friends (Modrinth)</div>
-          <button className="list-item" onClick={() => { go(modrinth ? "friends" : "settings"); setOpen(false); }}>
-            {modrinth ? <Avatar name={modrinth.username} url={modrinth.avatar} size={28} /> : <span className="nav-tile"><Icon name="friends" size={15} /></span>}
-            <span className="small">{modrinth ? modrinth.username : "Sign in with Modrinth"}</span>
+          <div className="label" style={{ padding: "4px 8px" }}>VEX online</div>
+          <button className="list-item" onClick={() => { go("friends"); setOpen(false); }}>
+            <span className="nav-tile"><Icon name="friends" size={15} /></span>
+            <span className="small" style={{ flex: 1, textAlign: "left" }}>{modrinth ? "Connected" : account?.configured ? "Not connected" : "Not set up"}</span>
+            <span className={`presence-dot ${modrinth ? "online" : ""}`} style={{ position: "static", border: 0 }} />
           </button>
           <hr className="divider" />
           <button className="list-item" onClick={() => { go("settings"); setOpen(false); }}><span className="nav-tile"><Icon name="settings" size={15} /></span><span className="small">Manage accounts</span></button>
@@ -116,7 +118,7 @@ function AccountBox({ collapsed }: { collapsed: boolean }) {
         {active ? <span style={{ position: "relative" }}><McHead uuid={active.uuid} name={active.name} /><span className={`presence-dot ${active.needsLogin ? "" : "online"}`} /></span> : <span className="nav-tile"><Icon name="plus" size={17} /></span>}
         {!collapsed && <span style={{ minWidth: 0, textAlign: "left", flex: 1 }}>
           <b className="small" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{active ? active.name : "No account"}</b>
-          <span className="tiny faint">{active ? (active.needsLogin ? "Sign in again" : modrinth ? `Microsoft · ${modrinth.username}` : "Microsoft") : "Add account"}</span></span>}
+          <span className="tiny faint">{active ? (active.needsLogin ? "Sign in again" : modrinth ? "Online" : "Microsoft") : "Sign in"}</span></span>}
         {!collapsed && <Icon name="chevron" size={14} />}
       </button>
     </div>

@@ -7,7 +7,7 @@ import { spawn } from "node:child_process";
 import { app, BrowserWindow, shell } from "electron";
 import { log } from "./logger";
 
-export type StepId = "node" | "tools" | "cloudflare" | "database" | "deploy" | "modrinth" | "check" | "connect";
+export type StepId = "node" | "tools" | "cloudflare" | "database" | "deploy" | "check" | "connect";
 export type StepStatus = "pending" | "running" | "done" | "error" | "waiting";
 export const STEPS: { id: StepId; label: string }[] = [
   { id: "node", label: "Node.js" },
@@ -15,7 +15,6 @@ export const STEPS: { id: StepId; label: string }[] = [
   { id: "cloudflare", label: "Sign in to Cloudflare" },
   { id: "database", label: "Create the friends database" },
   { id: "deploy", label: "Put the service online" },
-  { id: "modrinth", label: "Connect Modrinth sign-in" },
   { id: "check", label: "Check it works" },
   { id: "connect", label: "Connect VEX" },
 ];
@@ -23,7 +22,7 @@ export const STEPS: { id: StepId; label: string }[] = [
 export interface SetupState {
   running: boolean;
   steps: Record<StepId, { status: StepStatus; detail?: string }>;
-  need: null | { kind: "subdomain" } | { kind: "modrinth"; redirect: string } | { kind: "cloudflare-login" };
+  need: null | { kind: "subdomain" } | { kind: "cloudflare-login" };
   url: string | null;
   error: string | null;
   log: string[];
@@ -36,7 +35,6 @@ const fresh = (): SetupState => ({
 });
 let state = fresh();
 let onConnected: (url: string) => Promise<void> = async () => {};
-let modrinthInput: { clientId: string; secret: string } | null = null;
 
 const broadcast = () => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send("online-setup:state", state));
 const setStep = (id: StepId, status: StepStatus, detail?: string) => { state.steps[id] = { status, detail }; broadcast(); };
@@ -74,7 +72,6 @@ function prepareWorkDir() {
 }
 
 const tomlPath = () => path.join(workDir(), "wrangler.toml");
-const getToml = (key: string) => new RegExp(`^\\s*${key}\\s*=\\s*"([^"]*)"`, "m").exec(fs.readFileSync(tomlPath(), "utf8"))?.[1] ?? "";
 const setToml = (key: string, value: string) => {
   const t = fs.readFileSync(tomlPath(), "utf8").replace(new RegExp(`^(\\s*${key}\\s*=\\s*)"[^"]*"`, "m"), `$1"${value}"`);
   fs.writeFileSync(tomlPath(), t, "utf8");
@@ -176,26 +173,6 @@ async function stepDeploy() {
   throw new StepError("Putting the service online failed. Click Retry.");
 }
 
-async function stepModrinth(url: string) {
-  const secrets = findJson((await wrangler(["secret", "list", "--format", "json"], { quiet: true, nonInteractive: true })).out);
-  const hasSecret = Array.isArray(secrets) && secrets.some((s: any) => s?.name === "MODRINTH_CLIENT_SECRET");
-  const clientId = getToml("MODRINTH_CLIENT_ID");
-  if (hasSecret && clientId && !/REPLACE/.test(clientId) && !modrinthInput) return clientId;
-  if (!modrinthInput) {
-    state.need = { kind: "modrinth", redirect: `${url}/auth/callback` }; broadcast();
-    throw new NeedsInput("Register VEX on Modrinth, then paste the Client ID and Secret.");
-  }
-  const { clientId: id, secret } = modrinthInput;
-  setToml("MODRINTH_CLIENT_ID", id);
-  addLog("Saving the Modrinth secret to Cloudflare (it isn't stored on this PC)…");
-  const s = await wrangler(["secret", "put", "MODRINTH_CLIENT_SECRET"], { input: secret, nonInteractive: true });
-  modrinthInput = null;
-  if (s.code !== 0) throw new StepError("Saving the Modrinth secret failed. Check it and try again.");
-  const d = await deployCapture();
-  if (!d.url) throw new StepError("Redeploying with your Modrinth app failed. Click Retry.");
-  return id;
-}
-
 async function stepCheck(url: string) {
   for (let i = 0; i < 6; i++) {
     try {
@@ -225,7 +202,6 @@ export async function startSetup(): Promise<SetupState> {
     await step("database", stepDatabase);
     const url = await step("deploy", stepDeploy, (u) => u);
     state.url = url;
-    await step("modrinth", () => stepModrinth(url), (id) => `App ${id}`);
     state.need = null;
     await step("check", () => stepCheck(url));
     await step("connect", () => onConnected(url));
@@ -238,14 +214,6 @@ export async function startSetup(): Promise<SetupState> {
   return state;
 }
 
-export function provideModrinth(clientId: string, secret: string) {
-  const id = String(clientId ?? "").trim(), s = String(secret ?? "").trim();
-  if (!/^[A-Za-z0-9_-]{4,64}$/.test(id)) throw new Error("That doesn't look like a Client ID — copy it again from Modrinth.");
-  if (s.length < 8 || /\s/.test(s)) throw new Error("That doesn't look like a Client Secret — copy it again from Modrinth.");
-  modrinthInput = { clientId: id, secret: s };
-  return startSetup();
-}
-
 /** How far an earlier setup got (survives restarts — read from the working folder). */
 export function setupProgress() {
   const dir = workDir();
@@ -254,8 +222,7 @@ export function setupProgress() {
   const get = (k: string) => new RegExp(`^\\s*${k}\\s*=\\s*"([^"]*)"`, "m").exec(toml)?.[1] ?? "";
   const url = read("deployed-url.txt") || null;
   const database = !!get("database_id") && !/REPLACE/.test(get("database_id"));
-  const modrinth = !!get("MODRINTH_CLIENT_ID") && !/REPLACE/.test(get("MODRINTH_CLIENT_ID"));
-  return { started: fs.existsSync(path.join(dir, "package.json")), database, deployed: !!url, url, modrinth };
+  return { started: fs.existsSync(path.join(dir, "package.json")), database, deployed: !!url, url };
 }
 
 export function openHelper(which: "modrinth" | "cloudflare") {

@@ -5,14 +5,14 @@
 export interface Env {
   DB: D1Database;
   MODRINTH_CLIENT_ID: string;
-  MODRINTH_CLIENT_SECRET: string;
+  MODRINTH_CLIENT_SECRET?: string;
   MODRINTH_WEB?: string;  // overrides for local testing only
   MODRINTH_API?: string;
   MC_API?: string;
   ADMINS?: string;        // comma-separated Minecraft names; defaults to DEFAULT_ADMINS
 }
 
-const SERVER_VERSION = "2.0.0";
+const SERVER_VERSION = "2.1.0";
 // Admins are checked against the Minecraft account the player linked — the server verifies that
 // account with Mojang itself, so nobody can make themselves an admin by renaming anything.
 const DEFAULT_ADMINS = "HAckerbest11,RaxMc,UNCdel";
@@ -73,6 +73,39 @@ async function authStart(url: URL, env: Env) {
   return Response.redirect(auth.toString(), 302);
 }
 
+// Sign in with the Minecraft account the player already uses in VEX. The launcher sends a fresh
+// Minecraft access token once; the server asks Mojang whose it is, then drops the token.
+// No Modrinth app or other registration is needed for this.
+async function authMinecraft(req: Request, env: Env) {
+  const body = (await req.json().catch(() => ({}))) as { token?: string };
+  if (typeof body.token !== "string" || body.token.length < 20 || body.token.length > 4000) return fail(400, "Missing Minecraft sign-in.");
+  let prof: { id?: string; name?: string; skins?: { state?: string; url?: string }[] };
+  try {
+    const r = await fetch(`${env.MC_API ?? "https://api.minecraftservices.com"}/minecraft/profile`, { headers: { authorization: `Bearer ${body.token}` } });
+    if (r.status === 401 || r.status === 403) return fail(401, "Mojang didn't accept that Minecraft sign-in. Sign in with Microsoft again.");
+    if (r.status === 404) return fail(400, "That Microsoft account doesn't own Minecraft: Java Edition.");
+    if (!r.ok) throw new Error(String(r.status));
+    prof = await r.json();
+  } catch { return fail(502, "Couldn't reach Mojang. Try again in a minute."); }
+  const uuid = String(prof.id ?? "").replace(/-/g, "");
+  const name = String(prof.name ?? "");
+  if (!/^[0-9a-fA-F]{32}$/.test(uuid) && !/^[A-Za-z0-9]{1,40}$/.test(uuid)) return fail(400, "That account has no Minecraft profile.");
+  if (!/^[A-Za-z0-9_]{1,16}$/.test(name)) return fail(400, "That account has no Minecraft name yet.");
+  const skin = (prof.skins ?? []).find((s) => s.state === "ACTIVE")?.url ?? prof.skins?.[0]?.url ?? null;
+  const avatar = skin && /^https?:\/\/textures\.minecraft\.net\/texture\/[0-9a-f]+$/.test(skin) ? skin.replace(/^http:/, "https:") : null;
+  const existing = await env.DB.prepare("SELECT banned FROM users WHERE id = ?").bind(uuid).first<{ banned: number }>();
+  if (existing?.banned) return fail(403, "This account is banned from VEX online.");
+  const token = randomToken();
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO users (id, username, username_lower, avatar_url, created_at, mc_name, mc_uuid) VALUES (?1, ?2, ?3, ?4, ?5, ?2, ?1)
+      ON CONFLICT (id) DO UPDATE SET username = excluded.username, username_lower = excluded.username_lower, avatar_url = excluded.avatar_url, mc_name = excluded.mc_name, mc_uuid = excluded.mc_uuid`)
+      .bind(uuid, name, name.toLowerCase(), avatar, now()),
+    env.DB.prepare("INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)").bind(await sha256(token), uuid, now(), now() + SESSION_DAYS * 86_400_000),
+    env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now()),
+  ]);
+  return json({ token });
+}
+
 async function authCallback(url: URL, env: Env) {
   const id = url.searchParams.get("state") ?? "";
   const login = await env.DB.prepare("SELECT * FROM logins WHERE id = ?").bind(id).first<{ port: number; client_state: string; created_at: number }>();
@@ -85,7 +118,7 @@ async function authCallback(url: URL, env: Env) {
     const api = env.MODRINTH_API ?? "https://api.modrinth.com";
     const tok = await fetch(`${api}/_internal/oauth/token`, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", authorization: env.MODRINTH_CLIENT_SECRET },
+      headers: { "content-type": "application/x-www-form-urlencoded", authorization: env.MODRINTH_CLIENT_SECRET ?? "" },
       body: new URLSearchParams({ code, client_id: env.MODRINTH_CLIENT_ID, redirect_uri: `${url.origin}/auth/callback`, grant_type: "authorization_code" }),
     });
     if (!tok.ok) throw new Error(`token ${tok.status}`);
@@ -340,6 +373,7 @@ export default {
     try {
       if (url.pathname === "/") return json({ service: "vex-online", ok: true, version: SERVER_VERSION });
       if (url.pathname === "/v1/public/home" && req.method === "GET") return await publicHome(env);
+      if (url.pathname === "/auth/minecraft" && req.method === "POST") return await authMinecraft(req, env);
       if (url.pathname === "/auth/start") return await authStart(url, env);
       if (url.pathname === "/auth/callback") return await authCallback(url, env);
       if (url.pathname.startsWith("/v1/")) {

@@ -110,12 +110,12 @@ function AccountCard() {
   const p = account?.signedIn ? account.profile : null;
   const urlOk = url === "" || isServiceUrl(url);
   return (
-    <Card title="Friends account" icon="friends" sub="Sign in with Modrinth for friends, Collab and online status.">
+    <Card title="VEX online" icon="friends" sub="Friends, Collab, news and admin. You're signed in automatically with your Minecraft account.">
       {p ? (
         <div className="row">
           <Avatar name={p.username} url={p.avatar} size={44} />
-          <div style={{ flex: 1 }}><b>{p.username}</b><div className="tiny faint">Signed in with Modrinth</div></div>
-          <button className="btn sm" onClick={async () => { await window.vex!.account.logout(); toast("info", "Signed out"); }}>Sign out</button>
+          <div style={{ flex: 1 }}><b>{p.username}</b><div className="tiny faint">Connected{p.admin ? " · admin" : ""}</div></div>
+          <span className="chip ok"><span className="dot" />Online</span>
         </div>
       ) : <SignInCard compact />}
       <div style={{ marginTop: 12 }}><ServiceUpdate /></div>

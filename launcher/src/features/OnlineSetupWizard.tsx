@@ -1,23 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { Modal, Notice, Field } from "../components/ui";
+import { Modal, Notice } from "../components/ui";
 import { Icon } from "../components/Icon";
 import { useApp } from "../state/AppState";
-import { vex, errMsg } from "../lib/bridge";
+import { vex } from "../lib/bridge";
 import type { SetupState } from "../vex";
 
 const STEPS: [string, string][] = [
   ["node", "Node.js"], ["tools", "Install tools"], ["cloudflare", "Sign in to Cloudflare"], ["database", "Create the friends database"],
-  ["deploy", "Put the service online"], ["modrinth", "Connect Modrinth sign-in"], ["check", "Check it works"], ["connect", "Connect VEX"],
+  ["deploy", "Put the service online"], ["check", "Check it works"], ["connect", "Connect VEX"],
 ];
 
 export function OnlineSetupWizard({ onClose }: { onClose(): void }) {
   const { toast } = useApp();
   const [s, setS] = useState<SetupState | null>(null);
-  const [clientId, setClientId] = useState("");
-  const [secret, setSecret] = useState("");
-  const [inputErr, setInputErr] = useState<string | null>(null);
   const [showLog, setShowLog] = useState(false);
-  const [copied, setCopied] = useState(false);
   const logRef = useRef<HTMLPreElement>(null);
 
   useEffect(() => {
@@ -25,20 +21,14 @@ export function OnlineSetupWizard({ onClose }: { onClose(): void }) {
     return vex().onlineSetup.onState(setS);
   }, []);
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [s?.log.length, showLog]);
-  useEffect(() => { if (s?.finished) toast("success", "VEX online is set up", "You can sign in with Modrinth now."); }, [s?.finished]);
+  useEffect(() => { if (s?.finished) toast("success", "VEX online is set up", "You're signed in with your Minecraft account."); }, [s?.finished]);
 
-  const submitModrinth = async () => {
-    setInputErr(null);
-    try { await vex().onlineSetup.modrinth(clientId, secret); setSecret(""); }
-    catch (e) { setInputErr(errMsg(e)); }
-  };
-  const copy = async (text: string) => { try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* ignore */ } };
   const need = s?.need;
 
   return (
     <Modal title="Set up VEX online" onClose={onClose} wide>
       <div className="stack">
-        {!s?.finished && <p className="small muted">This puts Modrinth sign-in and Friends online on your own free Cloudflare account. VEX does every step — you just click <b>Allow</b> in your browser and paste two values from Modrinth.</p>}
+        {!s?.finished && <p className="small muted">This puts Friends, Collab and the admin panel online on your own free Cloudflare account. VEX does every step — you just click <b>Allow</b> in your browser. Players then sign in with their Minecraft account automatically.</p>}
         <ol className="setup-steps">
           {STEPS.map(([id, label]) => {
             const st = s?.steps[id as keyof SetupState["steps"]];
@@ -70,35 +60,8 @@ export function OnlineSetupWizard({ onClose }: { onClose(): void }) {
           </Notice>
         )}
 
-        {need?.kind === "modrinth" && !s?.running && (
-          <div className="card" style={{ padding: 16 }}>
-            <b>Last step: register VEX on Modrinth</b>
-            <p className="tiny muted" style={{ margin: "4px 0 0" }}>This lets players sign in to VEX with their Modrinth account. You do it once, on your own Modrinth account.</p>
-            <ol className="small muted" style={{ paddingLeft: 18, margin: "8px 0" }}>
-              <li>Click <b>Open Modrinth</b> below and log in. You land on <b>Settings → Applications</b>.</li>
-              <li>Click <b>New application</b>. Name it <span className="mono">VEX CLIENT</span> and click <b>Create</b>.</li>
-              <li>In the application, under <b>Scopes</b>, tick only <b>Read user data</b>.</li>
-              <li>Under <b>Redirect URIs</b>, paste this address and click <b>Add</b>, then <b>Save changes</b>:
-                <div className="row" style={{ margin: "6px 0" }}>
-                  <input className="input mono" readOnly value={need.redirect} onFocus={(e) => e.target.select()} />
-                  <button className="btn sm" onClick={() => copy(need.redirect)}><Icon name={copied ? "check" : "save"} size={14} />{copied ? "Copied" : "Copy"}</button>
-                </div></li>
-              <li>Copy the <b>Client ID</b> and the <b>Client secret</b> from the top of that page (the secret may be behind a <i>Reveal</i> or <i>Regenerate</i> button) and paste them below.</li>
-            </ol>
-            <button className="btn sm" style={{ marginBottom: 10 }} onClick={() => vex().onlineSetup.open("modrinth")}><Icon name="external" size={14} />Open Modrinth</button>
-            <div className="grid grid-2" style={{ gap: 10 }}>
-              <Field label="Client ID">{(id) => <input id={id} className="input mono" value={clientId} onChange={(e) => setClientId(e.target.value.trim())} spellCheck={false} />}</Field>
-              <Field label="Client Secret" hint="Goes straight to your Cloudflare. VEX doesn't keep it.">{(id) => <input id={id} type="password" className="input mono" value={secret} onChange={(e) => setSecret(e.target.value.trim())} autoComplete="off" />}</Field>
-            </div>
-            {inputErr && <div className="error-text" style={{ marginTop: 6 }}>{inputErr}</div>}
-            <div className="row" style={{ justifyContent: "flex-end", marginTop: 10 }}>
-              <button className="btn primary" disabled={!clientId || !secret} onClick={submitModrinth}>Continue</button>
-            </div>
-          </div>
-        )}
-
         {s?.error && !s.running && <Notice kind="danger">{s.error}</Notice>}
-        {s?.finished && <Notice><b>All done!</b> Your VEX online address is <span className="mono">{s.url}</span>. Send it (never the secret) to build it into VEX for your friends.</Notice>}
+        {s?.finished && <Notice><b>All done!</b> VEX online runs at <span className="mono">{s.url}</span> and you're signed in with your Minecraft account. Send this address to build it into VEX for your friends.</Notice>}
 
         <button className="btn ghost sm" style={{ alignSelf: "flex-start" }} onClick={() => setShowLog((v) => !v)}><Icon name="info" size={13} />{showLog ? "Hide details" : "Show details"}</button>
         {showLog && <pre ref={logRef} className="setup-log mono">{s?.log.join("\n") || "Nothing yet."}</pre>}

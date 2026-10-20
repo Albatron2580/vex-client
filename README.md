@@ -19,7 +19,7 @@ vex-client/
 │  │  └─ state/               App state, settings persistence, toasts
 │  └─ tests/                  Vitest unit tests
 ├─ mod/                       Fabric in-game mod (built by .github/workflows/mod.yml)
-├─ server/                    VEX online service (Cloudflare Worker + D1): Modrinth sign-in, friends
+├─ server/                    VEX online service (Cloudflare Worker + D1): Minecraft sign-in, friends, admin
 └─ shared/                    Theme presets + JSON schema shared with the in-game client
 ```
 
@@ -58,7 +58,7 @@ The installer is per-user (no admin prompt) and puts a **VEX CLIENT icon on the 
 | **Custom Totem** | Classic / Arms Out / Big Head from a username or file, 64×32 legacy skins, slim arms; real resource pack (1.20 → 26.3 formats, `min_format`/`max_format` for 1.21.9+), install into an instance's `resourcepacks` or save as ZIP, progress |
 | **Custom Sky** | Any image (or the built-in Aurora preset) → seamless 6-face sky in OptiFine format; horizon line, night-only, rotate; install/ZIP. Needs Nuit + Nuit Interop (Fabric/NeoForge) or OptiFine in game |
 | **Import** | Instances → Import: finds Modrinth App, CurseForge, Prism, MultiMC and normal-launcher installs; copies mods, configs, game settings/keybinds/servers, resource & shader packs and (optionally) worlds into a new instance. Source folders are only read, never changed |
-| **Friends & Modrinth sign-in** | Sign in with Modrinth (browser login, nothing pasted), search players, send/accept/decline requests, see who's online/playing. Needs the VEX online service: click **Set up online service** in Friends (or Settings → Account) and VEX deploys it to your free Cloudflare account for you |
+| **Friends & VEX online** | Signs in automatically with the active Minecraft account (verified with Mojang — nothing to register), search players by Minecraft name, requests, online/playing status, skin faces. Needs the VEX online service: **Set up online service** in Friends deploys it to your free Cloudflare account |
 | **Auto-update** | Checks GitHub releases, downloads in the background, verifies SHA-256, then asks to restart. Push a `v*.*.*` tag and `.github/workflows/release.yml` builds and publishes the release |
 | **Cursor trail** | Sakura petals, aurora, cyan light, stardust, soft, minimal; length, density, opacity, speed, size, glow, colour, performance mode |
 | **Layout** | Sectioned, collapsible sidebar with account box; floating instance switcher + Play bar |

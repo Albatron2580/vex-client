@@ -16,49 +16,55 @@ const ago = (t?: number | null) => {
   return m < 60 ? `Last seen ${m} min ago` : m < 1440 ? `Last seen ${Math.round(m / 60)} h ago` : `Last seen ${Math.round(m / 1440)} d ago`;
 };
 
+/** Login check for VEX online. Not set up → setup; no Microsoft account → login; otherwise connects automatically. */
 export function SignInCard({ compact }: { compact?: boolean }) {
-  const { account, toast, desktop } = useApp();
+  const { account, toast, desktop, ms, refreshMs } = useApp();
   const [busy, setBusy] = useState(false);
   const [wizard, setWizard] = useState(false);
-  // The wizard stays mounted after setup connects VEX, so it can show "All done".
+  const [error, setError] = useState<string | null>(null);
   const wiz = wizard && <OnlineSetupWizard onClose={() => setWizard(false)} />;
-  const [progress, setProgress] = useState<{ started: boolean; database: boolean; deployed: boolean; url: string | null; modrinth: boolean } | null>(null);
+  const [progress, setProgress] = useState<{ started: boolean; database: boolean; deployed: boolean; url: string | null } | null>(null);
   useEffect(() => { if (!account?.configured && window.vex) window.vex.onlineSetup.progress().then(setProgress).catch(() => {}); }, [account?.configured, wizard]);
+  const active = ms?.accounts.find((a) => a.active) ?? null;
+  // Login check: once a Microsoft account and the service exist, connect without a click.
+  useEffect(() => {
+    if (!account?.configured || account.signedIn || !active || active.needsLogin || !window.vex) return;
+    setBusy(true); setError(null);
+    window.vex.online.loginCheck().then((s) => { if (!s.signedIn) setError("Couldn't connect to VEX online."); }).catch((e) => setError(errMsg(e))).finally(() => setBusy(false));
+  }, [account?.configured, account?.signedIn, active?.uuid]);
+  const align = { alignItems: compact ? "flex-start" : "center", textAlign: compact ? "left" : "center", gap: 10 } as const;
+
   if (!account?.configured) {
-    const steps: [boolean, string][] = [[!!progress?.database, "Database"], [!!progress?.deployed, "Online"], [!!progress?.modrinth, "Modrinth sign-in"], [false, "Connected"]];
-    const doneCount = steps.filter(([d]) => d).length;
+    const steps: [boolean, string][] = [[!!progress?.database, "Database"], [!!progress?.deployed, "Online"], [false, "Connected"]];
     return (
-      <div className="stack" style={{ alignItems: compact ? "flex-start" : "center", textAlign: compact ? "left" : "center", gap: 10 }}>
+      <div className="stack" style={align}>
         {!compact && <><Icon name="friends" size={40} /><b style={{ fontSize: 18 }}>{progress?.started ? "Finish setting up VEX online" : "Set up VEX online"}</b></>}
-        <span className="small muted" style={{ maxWidth: 460 }}>{progress?.started
-          ? progress.deployed && !progress.modrinth ? "Almost done — the last step is registering VEX on Modrinth so players can sign in. VEX shows you exactly what to click."
-            : "You've started setting this up. Continue where you left off."
-          : "Friends and Modrinth sign-in need the VEX online service. VEX can set it up for you on a free Cloudflare account — it takes a few minutes."}</span>
-        {progress?.started && (
-          <div className="setup-mini" aria-label={`${doneCount} of ${steps.length} steps done`}>
-            {steps.map(([done, label]) => <span key={label} className={done ? "done" : ""}><i>{done ? <Icon name="check" size={11} /> : null}</i>{label}</span>)}
-          </div>
-        )}
+        <span className="small muted" style={{ maxWidth: 460 }}>{progress?.started ? "You've started setting this up. Continue where you left off."
+          : "Friends, Collab and admin need the VEX online service. VEX sets it up for you on a free Cloudflare account — it takes a few minutes."}</span>
+        {progress?.started && <div className="setup-mini">{steps.map(([done, label]) => <span key={label} className={done ? "done" : ""}><i>{done ? <Icon name="check" size={11} /> : null}</i>{label}</span>)}</div>}
         <button className="btn primary" disabled={!desktop} onClick={() => setWizard(true)}><Icon name="sparkle" size={16} />{progress?.started ? "Continue setup" : "Set up online service"}</button>
         {wiz}
       </div>
     );
   }
-  const signIn = async () => {
-    setBusy(true);
-    try { const s = await vex().account.login(); toast("success", `Signed in as ${s.profile?.username}`); }
-    catch (e) { toast("error", "Sign-in didn't finish", errMsg(e)); }
-    finally { setBusy(false); }
-  };
+  if (!active || active.needsLogin) return (
+    <div className="stack" style={align}>
+      {!compact && <><Icon name="user" size={40} /><b style={{ fontSize: 18 }}>{active?.needsLogin ? `Sign in to ${active.name} again` : "Sign in to use VEX online"}</b></>}
+      <span className="small muted" style={{ maxWidth: 440 }}>VEX online uses the Minecraft account you play with. You sign in on Microsoft's own page — VEX never sees your password.</span>
+      <button className="btn primary" disabled={!desktop || busy} onClick={async () => {
+        setBusy(true);
+        try { await window.vex!.ms.add(); await refreshMs(); toast("success", "Signed in"); } catch (e) { toast("error", "Microsoft sign-in didn't finish", errMsg(e)); } finally { setBusy(false); }
+      }}>{busy ? <span className="spinner" /> : <Icon name="user" size={16} />}{busy ? "Waiting for Microsoft…" : "Sign in with Microsoft"}</button>
+    </div>
+  );
   return (
-    <div className="stack" style={{ alignItems: compact ? "flex-start" : "center", textAlign: compact ? "left" : "center", gap: 10 }}>
-      {!compact && <><Icon name="friends" size={40} /><b style={{ fontSize: 18 }}>Sign in to see your friends</b>
-        <span className="small muted" style={{ maxWidth: 440 }}>Use your Modrinth account. Your browser opens Modrinth's own login page — VEX never sees your password, and it doesn't touch your Minecraft account.</span></>}
-      <div className="row">
-        <button className="btn primary" disabled={!desktop || busy} onClick={signIn}>{busy ? <span className="spinner" /> : <Icon name="user" size={16} />}{busy ? "Waiting for your browser…" : "Sign in with Modrinth"}</button>
-        {busy && <button className="btn ghost sm" onClick={() => vex().account.cancel()}>Cancel</button>}
-      </div>
-      {!account.persistent && <span className="hint">This PC can't encrypt saved sign-ins, so you'll sign in again next time.</span>}
+    <div className="stack" style={align}>
+      {busy ? <div className="row small muted"><span className="spinner" />Connecting as {active.name}…</div>
+        : <>
+            {error && <span className="small" style={{ color: "var(--danger)", maxWidth: 440 }}>{error}</span>}
+            <button className="btn primary" onClick={async () => { setBusy(true); setError(null); try { const st = await window.vex!.online.loginCheck(); if (!st.signedIn) setError("Couldn't connect to VEX online."); } catch (e) { setError(errMsg(e)); } finally { setBusy(false); } }}>
+              <Icon name="refresh" size={16} />Connect as {active.name}</button>
+          </>}
       {wiz}
     </div>
   );
@@ -133,12 +139,12 @@ export function FriendsPage() {
         <div><span className="eyebrow">Social</span><h1>Friends</h1><p>{lists ? `${online} of ${lists.friends.length} online` : "Loading…"}</p></div>
         <button className="btn sm" onClick={load}><Icon name="refresh" size={14} />Refresh</button>
       </div>
-      <Card title="Add friends" icon="search" sub="Search by Modrinth username. Only people who've signed in to VEX show up.">
+      <Card title="Add friends" icon="search" sub="Search by Minecraft name. Only players who use VEX show up.">
         <SearchBar value={q} onChange={setQ} placeholder="Search players" />
         {q.trim().length >= 2 && (
           <div className="stack" style={{ gap: 4, marginTop: 10 }}>
             {searching && !found && <div className="row small muted"><span className="spinner" />Searching…</div>}
-            {found?.length === 0 && <p className="small faint">Nobody called “{q.trim()}” has signed in to VEX yet. Ask them to install VEX and sign in with Modrinth.</p>}
+            {found?.length === 0 && <p className="small faint">Nobody called “{q.trim()}” uses VEX yet. Ask them to install VEX and sign in with their Minecraft account.</p>}
             {found?.map((f) => (
               <Row key={f.id} f={f}>
                 {f.relation === "none" && <button className="btn primary sm" disabled={busyId === f.id} onClick={() => act(f.id, "add", `Friend request sent to ${f.username}`)}><Icon name="plus" size={14} />Add</button>}
@@ -178,7 +184,7 @@ export function FriendsPage() {
           )}
         </div>
       </Card>
-      <p className="tiny faint">Friends only see your username, picture and whether you're online. VEX stores your Modrinth name and picture, nothing else.</p>
+      <p className="tiny faint">Friends only see your Minecraft name, skin and whether you're online. VEX online stores your Minecraft name, UUID and skin link — nothing else.</p>
     </div>
   );
 }

@@ -12,5 +12,5 @@ import { LogsApp } from "./pages/LogsApp";
 
 const root = createRoot(document.getElementById("root")!);
 // The same app bundle serves the "Minecraft Logs" window (index.html#logs).
-if (location.hash === "#logs") root.render(<StrictMode><LogsApp /></StrictMode>);
+if (location.hash === "#logs") root.render(<StrictMode><AppProvider><LogsApp /></AppProvider></StrictMode>);
 else root.render(<StrictMode><AppProvider><App /></AppProvider></StrictMode>);

@@ -103,34 +103,9 @@ if (-not $dep.Url) { Say $dep.Text; Fail 'Deploying to Cloudflare failed.' }
 $Url = $dep.Url.TrimEnd('/')
 Done "Online at $Url"
 
-# 6. Modrinth application -------------------------------------------------------------------
-Step 6 'Connecting Modrinth sign-in'
-$clientId = Get-TomlValue 'MODRINTH_CLIENT_ID'
-$secrets = Find-Json (Wrangler @('secret', 'list', '--format', 'json') -Capture -NoPrompt).Text '[' ']'
-$hasSecret = [bool]($secrets | Where-Object { $_.name -eq 'MODRINTH_CLIENT_SECRET' })
-if ($clientId -match 'REPLACE' -or -not $clientId -or -not $hasSecret) {
-  $redirect = "$Url/auth/callback"
-  try { Set-Clipboard -Value $redirect } catch { }
-  Say ''
-  Say '      Modrinth is opening in your browser. Click "New application" and fill in:' 'Yellow'
-  Say '        Name:          VEX CLIENT' 'White'
-  Say "        Redirect URI:  $redirect   (already copied - just paste it)" 'White'
-  Say '        Scopes:        only "Read user data"' 'White'
-  Say '      Click Save. You will see a Client ID and a Client Secret.' 'Yellow'
-  try { Start-Process 'https://modrinth.com/settings/applications' } catch { }
-  do {
-    $clientId = (Read-Host '      Paste the Client ID here and press Enter').Trim()
-    if ($clientId -notmatch '^[A-Za-z0-9_-]{4,64}$') { Say '      That does not look like a Client ID - copy it again from Modrinth.' 'Red' }
-  } until ($clientId -match '^[A-Za-z0-9_-]{4,64}$')
-  Set-TomlValue 'MODRINTH_CLIENT_ID' $clientId
-  Say ''
-  Say '      Now paste the Client SECRET when asked below (it stays hidden, and only goes to Cloudflare).' 'Yellow'
-  & npx --yes wrangler secret put MODRINTH_CLIENT_SECRET
-  if ($LASTEXITCODE -ne 0) { Fail 'Saving the Modrinth secret failed.' }
-  $dep = Deploy-Capture
-  if (-not $dep.Url) { Say $dep.Text; Fail 'Redeploying with your Modrinth app failed.' }
-}
-Done "Modrinth app $clientId connected"
+# 6. Sign-in ---------------------------------------------------------------------------------
+Step 6 'Player sign-in'
+Done 'Players sign in with their Minecraft account - nothing to register'
 
 # 7. Check ----------------------------------------------------------------------------------
 Step 7 'Checking it works'

@@ -5,6 +5,8 @@ import { Particles } from "./components/Particles";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { PlayBar } from "./components/PlayBar";
 import { CursorTrail } from "./components/CursorTrail";
+import { LoginScreen } from "./components/LoginScreen";
+import { useState } from "react";
 import { HomePage } from "./pages/Home";
 import { InstancesPage } from "./pages/Instances";
 import { DiscoverPage } from "./pages/Discover";
@@ -19,7 +21,10 @@ import { SettingsPage } from "./pages/Settings";
 const PAGES = { home: HomePage, instances: InstancesPage, discover: DiscoverPage, skins: SkinsPage, features: FeaturesPage, friends: FriendsPage, collab: CollabPage, admin: AdminPage, shop: ShopPage, settings: SettingsPage };
 
 export function App() {
-  const { page, settings, ready } = useApp();
+  const { page, settings, ready, desktop, ms } = useApp();
+  const [skipLogin, setSkipLogin] = useState(false);
+  // Login check: no usable Microsoft account → login screen (can be skipped for this session).
+  const needsLogin = ready && desktop && ms !== null && !ms.accounts.some((a) => a.active && !a.needsLogin);
   const Page = PAGES[page];
   return (
     <>
@@ -30,6 +35,7 @@ export function App() {
       <Sidebar />
       <main className={`main ${page !== "home" ? "with-playbar" : ""}`}>{ready ? <Page key={page} /> : <div className="row muted" style={{ padding: 40 }}><span className="spinner" />Loading…</div>}</main>
       {ready && page !== "home" && <PlayBar />}
+      {needsLogin && !skipLogin && <LoginScreen onSkip={() => setSkipLogin(true)} />}
       <UpdateBanner />
       <Toasts />
     </div>

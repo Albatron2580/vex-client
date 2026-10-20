@@ -5,17 +5,17 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { initLogger, log, logsDir, setVerbose } from "./ipc/logger";
 import { readJson, writeJson } from "./ipc/jsonStore";
-import { lookupSkin } from "./ipc/skins";
+import { lookupSkin, textureDataUrl } from "./ipc/skins";
 import { getVersions } from "./ipc/versions";
 import { listSkins, addSkin, removeSkin } from "./ipc/skinLibrary";
 import { shortcutStatus, setShortcut } from "./ipc/shortcuts";
 import initSqlJs from "sql.js";
 import { defaultRoots, findModrinth, findCurseForge, findPrismLike, findVanilla, findInFolder, copyParts, measure, type FoundInstance, type ImportPart } from "./ipc/importers";
-import { initAccount, setServiceUrl, accountState, login, cancelLogin, logout, friends, setMinecraftTokenSource, linkMinecraft, publicHome, serviceVersion, online, adminApi } from "./ipc/account";
+import { initAccount, setServiceUrl, accountState, login, cancelLogin, logout, friends, setMinecraftTokenSource, linkMinecraft, ensureSignedIn, publicHome, serviceVersion, online, adminApi } from "./ipc/account";
 import { listMods, setModEnabled, removeMod, addMods, modInfo, installedLoaderVersions } from "./ipc/mods";
 import { buildRecipe, installRecipeMods, serverStatus, type Recipe } from "./ipc/collab";
 import { connectGithub, disconnectGithub, publishStatus, publishUpdate } from "./ipc/publish";
-import { setupState, startSetup, provideModrinth, openHelper, setConnectHandler, setupProgress } from "./ipc/onlineSetup";
+import { setupState, startSetup, openHelper, setConnectHandler, setupProgress } from "./ipc/onlineSetup";
 import { logSessions, onGameStarting, activeMinecraftToken, initGame, accountsStatus, addMicrosoftAccount, setActiveAccount, signOutAccount, accountSkin, accountCapes, setAccountCape, gameSettings, setGameSettings, gameState, launchInstance, stopGame, gameLogPath } from "./ipc/game";
 import { checkForUpdates, getUpdateState, installAndRestart, startAutoCheck } from "./ipc/updater";
 import { defaultMinecraftDir, instancesRoot, safeFileName, isInside } from "./ipc/paths";
@@ -88,7 +88,7 @@ function registerIpc() {
     writeJson("settings.json", settings);
     setVerbose(settings.verboseLogging);
     if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: settings.openAtLogin });
-    setServiceUrl(settings.onlineServiceUrl).catch(() => {});
+    setServiceUrl(settings.onlineServiceUrl).then((changed) => { if (changed) return ensureSignedIn(accountsStatus().accounts.find((a) => a.active)?.name ?? null); }).catch(() => {});
     return settings;
   });
 
@@ -119,6 +119,7 @@ function registerIpc() {
   // Skins
   ipcMain.handle("skins:lookup", (_e, name: string) => lookupSkin(String(name ?? "")));
   ipcMain.handle("skins:library", () => listSkins());
+  ipcMain.handle("skins:texture", (_e, url: string) => textureDataUrl(String(url ?? "")));
   ipcMain.handle("skins:add", (_e, name: string, model: string, bytes: Uint8Array) => addSkin(name, model, bytes));
   ipcMain.handle("skins:remove", (_e, id: string) => removeSkin(String(id)));
 
@@ -216,12 +217,12 @@ function registerIpc() {
     settings = validateSettings({ ...settings, onlineServiceUrl: url });
     writeJson("settings.json", settings);
     await setServiceUrl(url);
+    await ensureSignedIn(accountsStatus().accounts.find((a) => a.active)?.name ?? null);
     BrowserWindow.getAllWindows().forEach((w) => w.webContents.send("settings:changed", settings));
   });
   ipcMain.handle("online-setup:state", () => setupState());
   ipcMain.handle("online-setup:progress", () => setupProgress());
   ipcMain.handle("online-setup:start", () => startSetup());
-  ipcMain.handle("online-setup:modrinth", (_e, clientId: string, secret: string) => provideModrinth(clientId, secret));
   ipcMain.handle("online-setup:open", (_e, which: "modrinth" | "cloudflare") => openHelper(which === "cloudflare" ? "cloudflare" : "modrinth"));
 
   // Microsoft accounts + launching Minecraft
@@ -241,9 +242,13 @@ function registerIpc() {
   });
   ipcMain.handle("ms:status", () => accountsStatus());
   setMinecraftTokenSource(activeMinecraftToken);
-  ipcMain.handle("ms:add", async () => { const r = await addMicrosoftAccount(); linkMinecraft().catch(() => {}); return r; });
-  ipcMain.handle("ms:setActive", (_e, uuid: string) => { const r = setActiveAccount(uuid); linkMinecraft().catch(() => {}); return r; });
-  ipcMain.handle("ms:signOut", (_e, uuid: string) => signOutAccount(uuid));
+  // Login check: VEX online always follows the active Microsoft account.
+  const activeName = () => accountsStatus().accounts.find((a) => a.active)?.name ?? null;
+  const loginCheck = () => ensureSignedIn(activeName()).catch(() => {});
+  ipcMain.handle("ms:add", async () => { const r = await addMicrosoftAccount(); loginCheck(); return r; });
+  ipcMain.handle("ms:setActive", (_e, uuid: string) => { const r = setActiveAccount(uuid); loginCheck(); return r; });
+  ipcMain.handle("ms:signOut", (_e, uuid: string) => { const r = signOutAccount(uuid); loginCheck(); return r; });
+  ipcMain.handle("online:loginCheck", () => ensureSignedIn(activeName()));
   ipcMain.handle("ms:skin", (_e, uuid: string) => accountSkin(uuid));
   ipcMain.handle("ms:capes", (_e, uuid: string) => accountCapes(uuid));
   ipcMain.handle("ms:setCape", (_e, uuid: string, id: string | null) => setAccountCape(uuid, id));
@@ -332,7 +337,9 @@ app.whenReady().then(() => {
   initLogger();
   loadSettings();
   registerIpc();
-  initAccount(settings.onlineServiceUrl).catch(() => {});
+  initAccount(settings.onlineServiceUrl)
+    .then(() => ensureSignedIn(accountsStatus().accounts.find((a) => a.active)?.name ?? null))
+    .catch(() => {});
   createWindow();
   startAutoCheck();
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

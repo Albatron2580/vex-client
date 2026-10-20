@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.3.0 — 2026-10-20
+- **No more Modrinth registration.** VEX online signs you in with the Minecraft account you already play with (checked with Mojang). The "Connect Modrinth sign-in" step is gone everywhere.
+- **Login check:** VEX connects to VEX online by itself and follows whichever Microsoft account is active. Signed out? You get the login screen.
+- Friends and Collab use Minecraft names and show real skin faces.
+- The **Minecraft Logs** window now has VEX's own look and follows your theme.
+- Update your online service once for this: Settings → VEX online → Update online service (or finish the setup).
+
 ## 2.2.0 — 2026-10-20
 - **Minecraft Logs window** opens when the game starts: live log with warnings/errors coloured, filter, copy, stop game. Closing it doesn't stop Minecraft. Reopen it from the Play bar or Settings → Game.
 - **Instances** are now rows like the Modrinth app: version, loader version, last played, **PLAY**, **MODS** and a settings menu.

@@ -1,18 +1,16 @@
 # VEX online service
 
-Powers **Sign in with Modrinth** and **Friends** (search, requests, online status) for VEX CLIENT.
+Powers **Friends**, **Collab**, news, the featured server and the **admin panel** for VEX CLIENT. Players sign in with the Minecraft account they already use in VEX — the server checks it with Mojang. Nothing to register.
 It's a Cloudflare Worker with a D1 database — the free tier is plenty.
 
 **Privacy & safety**
-- The Modrinth login happens on modrinth.com in the player's browser. VEX never sees passwords.
-- The Modrinth client secret lives only in Cloudflare. The Modrinth access token is used once to read the player's id, name and avatar, then thrown away.
+- Players sign in with Microsoft on Microsoft's own page inside VEX. VEX sends the server a Minecraft access token once; the server asks Mojang whose it is, keeps the name, UUID and skin link, and drops the token.
 - The launcher gets a VEX session token (stored encrypted with Windows DPAPI). The server stores only a SHA-256 hash of it.
 - Only friends see each other's online status. Search shows name + picture only.
 
 ## Easiest: double-click **`Set up VEX online.bat`**
 It installs what's needed, signs you in to Cloudflare (click **Allow** in the browser), creates the database,
-deploys, walks you through registering VEX on Modrinth (the redirect address is copied for you), and
-points VEX at your new service. If anything stops, fix it and double-click again — finished steps are skipped.
+deploys, and points VEX at your new service. If anything stops, fix it and double-click again — finished steps are skipped.
 
 ## Deploy by hand (about 10 minutes, one time)
 
@@ -31,18 +29,8 @@ npx wrangler d1 create vex-online      # prints a database_id
    npm run db:init
    npm run deploy                     # prints https://vex-online.<your-name>.workers.dev
    ```
-3. Register VEX on Modrinth: **modrinth.com/settings/applications → New application**
-   - Name: `VEX CLIENT`
-   - Redirect URI: `https://vex-online.<your-name>.workers.dev/auth/callback`
-   - Scope: **Read user data** (`USER_READ`) only
-4. Copy the **Client ID** into `wrangler.toml` (`MODRINTH_CLIENT_ID`), then set the secret and redeploy:
-   ```powershell
-   npx wrangler secret put MODRINTH_CLIENT_SECRET   # paste the Client Secret when asked
-   npm run deploy
-   ```
-5. Open `https://vex-online.<your-name>.workers.dev/` — you should see `{"service":"vex-online","ok":true}`.
+3. Open `https://vex-online.<your-name>.workers.dev/` — you should see `{"service":"vex-online","ok":true}`.
 
-Never put the Client Secret in the launcher or in GitHub — only in `wrangler secret put`.
 
 ## Connect the launcher
 - **For everyone (recommended):** put the address in `launcher/electron/config.ts` → `DEFAULT_ONLINE_URL`, then publish a new VEX release. Every player gets it automatically through the updater.
@@ -51,7 +39,8 @@ Never put the Client Secret in the launcher or in GitHub — only in `wrangler s
 ## API (all `/v1/*` routes need `Authorization: Bearer <VEX token>`)
 | Route | Does |
 |---|---|
-| `GET /auth/start?port&state` | Starts Modrinth login, returns to `http://127.0.0.1:<port>/callback` |
+| `POST /auth/minecraft` `{token}` | Sign in with a Minecraft access token (checked with Mojang) → VEX session token |
+| `GET /auth/start?port&state` | Older, optional Modrinth sign-in (needs a Modrinth app) |
 | `GET /v1/me` | Your profile |
 | `POST /v1/presence` `{status, detail}` | Heartbeat (launcher sends every 60 s; online = seen in the last 2 min) |
 | `GET /v1/users/search?q=` | Find players (2+ characters) |

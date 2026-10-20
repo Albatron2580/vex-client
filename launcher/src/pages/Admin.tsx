@@ -51,7 +51,7 @@ function OnlineNeeded() {
   const steps: [boolean, string, React.ReactNode][] = [
     [!!ms?.accounts.some((a) => a.active && isAdminName(a.name)), "Use an admin Minecraft account", "Add or switch to HAckerbest11, RaxMc or UNCdel in the account menu (bottom left)."],
     [!!account?.configured, "Set up the VEX online service", <button key="b" className="btn primary sm" disabled={!desktop} onClick={() => setWizard(true)}><Icon name="sparkle" size={14} />Set up / continue</button>],
-    [!!account?.signedIn, "Sign in with Modrinth", account?.configured ? <button key="m" className="btn sm" disabled={busy} onClick={async () => { setBusy(true); try { await vex().account.login(); } catch { /* shown in the wizard/toast elsewhere */ } finally { setBusy(false); } }}>{busy ? <span className="spinner" /> : <Icon name="user" size={14} />}Sign in with Modrinth</button> : "After the online service is set up."],
+    [!!account?.signedIn, "Connected to VEX online", account?.configured ? <button key="m" className="btn sm" disabled={busy} onClick={async () => { setBusy(true); try { await vex().online.loginCheck(); } catch { /* shown on the Friends page */ } finally { setBusy(false); } }}>{busy ? <span className="spinner" /> : <Icon name="refresh" size={14} />}Connect</button> : "Happens automatically after the online service is set up."],
   ];
   const next = steps.findIndex(([done]) => !done);
   return (

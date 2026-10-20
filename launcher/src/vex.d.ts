@@ -54,6 +54,7 @@ declare global {
       skins: {
         lookup(name: string): Promise<SkinLookupResult>;
         library(): Promise<LibrarySkin[]>;
+        texture(url: string): Promise<string>;
         add(name: string, model: string, bytes: Uint8Array): Promise<LibrarySkin>;
         remove(id: string): Promise<boolean>;
       };
@@ -86,7 +87,7 @@ declare global {
       loaderVersions(): Promise<Record<string, string>>;
       online: {
         home(): Promise<PublicHome>; serviceVersion(): Promise<string | null>; bundledServerVersion(): Promise<string | null>;
-        link(): Promise<AccountState>; reportBug(title: string, body: string): Promise<unknown>;
+        link(): Promise<AccountState>; loginCheck(): Promise<AccountState>; reportBug(title: string, body: string): Promise<unknown>;
         serverStatus(address: string): Promise<ServerStatus>;
       };
       collab: {
@@ -110,7 +111,7 @@ declare global {
         add(id: string): Promise<{ relation: string }>; remove(id: string): Promise<{ relation: string }>;
       };
       onlineSetup: {
-        state(): Promise<SetupState>; progress(): Promise<{ started: boolean; database: boolean; deployed: boolean; url: string | null; modrinth: boolean }>; start(): Promise<SetupState>; modrinth(clientId: string, secret: string): Promise<SetupState>;
+        state(): Promise<SetupState>; progress(): Promise<{ started: boolean; database: boolean; deployed: boolean; url: string | null }>; start(): Promise<SetupState>;
         open(which: "modrinth" | "cloudflare"): Promise<void>; onState(cb: (s: SetupState) => void): () => void;
       };
       onSettingsChanged(cb: (s: LauncherSettings) => void): () => void;
