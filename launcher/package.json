@@ -1,8 +1,8 @@
 {
   "name": "vex-client-launcher",
   "productName": "VEX CLIENT",
-  "version": "2.3.0",
-  "description": "VEX CLIENT \u2014 Minecraft launcher. Play different.",
+  "version": "2.3.1",
+  "description": "VEX CLIENT — Minecraft launcher. Play different.",
   "author": "Albatron2580",
   "license": "UNLICENSED",
   "private": true,

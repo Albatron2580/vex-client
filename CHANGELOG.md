@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2.3.1 — 2026-10-20
+- Fix: the Friends page now says why VEX online couldn't connect, and offers Update online service when your service is outdated.
+
+## 2.3.1 — 2026-10-20
 - **Fix:** "Couldn't connect to VEX online" now says *why*. When your online service is older than VEX (the usual cause after 2.3.0), the **Update online service** button shows right there on the Friends page.
 - Online service 2.2.0 (needed for the upcoming in-game V badge).
 
