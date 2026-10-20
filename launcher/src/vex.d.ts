@@ -83,6 +83,7 @@ declare global {
         list(id: string): Promise<ModFile[]>; info(hashes: string[]): Promise<Record<string, ModInfo>>;
         toggle(id: string, file: string, enabled: boolean): Promise<ModFile[]>; remove(id: string, file: string): Promise<ModFile[]>;
         add(id: string): Promise<{ added: number; mods: ModFile[] } | null>;
+        copyFrom(id: string, inst: FoundInstance): Promise<{ added: number; skipped: number; mods: ModFile[] }>;
       };
       loaderVersions(): Promise<Record<string, string>>;
       online: {

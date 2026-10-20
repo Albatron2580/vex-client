@@ -4,7 +4,7 @@ import { Icon } from "../components/Icon";
 import { useApp } from "../state/AppState";
 import { vex, errMsg } from "../lib/bridge";
 import type { Instance } from "../../electron/shared/settingsModel";
-import type { ModFile, ModInfo } from "../vex";
+import type { FoundInstance, ModFile, ModInfo } from "../vex";
 
 const pretty = (f: string) => f.replace(/\.jar(\.disabled)?$/i, "").replace(/[-_+]/g, " ");
 const kb = (n: number) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
@@ -15,6 +15,7 @@ export function ModsDialog({ inst, onClose }: { inst: Instance; onClose(): void 
   const [info, setInfo] = useState<Record<string, ModInfo>>({});
   const [q, setQ] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
   const running = game.state !== "idle" && game.profileId === inst.id;
 
   const apply = async (p: Promise<ModFile[] | { mods: ModFile[]; added: number } | null>) => {
@@ -36,6 +37,7 @@ export function ModsDialog({ inst, onClose }: { inst: Instance; onClose(): void 
       <div className="stack">
         <div className="row">
           <div style={{ flex: 1 }}><SearchBar value={q} onChange={setQ} placeholder="Search mods" /></div>
+          <button className="btn" disabled={running} onClick={() => setCopying(true)}><Icon name="download" size={15} />Copy from launcher</button>
           <button className="btn" disabled={running} onClick={() => apply(vex().mods.add(inst.id))}><Icon name="plus" size={15} />Add .jar</button>
           <button className="btn icon" aria-label="Open mods folder" title="Open mods folder" onClick={() => vex().files.open("path", `${inst.gameDir}${inst.gameDir.includes("\\") ? "\\" : "/"}mods`)}><Icon name="folder" size={15} /></button>
         </div>
@@ -60,6 +62,63 @@ export function ModsDialog({ inst, onClose }: { inst: Instance; onClose(): void 
               );
             })}
         </div>
+      </div>
+      {copying && <CopyFrom inst={inst} onClose={() => setCopying(false)} onDone={(list) => apply(Promise.resolve(list))} />}
+    </Modal>
+  );
+}
+
+/** Pick an instance in another launcher (Modrinth App, NoRisk Client, Minecraft Launcher, CurseForge, Prism…) and copy its mods in. */
+function CopyFrom({ inst, onClose, onDone }: { inst: Instance; onClose(): void; onDone(mods: ModFile[]): void }) {
+  const { toast } = useApp();
+  const [found, setFound] = useState<FoundInstance[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => { vex().importer.scan().then((f) => setFound(f.filter((x) => (x.modCount ?? 0) > 0))).catch((e) => { setError(errMsg(e)); setFound([]); }); }, []);
+  const groups = useMemo(() => {
+    const m = new Map<string, FoundInstance[]>();
+    for (const f of found ?? []) m.set(f.sourceLabel, [...(m.get(f.sourceLabel) ?? []), f]);
+    return [...m.entries()];
+  }, [found]);
+  const copy = async (f: FoundInstance) => {
+    const key = f.gameDir + (f.modsDir ?? "");
+    setBusy(key); setError(null);
+    try {
+      const r = await vex().mods.copyFrom(inst.id, f);
+      onDone(r.mods);
+      toast("success", `Copied ${r.added} mod${r.added === 1 ? "" : "s"} from ${f.sourceLabel}`, r.skipped ? `${r.skipped} were already here. Your ${f.sourceLabel} files weren't changed.` : `Your ${f.sourceLabel} files weren't changed.`);
+      onClose();
+    } catch (e) { setError(errMsg(e)); } finally { setBusy(null); }
+  };
+  return (
+    <Modal title="Copy mods from another launcher" onClose={onClose}>
+      <div className="stack">
+        <span className="small muted">Pick an instance. Its mod files are copied into <b>{inst.name}</b>; nothing in the other launcher is moved or changed.</span>
+        {error && <Notice kind="danger">{error}</Notice>}
+        {found === null ? <div className="row small muted"><span className="spinner" />Looking in Modrinth App, NoRisk Client, Minecraft Launcher, CurseForge and Prism…</div>
+          : !found.length ? <div className="empty"><Icon name="search" size={26} /><span className="small">No instances with mods found in other launchers on this PC.</span></div>
+          : <div className="mods-list" style={{ maxHeight: 380 }}>
+              {groups.map(([label, list]) => (
+                <div key={label} className="stack" style={{ gap: 6 }}>
+                  <b className="tiny faint" style={{ textTransform: "uppercase", letterSpacing: ".08em" }}>{label}</b>
+                  {list.map((f) => {
+                    const key = f.gameDir + (f.modsDir ?? "");
+                    const mismatch = (f.version && f.version !== inst.version) || (f.loader !== "vanilla" && f.loader !== inst.loader);
+                    return (
+                      <div key={key} className="mod-row">
+                        <span className="inst-tile ghost" style={{ width: 36, height: 36 }}><Icon name="cube" size={16} /></span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <b className="small" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</b>
+                          <span className="tiny faint">{[f.loader !== "vanilla" ? f.loader : null, f.version, `${f.modCount} mods`].filter(Boolean).join(" · ")}</span>
+                          {mismatch && <span className="tiny" style={{ display: "block", color: "var(--warn, #f5b84b)" }}>Made for {f.loader} {f.version ?? ""}; this instance is {inst.loader} {inst.version}. Some mods may not load.</span>}
+                        </div>
+                        <button className="btn sm primary" disabled={!!busy} onClick={() => copy(f)}>{busy === key ? <span className="spinner" /> : <Icon name="download" size={14} />}Copy</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>}
       </div>
     </Modal>
   );

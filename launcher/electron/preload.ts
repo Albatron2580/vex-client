@@ -71,6 +71,7 @@ const api = {
     toggle: (id: string, file: string, enabled: boolean) => ipcRenderer.invoke("mods:toggle", id, file, enabled),
     remove: (id: string, file: string) => ipcRenderer.invoke("mods:remove", id, file),
     add: (id: string) => ipcRenderer.invoke("mods:add", id),
+    copyFrom: (id: string, inst: unknown) => ipcRenderer.invoke("mods:copyFrom", id, inst),
   },
   loaderVersions: () => ipcRenderer.invoke("instances:loaderVersions"),
   online: {

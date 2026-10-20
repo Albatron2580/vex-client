@@ -13,7 +13,7 @@ const PARTS: { id: ImportPart; label: string; desc: string; on: boolean }[] = [
   { id: "shaderpacks", label: "Shader packs", desc: "", on: true },
   { id: "worlds", label: "Worlds", desc: "Singleplayer saves — can be big", on: false },
 ];
-const SOURCE_ICON: Record<string, string> = { modrinth: "cube", curseforge: "cube", prism: "cube", multimc: "cube", vanilla: "sparkle", folder: "folder" };
+const SOURCE_ICON: Record<string, string> = { modrinth: "cube", curseforge: "cube", prism: "cube", multimc: "cube", vanilla: "sparkle", norisk: "shield", folder: "folder" };
 const fmtSize = (b: number) => (b > 1e9 ? `${(b / 1e9).toFixed(1)} GB` : b > 1e6 ? `${(b / 1e6).toFixed(0)} MB` : `${Math.max(1, Math.round(b / 1e3))} KB`);
 
 export function ImportDialog({ onClose }: { onClose(): void }) {

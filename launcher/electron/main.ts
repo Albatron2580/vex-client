@@ -10,7 +10,7 @@ import { getVersions } from "./ipc/versions";
 import { listSkins, addSkin, removeSkin } from "./ipc/skinLibrary";
 import { shortcutStatus, setShortcut } from "./ipc/shortcuts";
 import initSqlJs from "sql.js";
-import { defaultRoots, findModrinth, findCurseForge, findPrismLike, findVanilla, findInFolder, copyParts, measure, type FoundInstance, type ImportPart } from "./ipc/importers";
+import { defaultRoots, findModrinth, findNoRisk, findCurseForge, findPrismLike, findVanilla, findInFolder, copyParts, copyModJars, modJars, measure, type FoundInstance, type ImportPart } from "./ipc/importers";
 import { initAccount, setServiceUrl, accountState, login, cancelLogin, logout, friends, setMinecraftTokenSource, linkMinecraft, ensureSignedIn, publicHome, serviceVersion, online, adminApi } from "./ipc/account";
 import { listMods, setModEnabled, removeMod, addMods, modInfo, installedLoaderVersions } from "./ipc/mods";
 import { buildRecipe, installRecipeMods, serverStatus, type Recipe } from "./ipc/collab";
@@ -172,10 +172,10 @@ function registerIpc() {
     const r = defaultRoots();
     const mc = settings.minecraftDir || defaultMinecraftDir();
     const results = await Promise.allSettled([
-      findModrinth(r.modrinth, sqlLoader), Promise.resolve(findCurseForge(r.curseforge)), Promise.resolve(findPrismLike(r.prism, "prism")),
+      findModrinth(r.modrinth, sqlLoader), findNoRisk(r.norisk, sqlLoader), Promise.resolve(findCurseForge(r.curseforge)), Promise.resolve(findPrismLike(r.prism, "prism")),
       Promise.resolve(r.multimc.flatMap((d) => findPrismLike(d, "multimc"))), Promise.resolve(findVanilla(mc)),
     ]);
-    const found = results.flatMap((x) => (x.status === "fulfilled" ? x.value : []));
+    const found = results.flatMap((x) => (x.status === "fulfilled" ? x.value : [])).map((f) => ({ ...f, modCount: modJars(f).length }));
     log("info", `Import scan found ${found.length} instance(s)`);
     return found;
   });
@@ -268,6 +268,15 @@ function registerIpc() {
   ipcMain.handle("mods:info", (_e, hashes: string[]) => modInfo(Array.isArray(hashes) ? hashes.slice(0, 1000).map(String) : []));
   ipcMain.handle("mods:toggle", (_e, id: string, file: string, enabled: boolean) => setModEnabled(instDir(String(id)), String(file), !!enabled));
   ipcMain.handle("mods:remove", (_e, id: string, file: string) => removeMod(instDir(String(id)), String(file)));
+  // Copy the mod jars of an instance in another launcher (Modrinth App, NoRisk Client, Minecraft Launcher…) into this one.
+  ipcMain.handle("mods:copyFrom", async (_e, id: string, inst: FoundInstance) => {
+    const dir = instDir(String(id));
+    if (!inst || typeof inst.gameDir !== "string" || !fs.existsSync(inst.gameDir)) throw new Error("That launcher folder no longer exists.");
+    const src = { ...inst, modsDir: typeof inst.modsDir === "string" ? inst.modsDir : undefined };
+    const r = await copyModJars(src, dir);
+    log("info", `Copied ${r.added} mod(s) from ${inst.sourceLabel} “${inst.name}” (${r.skipped} already there)`);
+    return { added: r.added, skipped: r.skipped, mods: listMods(dir) };
+  });
   ipcMain.handle("mods:add", async (_e, id: string) => {
     const dir = instDir(String(id));
     const r = await dialog.showOpenDialog(win!, { title: "Add mods (.jar)", properties: ["openFile", "multiSelections"], filters: [{ name: "Minecraft mods", extensions: ["jar"] }] });
