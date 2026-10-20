@@ -51,6 +51,7 @@ export interface LauncherSettings {
   sidebarCollapsed: boolean;
   trail: TrailSettings;
   onlineServiceUrl: string;   // "" = use the built-in default
+  vexMod: boolean;            // put the VEX in-game mod (+ Fabric API) into Fabric instances it supports
 }
 
 export const DEFAULT_SETTINGS: LauncherSettings = {
@@ -75,6 +76,7 @@ export const DEFAULT_SETTINGS: LauncherSettings = {
   sidebarCollapsed: false,
   trail: DEFAULT_TRAIL,
   onlineServiceUrl: "",
+  vexMod: true,
 };
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -167,6 +169,7 @@ export function validateSettings(input: unknown): LauncherSettings {
     recentInstanceIds: Array.isArray(r.recentInstanceIds) ? r.recentInstanceIds.filter((x): x is string => typeof x === "string").slice(0, 8) : [],
     selectedInstanceId: typeof r.selectedInstanceId === "string" ? r.selectedInstanceId : null,
     sidebarCollapsed: bool("sidebarCollapsed"),
+    vexMod: bool("vexMod"),
     trail: validateTrail(r.trail),
     onlineServiceUrl: typeof r.onlineServiceUrl === "string" && isServiceUrl(r.onlineServiceUrl) ? r.onlineServiceUrl.replace(/\/+$/, "") : "",
   };

@@ -12,7 +12,7 @@ export interface Env {
   ADMINS?: string;        // comma-separated Minecraft names; defaults to DEFAULT_ADMINS
 }
 
-const SERVER_VERSION = "2.1.0";
+const SERVER_VERSION = "2.2.0";
 // Admins are checked against the Minecraft account the player linked — the server verifies that
 // account with Mojang itself, so nobody can make themselves an admin by renaming anything.
 const DEFAULT_ADMINS = "HAckerbest11,RaxMc,UNCdel";
@@ -170,6 +170,12 @@ async function api(req: Request, url: URL, env: Env, me: UserRow) {
     return json({ mcName: prof.name, admin: isAdmin(env, updated) });
   }
 
+  // The in-game mod: "this player is in Minecraft with VEX right now" (shows the grey V badge to other VEX players).
+  if (p === "/v1/mod/presence" && req.method === "POST") {
+    await env.DB.prepare("UPDATE users SET mod_seen = ? WHERE id = ?").bind(now(), me.id).run();
+    return json({ ok: true, uuid: me.mc_uuid });
+  }
+
   // Bug reports from players.
   if (p === "/v1/bugs" && req.method === "POST") {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -288,6 +294,14 @@ async function getConfig(env: Env, key: string) {
   try { return r ? JSON.parse(r.value) : null; } catch { return null; }
 }
 
+// Minecraft UUIDs (no dashes) of players who had the VEX mod open in the last few minutes. Only UUIDs,
+// which every Minecraft server already shows, so this is safe to be public.
+const MOD_ONLINE_MS = 5 * 60_000;
+async function vexPlayers(env: Env) {
+  const { results } = await env.DB.prepare("SELECT mc_uuid FROM users WHERE mod_seen > ? AND mc_uuid IS NOT NULL AND banned = 0 LIMIT 5000").bind(now() - MOD_ONLINE_MS).all<{ mc_uuid: string }>();
+  return new Response(JSON.stringify({ uuids: results.map((r) => r.mc_uuid.replace(/-/g, "").toLowerCase()) }), { headers: { "content-type": "application/json", "cache-control": "public, max-age=30" } });
+}
+
 async function publicHome(env: Env) {
   const { results } = await env.DB.prepare("SELECT id, title, body, kind, author, created_at FROM announcements ORDER BY created_at DESC LIMIT 5").all<any>();
   return json({
@@ -373,6 +387,7 @@ export default {
     try {
       if (url.pathname === "/") return json({ service: "vex-online", ok: true, version: SERVER_VERSION });
       if (url.pathname === "/v1/public/home" && req.method === "GET") return await publicHome(env);
+      if (url.pathname === "/v1/public/vex-players" && req.method === "GET") return await vexPlayers(env);
       if (url.pathname === "/auth/minecraft" && req.method === "POST") return await authMinecraft(req, env);
       if (url.pathname === "/auth/start") return await authStart(url, env);
       if (url.pathname === "/auth/callback") return await authCallback(url, env);

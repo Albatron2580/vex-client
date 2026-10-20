@@ -6,6 +6,7 @@ import { useApp } from "../state/AppState";
 import { vex, errMsg } from "../lib/bridge";
 import type { Friend } from "../vex";
 import { OnlineSetupWizard } from "../features/OnlineSetupWizard";
+import { ServiceUpdate } from "../components/ServiceUpdate";
 
 type Lists = { friends: Friend[]; incoming: Friend[]; outgoing: Friend[] };
 type Found = Friend & { relation: "none" | "friends" | "outgoing" | "incoming" };
@@ -30,7 +31,7 @@ export function SignInCard({ compact }: { compact?: boolean }) {
   useEffect(() => {
     if (!account?.configured || account.signedIn || !active || active.needsLogin || !window.vex) return;
     setBusy(true); setError(null);
-    window.vex.online.loginCheck().then((s) => { if (!s.signedIn) setError("Couldn't connect to VEX online."); }).catch((e) => setError(errMsg(e))).finally(() => setBusy(false));
+    window.vex.online.loginCheck().then((s) => { if (!s.signedIn) setError(s.loginError || "Couldn't connect to VEX online."); }).catch((e) => setError(errMsg(e))).finally(() => setBusy(false));
   }, [account?.configured, account?.signedIn, active?.uuid]);
   const align = { alignItems: compact ? "flex-start" : "center", textAlign: compact ? "left" : "center", gap: 10 } as const;
 
@@ -62,7 +63,8 @@ export function SignInCard({ compact }: { compact?: boolean }) {
       {busy ? <div className="row small muted"><span className="spinner" />Connecting as {active.name}…</div>
         : <>
             {error && <span className="small" style={{ color: "var(--danger)", maxWidth: 440 }}>{error}</span>}
-            <button className="btn primary" onClick={async () => { setBusy(true); setError(null); try { const st = await window.vex!.online.loginCheck(); if (!st.signedIn) setError("Couldn't connect to VEX online."); } catch (e) { setError(errMsg(e)); } finally { setBusy(false); } }}>
+            {error && <div style={{ maxWidth: 480, width: "100%" }}><ServiceUpdate /></div>}
+            <button className="btn primary" onClick={async () => { setBusy(true); setError(null); try { const st = await window.vex!.online.loginCheck(); if (!st.signedIn) setError(st.loginError || "Couldn't connect to VEX online."); } catch (e) { setError(errMsg(e)); } finally { setBusy(false); } }}>
               <Icon name="refresh" size={16} />Connect as {active.name}</button>
           </>}
       {wiz}

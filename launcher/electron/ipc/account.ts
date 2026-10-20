@@ -11,10 +11,11 @@ import { log } from "./logger";
 import { DEFAULT_ONLINE_URL } from "../config";
 
 export interface Profile { id: string; username: string; avatar: string | null; mcName?: string | null; admin?: boolean }
-export interface AccountState { configured: boolean; serviceUrl: string; signedIn: boolean; profile: Profile | null; persistent: boolean }
+export interface AccountState { configured: boolean; serviceUrl: string; signedIn: boolean; profile: Profile | null; persistent: boolean; loginError: string | null }
 
 let serviceUrl = "";
 let token: string | null = null;
+let loginError: string | null = null;  // why the last automatic sign-in failed (shown on the Friends page)
 let profile: Profile | null = null;
 let heartbeat: NodeJS.Timeout | null = null;
 let pendingLogin: { server: http.Server; reject: (e: Error) => void } | null = null;
@@ -24,7 +25,7 @@ const canEncrypt = () => { try { return safeStorage.isEncryptionAvailable(); } c
 const broadcast = () => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send("account:changed", accountState()));
 
 export function accountState(): AccountState {
-  return { configured: !!serviceUrl, serviceUrl, signedIn: !!token && !!profile, profile, persistent: canEncrypt() };
+  return { configured: !!serviceUrl, serviceUrl, signedIn: !!token && !!profile, profile, persistent: canEncrypt(), loginError: token && profile ? null : loginError };
 }
 
 export async function initAccount(url: string) {
@@ -147,7 +148,7 @@ export function login(): Promise<AccountState> {
         body: JSON.stringify({ token: mc.token }), signal: AbortSignal.timeout(20_000) });
     } catch { throw new Error("Couldn't reach the VEX server. Check your internet connection."); }
     const data: any = await res.json().catch(() => ({}));
-    if (res.status === 404) throw new Error("Your online service is older than this VEX. Update it: Settings → VEX online → Update online service.");
+    if (res.status === 404) throw new Error("Your online service is older than this VEX, so it can't sign you in yet. Update it below (on the PC that set it up).");
     if (!res.ok || !data.token) throw new Error(data.error ?? `VEX server error (${res.status})`);
     token = data.token;
     if (canEncrypt()) fs.writeFileSync(tokenFile(), safeStorage.encryptString(data.token));
@@ -163,8 +164,8 @@ export async function ensureSignedIn(activeName: string | null) {
   if (!serviceUrl) return accountState();
   if (!activeName) { if (token) await logout(true); return accountState(); }
   if (token && profile && (profile.mcName ?? profile.username)?.toLowerCase() === activeName.toLowerCase()) return accountState();
-  try { return await login(); }
-  catch (e: any) { log("warn", `Automatic VEX online sign-in failed: ${e.message}`); broadcast(); return accountState(); }
+  try { const st = await login(); loginError = null; return st; }
+  catch (e: any) { loginError = e?.message || "Couldn't connect to VEX online."; log("warn", `Automatic VEX online sign-in failed: ${loginError}`); broadcast(); return accountState(); }
 }
 
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);

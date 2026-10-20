@@ -8,9 +8,9 @@ import { vex, errMsg } from "../lib/bridge";
 import { DEFAULT_SETTINGS, DEFAULT_TRAIL, type ThemeDef, type TrailSettings, type TrailStyle } from "../../electron/shared/settingsModel";
 import type { ShortcutStatus, GameSettings } from "../vex";
 import { McHead } from "../components/McHead";
-import { OnlineSetupWizard } from "../features/OnlineSetupWizard";
 import { useUpdateState } from "../components/UpdateBanner";
 import { SignInCard } from "./Friends";
+import { ServiceUpdate } from "../components/ServiceUpdate";
 import { Avatar } from "../components/Shell";
 import { isServiceUrl } from "../../electron/shared/settingsModel";
 
@@ -83,24 +83,6 @@ function GameCard() {
         <button className="btn sm" onClick={() => window.vex!.game.openLog()}><Icon name="folder" size={14} />Open log file</button>
       </div>
     </Card>
-  );
-}
-
-function ServiceUpdate() {
-  const { account } = useApp();
-  const [v, setV] = useState<{ deployed: string | null; bundled: string | null } | null>(null);
-  const [wizard, setWizard] = useState(false);
-  useEffect(() => {
-    if (!account?.configured || !window.vex) return;
-    Promise.all([window.vex.online.serviceVersion(), window.vex.online.bundledServerVersion()]).then(([deployed, bundled]) => setV({ deployed, bundled }));
-  }, [account?.configured, wizard]);
-  if (!v?.deployed || !v.bundled || v.deployed === v.bundled) return wizard ? <OnlineSetupWizard onClose={() => setWizard(false)} /> : null;
-  return (
-    <>
-      <Notice kind="warn"><b>Your online service can be updated</b> ({v.deployed} → {v.bundled}) for Collab, admin, news and bug reports. Do this on the PC that set it up.
-        <div style={{ marginTop: 8 }}><button className="btn primary sm" onClick={() => setWizard(true)}><Icon name="refresh" size={14} />Update online service</button></div></Notice>
-      {wizard && <OnlineSetupWizard onClose={() => setWizard(false)} />}
-    </>
   );
 }
 

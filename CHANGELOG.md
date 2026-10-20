@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.1 — 2026-10-20
+- **Fix:** "Couldn't connect to VEX online" now says *why*. When your online service is older than VEX (the usual cause after 2.3.0), the **Update online service** button shows right there on the Friends page.
+- Online service 2.2.0 (needed for the upcoming in-game V badge).
+
 ## 2.3.0 — 2026-10-20
 - **No more Modrinth registration.** VEX online signs you in with the Minecraft account you already play with (checked with Mojang). The "Connect Modrinth sign-in" step is gone everywhere.
 - **Login check:** VEX connects to VEX online by itself and follows whichever Microsoft account is active. Signed out? You get the login screen.

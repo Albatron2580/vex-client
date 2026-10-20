@@ -27,7 +27,7 @@ export interface AdminOverview { users: number; online: number; newWeek: number;
 export interface AdminUser { id: string; username: string; avatar: string | null; online: boolean; status: string; lastSeen: number | null; mcName: string | null; banned: boolean; admin: boolean; joined: number }
 export interface BugReport { id: number; title: string; body: string; version: string | null; status: string; createdAt: number; by: string }
 export interface GithubStatus { connected: boolean; login?: string; runs?: { id: number; status: string; conclusion: string | null; createdAt: string; url: string; title: string }[]; releases?: { tag: string; name: string; publishedAt: string; url: string }[] }
-export interface AccountState { configured: boolean; serviceUrl: string; signedIn: boolean; profile: Profile | null; persistent: boolean }
+export interface AccountState { configured: boolean; serviceUrl: string; signedIn: boolean; profile: Profile | null; persistent: boolean; loginError?: string | null }
 export interface Friend extends Profile { online?: boolean; status?: "online" | "playing" | "offline"; detail?: string | null; lastSeen?: number | null }
 export interface MsAccount { uuid: string; name: string; active: boolean; needsLogin: boolean }
 export interface MsStatus { secureStorage: boolean; accounts: MsAccount[] }
