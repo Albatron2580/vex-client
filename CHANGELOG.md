@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.1 — 2026-10-20
+- **Right Shift menu** redone as see-through glass circles around your face. Click your face for every module on one page; just type to search.
+- **"Couldn't connect to VEX online" fixed for good:** when your online service is older than VEX and was set up on this PC, VEX updates it by itself in the background and connects when it's done. Otherwise it tells you exactly why.
+- The "online service can be updated" notice no longer sticks around after updating.
+
 ## 2.4.0 — 2026-10-20
 - VEX in Minecraft: the launcher adds the VEX mod + Fabric API to Fabric 1.21.11 instances. Right Shift opens the petal menu (Client, Settings, Misc, Mod Menu, Combat) with search, GUI Settings, themes, combat HUD (addons only), and the grey V badge.
 
