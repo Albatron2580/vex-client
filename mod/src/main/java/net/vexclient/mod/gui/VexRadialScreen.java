@@ -81,8 +81,11 @@ public final class VexRadialScreen extends VexScreen {
     protected void draw() {
         open = Math.min(1f, open + dt * 5f);
         float ease = 1f - (1f - open) * (1f - open);
-        int cx = W / 2, cy = H / 2 - 16;
-        float R = Math.max(62, Math.min(112, Math.min(W, H) * 0.27f)) * (0.85f + 0.15f * ease);
+        // fit the flower between the header (ends at y 36) and the hint above the search bar (H - 48)
+        int top = 40, bottom = H - 50;
+        float R0 = Math.max(40, Math.min(112, Math.min(W * 0.27f, (bottom - top) / 2.8f)));
+        int cx = W / 2, cy = Math.round(top + 1.5f * R0);
+        float R = R0 * (0.85f + 0.15f * ease);
 
         // header
         int tw = Ui.titleWidth(this.font, 1.5f);
