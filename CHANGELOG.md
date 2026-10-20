@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2.3.2 — 2026-10-20
+- Copy mods from another launcher (Modrinth App, NoRisk Client, Minecraft Launcher, CurseForge, Prism) into any instance: Instances → MODS → Copy from launcher. NoRisk Client profiles also show up in Import.
+
+## 2.3.2 — 2026-10-20
 - **Copy mods from another launcher** into any instance: Instances → MODS → **Copy from launcher**. Works with the Modrinth App, **NoRisk Client**, the normal Minecraft Launcher, CurseForge and Prism/MultiMC. Mods already in the instance are skipped; nothing in the other launcher is changed.
 - **NoRisk Client** profiles now also show up in Import.
 - Mods kept in version subfolders (like NoRisk's `nrc-…` folders) are copied as normal mods so Fabric loads them.
