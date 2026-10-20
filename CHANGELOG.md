@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2.4.1 — 2026-10-20
+- Glass-circle Right Shift menu. VEX online: updates your online service by itself when it's too old and connects when done; always says why sign-in failed.
+
+## 2.4.1 — 2026-10-20
 - **Right Shift menu** redone as see-through glass circles around your face. Click your face for every module on one page; just type to search.
 - **"Couldn't connect to VEX online" fixed for good:** when your online service is older than VEX and was set up on this PC, VEX updates it by itself in the background and connects when it's done. Otherwise it tells you exactly why.
 - The "online service can be updated" notice no longer sticks around after updating.
