@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.0 — 2026-10-20
+- **VEX in Minecraft.** VEX now adds its in-game mod (and Fabric API) to your Fabric 1.21.11 instances before they start. Turn it off in Settings → Game.
+- **Right Shift opens the VEX menu:** five petals around your head and name (Client, Settings, Misc, **Mod Menu**, Combat) and a search bar for every module and setting. Just start typing.
+- **GUI Settings:** Show Particles, Background Dim, Tooltips, Always Show Advanced, Edit HUD Layout, Notification Sound, Themes (Sakura, Vex, Aurora, Midnight, Mono), GUI Scale (Auto/1x/2x/3x), Auto Switch Profiles.
+- **Combat** (addons only, no hacks): CPS, reach display, combo counter, armor and a low health warning. Flight and player outlines are gone.
+- **Grey V badge** in the tab list and above the heads of other VEX players, so people can see you play with VEX. Needs the online service update (Settings → VEX online).
+- The game window, title screen and HUD say **VEX CLIENT**.
+
 ## 2.3.2 — 2026-10-20
 - Copy mods from another launcher (Modrinth App, NoRisk Client, Minecraft Launcher, CurseForge, Prism) into any instance: Instances → MODS → Copy from launcher. NoRisk Client profiles also show up in Import.
 
