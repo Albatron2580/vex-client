@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { isAdminName } from "../../electron/shared/settingsModel";
 import { McHead } from "./McHead";
 import { errMsg } from "../lib/bridge";
 import { useApp, type PageId } from "../state/AppState";
@@ -29,9 +30,10 @@ export function TitleBar() {
 }
 
 export function Sidebar() {
-  const { page, go, t, settings, update, account } = useApp();
+  const { page, go, t, settings, update, account, ms } = useApp();
   const collapsed = settings.sidebarCollapsed;
-  const isAdmin = !!account?.profile?.admin;
+  // Shown for admin Minecraft accounts; every admin action is still checked by the server.
+  const isAdmin = !!account?.profile?.admin || isAdminName(ms?.accounts.find((a) => a.active)?.name);
   return (
     <nav className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Main">
       <div className="brand"><Logo size={collapsed ? 34 : 40} />{!collapsed && <div className="brand-name">VEX<small>CLIENT</small></div>}</div>

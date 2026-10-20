@@ -18,7 +18,36 @@ export interface GameHooks {
 }
 let hooks: GameHooks;
 
-const send = (ev: unknown) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send("game:event", ev));
+const send = (ev: unknown) => { record(ev); BrowserWindow.getAllWindows().forEach((w) => w.webContents.send("game:event", ev)); };
+
+// ---------- log sessions for the Minecraft Logs window ----------
+export interface LogSession { id: string; instanceId: string; name: string; state: "starting" | "running" | "closed"; startedAt: number; endedAt: number | null; code: number | null; lines: string[] }
+const MAX_LINES = 8000;
+const sessions: LogSession[] = [];
+let current: LogSession | null = null;
+let onStart: () => void = () => {};
+export function onGameStarting(fn: () => void) { onStart = fn; }
+function record(ev: any) {
+  if (ev?.type === "game" && ev.state === "starting") {
+    const inst = hooks.instances().find((i) => i.id === ev.profileId);
+    current = { id: `${ev.profileId}-${Date.now()}`, instanceId: ev.profileId, name: inst?.name ?? "Minecraft", state: "starting", startedAt: Date.now(), endedAt: null, code: null, lines: [] };
+    sessions.unshift(current); sessions.splice(6);
+    onStart();
+  } else if (current && ev?.type === "status") {
+    current.lines.push(`[VEX] ${ev.text}`);
+  } else if (current && ev?.type === "log" && Array.isArray(ev.lines)) {
+    current.lines.push(...ev.lines);
+    if (current.lines.length > MAX_LINES) current.lines.splice(0, current.lines.length - MAX_LINES);
+  } else if (current && ev?.type === "game") {
+    if (ev.state === "running") current.state = "running";
+    if (ev.state === "closed" || ev.state === "idle") {
+      current.state = "closed"; current.endedAt = Date.now(); current.code = ev.code ?? null;
+      current.lines.push(ev.state === "closed" ? `[VEX] Minecraft closed${ev.code != null ? ` (exit code ${ev.code})` : ""}.` : "[VEX] Minecraft didn't start.");
+      current = null;
+    }
+  }
+}
+export const logSessions = () => sessions;
 
 export function initGame(h: GameHooks) {
   hooks = h;

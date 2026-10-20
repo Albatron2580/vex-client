@@ -5,6 +5,7 @@ import { Avatar } from "../components/Shell";
 import { useApp } from "../state/AppState";
 import { vex, errMsg } from "../lib/bridge";
 import { OnlineSetupWizard } from "../features/OnlineSetupWizard";
+import { isAdminName } from "../../electron/shared/settingsModel";
 import type { AdminOverview, AdminUser, Announcement, BugReport, Featured, GithubStatus, PublicHome } from "../vex";
 
 type Tab = "overview" | "news" | "server" | "players" | "bugs" | "publish";
@@ -16,25 +17,56 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 const when = (t: number | string | null | undefined) => (t ? new Date(t).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—");
 
 export function AdminPage() {
-  const { account, go } = useApp();
+  const { account, go, ms } = useApp();
   const [tab, setTab] = useState<Tab>("overview");
-  if (!account?.profile?.admin) return (
+  const mcName = account?.profile?.mcName ?? ms?.accounts.find((a) => a.active)?.name;
+  const onlineAdmin = !!account?.profile?.admin;
+  if (!onlineAdmin && !isAdminName(mcName)) return (
     <div className="page"><Card><div className="empty" style={{ border: 0 }}><Icon name="shield" size={36} /><b style={{ color: "var(--text)" }}>Admins only</b>
-      <span className="small">Sign in with Modrinth and use an admin Minecraft account (HAckerbest11, RaxMc or UNCdel).</span><button className="btn sm" onClick={() => go("home")}>Back home</button></div></Card></div>
+      <span className="small">Switch to an admin Minecraft account (HAckerbest11, RaxMc or UNCdel) in the account menu.</span><button className="btn sm" onClick={() => go("home")}>Back home</button></div></Card></div>
   );
+  const needsOnline = !onlineAdmin && tab !== "publish" && tab !== "overview";
   return (
     <div className="page">
-      <div className="page-head"><div><span className="eyebrow">Client</span><h1>Admin</h1><p>Signed in as <b>{account.profile.mcName}</b>. Changes here reach every VEX player.</p></div></div>
+      <div className="page-head"><div><span className="eyebrow">Client</span><h1>Admin</h1><p>Signed in as <b>{mcName}</b>. Changes here reach every VEX player.</p></div></div>
       <div className="tabs" role="tablist">
         {TABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}><Icon name={t.icon} size={14} />{t.label}</button>)}
       </div>
-      {tab === "overview" && <Overview />}
-      {tab === "news" && <News />}
-      {tab === "server" && <FeaturedServer />}
-      {tab === "players" && <Players />}
-      {tab === "bugs" && <Bugs />}
+      {tab === "overview" && (onlineAdmin ? <Overview /> : <OnlineNeeded />)}
+      {needsOnline && <OnlineNeeded />}
+      {onlineAdmin && tab === "news" && <News />}
+      {onlineAdmin && tab === "server" && <FeaturedServer />}
+      {onlineAdmin && tab === "players" && <Players />}
+      {onlineAdmin && tab === "bugs" && <Bugs />}
       {tab === "publish" && <Publish />}
     </div>
+  );
+}
+
+/** What's still missing before announcements, players, bugs and the featured server work. */
+function OnlineNeeded() {
+  const { account, ms, desktop } = useApp();
+  const [wizard, setWizard] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const steps: [boolean, string, React.ReactNode][] = [
+    [!!ms?.accounts.some((a) => a.active && isAdminName(a.name)), "Use an admin Minecraft account", "Add or switch to HAckerbest11, RaxMc or UNCdel in the account menu (bottom left)."],
+    [!!account?.configured, "Set up the VEX online service", <button key="b" className="btn primary sm" disabled={!desktop} onClick={() => setWizard(true)}><Icon name="sparkle" size={14} />Set up / continue</button>],
+    [!!account?.signedIn, "Sign in with Modrinth", account?.configured ? <button key="m" className="btn sm" disabled={busy} onClick={async () => { setBusy(true); try { await vex().account.login(); } catch { /* shown in the wizard/toast elsewhere */ } finally { setBusy(false); } }}>{busy ? <span className="spinner" /> : <Icon name="user" size={14} />}Sign in with Modrinth</button> : "After the online service is set up."],
+  ];
+  const next = steps.findIndex(([done]) => !done);
+  return (
+    <Card title="Finish setting up VEX online" icon="server" sub="Announcements, the featured server, players and bug reports live on the VEX online service. Publish update already works.">
+      <ol className="setup-steps">
+        {steps.map(([done, label, action], i) => (
+          <li key={label} className={`setup-step ${done ? "done" : i === next ? "waiting" : "pending"}`}>
+            <span className="setup-icon">{done ? <Icon name="check" size={14} /> : i === next ? <Icon name="user" size={13} /> : null}</span>
+            <span style={{ flex: 1 }}><b className="small">{label}</b>{!done && i === next && <span className="tiny faint" style={{ display: "block", marginTop: 2 }}>{typeof action === "string" ? action : null}</span>}</span>
+            {!done && i === next && typeof action !== "string" && action}
+          </li>))}
+      </ol>
+      {next === -1 && account?.signedIn && !account.profile?.admin && <Notice kind="warn">Signed in, but the online service doesn't know your Minecraft account yet. Update the online service (Settings → Friends account) and reopen VEX.</Notice>}
+      {wizard && <OnlineSetupWizard onClose={() => setWizard(false)} />}
+    </Card>
   );
 }
 

@@ -3,6 +3,11 @@
 
 export const SETTINGS_SCHEMA_VERSION = 2;
 
+/** Minecraft accounts that see the Admin tab. The VEX online service checks the same list
+ *  (server/src/index.ts → DEFAULT_ADMINS) against Mojang before allowing any admin action. */
+export const ADMIN_ACCOUNTS = ["HAckerbest11", "RaxMc", "UNCdel"];
+export const isAdminName = (name?: string | null) => !!name && ADMIN_ACCOUNTS.some((a) => a.toLowerCase() === name.toLowerCase());
+
 export interface ThemeDef {
   id: string; name: string;
   accent: string; accent2: string; background: string; panel: string; border: string; text: string;

@@ -12,10 +12,11 @@ import { shortcutStatus, setShortcut } from "./ipc/shortcuts";
 import initSqlJs from "sql.js";
 import { defaultRoots, findModrinth, findCurseForge, findPrismLike, findVanilla, findInFolder, copyParts, measure, type FoundInstance, type ImportPart } from "./ipc/importers";
 import { initAccount, setServiceUrl, accountState, login, cancelLogin, logout, friends, setMinecraftTokenSource, linkMinecraft, publicHome, serviceVersion, online, adminApi } from "./ipc/account";
+import { listMods, setModEnabled, removeMod, addMods, modInfo, installedLoaderVersions } from "./ipc/mods";
 import { buildRecipe, installRecipeMods, serverStatus, type Recipe } from "./ipc/collab";
 import { connectGithub, disconnectGithub, publishStatus, publishUpdate } from "./ipc/publish";
-import { setupState, startSetup, provideModrinth, openHelper, setConnectHandler } from "./ipc/onlineSetup";
-import { activeMinecraftToken, initGame, accountsStatus, addMicrosoftAccount, setActiveAccount, signOutAccount, accountSkin, accountCapes, setAccountCape, gameSettings, setGameSettings, gameState, launchInstance, stopGame, gameLogPath } from "./ipc/game";
+import { setupState, startSetup, provideModrinth, openHelper, setConnectHandler, setupProgress } from "./ipc/onlineSetup";
+import { logSessions, onGameStarting, activeMinecraftToken, initGame, accountsStatus, addMicrosoftAccount, setActiveAccount, signOutAccount, accountSkin, accountCapes, setAccountCape, gameSettings, setGameSettings, gameState, launchInstance, stopGame, gameLogPath } from "./ipc/game";
 import { checkForUpdates, getUpdateState, installAndRestart, startAutoCheck } from "./ipc/updater";
 import { defaultMinecraftDir, instancesRoot, safeFileName, isInside } from "./ipc/paths";
 import { validateSettings, validateInstance, type LauncherSettings, type Instance } from "./shared/settingsModel";
@@ -40,6 +41,7 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   win.once("ready-to-show", () => win?.show());
+  win.on("closed", () => { win = null; if (logsWin && !logsWin.isDestroyed()) logsWin.close(); });
   // Links open in the user's browser, never inside the launcher.
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: "deny" }; });
   win.webContents.on("will-navigate", (e, url) => { if (!url.startsWith(process.env.VITE_DEV_SERVER_URL ?? "file://")) e.preventDefault(); });
@@ -47,11 +49,28 @@ function createWindow() {
   else win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
 }
 
+// The "Minecraft Logs" window: opens when a game starts. Closing it only hides the log — the game keeps running.
+let logsWin: BrowserWindow | null = null;
+function openLogsWindow() {
+  if (logsWin && !logsWin.isDestroyed()) { if (logsWin.isMinimized()) logsWin.restore(); logsWin.showInactive(); return; }
+  logsWin = new BrowserWindow({
+    width: 1200, height: 800, minWidth: 720, minHeight: 420, frame: false, backgroundColor: "#0c0f14", show: false, title: "Minecraft Logs",
+    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  logsWin.once("ready-to-show", () => logsWin?.showInactive());
+  logsWin.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  logsWin.webContents.on("will-navigate", (e) => e.preventDefault());
+  logsWin.on("closed", () => { logsWin = null; });
+  if (process.env.VITE_DEV_SERVER_URL) logsWin.loadURL(process.env.VITE_DEV_SERVER_URL + "#logs");
+  else logsWin.loadFile(path.join(__dirname, "..", "dist", "index.html"), { hash: "logs" });
+}
+
 function registerIpc() {
   // Window chrome
-  ipcMain.handle("win:minimize", () => win?.minimize());
-  ipcMain.handle("win:maximize", () => (win?.isMaximized() ? win.unmaximize() : win?.maximize()));
-  ipcMain.handle("win:close", () => win?.close());
+  const senderWin = (e: Electron.IpcMainInvokeEvent) => BrowserWindow.fromWebContents(e.sender);
+  ipcMain.handle("win:minimize", (e) => senderWin(e)?.minimize());
+  ipcMain.handle("win:maximize", (e) => { const w = senderWin(e); if (w?.isMaximized()) w.unmaximize(); else w?.maximize(); });
+  ipcMain.handle("win:close", (e) => senderWin(e)?.close());
 
   // App info
   ipcMain.handle("app:info", () => ({
@@ -200,6 +219,7 @@ function registerIpc() {
     BrowserWindow.getAllWindows().forEach((w) => w.webContents.send("settings:changed", settings));
   });
   ipcMain.handle("online-setup:state", () => setupState());
+  ipcMain.handle("online-setup:progress", () => setupProgress());
   ipcMain.handle("online-setup:start", () => startSetup());
   ipcMain.handle("online-setup:modrinth", (_e, clientId: string, secret: string) => provideModrinth(clientId, secret));
   ipcMain.handle("online-setup:open", (_e, which: "modrinth" | "cloudflare") => openHelper(which === "cloudflare" ? "cloudflare" : "modrinth"));
@@ -233,6 +253,22 @@ function registerIpc() {
   ipcMain.handle("game:launch", (_e, id: string, join?: { host: string; port: number }) => launchInstance(String(id), join));
   ipcMain.handle("game:stop", () => stopGame());
   ipcMain.handle("game:openLog", () => shell.openPath(gameLogPath()));
+  ipcMain.handle("logs:sessions", () => logSessions());
+  ipcMain.handle("logs:open", () => openLogsWindow());
+  onGameStarting(() => openLogsWindow());
+
+  // Mods inside an instance
+  const instDir = (id: string) => { const i = loadInstances().find((x) => x.id === id); if (!i) throw new Error("That instance no longer exists."); return i.gameDir; };
+  ipcMain.handle("mods:list", (_e, id: string) => listMods(instDir(String(id))));
+  ipcMain.handle("mods:info", (_e, hashes: string[]) => modInfo(Array.isArray(hashes) ? hashes.slice(0, 1000).map(String) : []));
+  ipcMain.handle("mods:toggle", (_e, id: string, file: string, enabled: boolean) => setModEnabled(instDir(String(id)), String(file), !!enabled));
+  ipcMain.handle("mods:remove", (_e, id: string, file: string) => removeMod(instDir(String(id)), String(file)));
+  ipcMain.handle("mods:add", async (_e, id: string) => {
+    const dir = instDir(String(id));
+    const r = await dialog.showOpenDialog(win!, { title: "Add mods (.jar)", properties: ["openFile", "multiSelections"], filters: [{ name: "Minecraft mods", extensions: ["jar"] }] });
+    return r.canceled ? null : addMods(dir, r.filePaths);
+  });
+  ipcMain.handle("instances:loaderVersions", () => installedLoaderVersions(path.join(app.getPath("userData"), "game", "minecraft")));
 
   // VEX online: news, bug reports, Collab, admin
   ipcMain.handle("online:home", () => publicHome());

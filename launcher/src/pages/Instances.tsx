@@ -1,11 +1,70 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, Field, Modal, Notice, Segmented, Select, Slider, Tooltip, SearchBar } from "../components/ui";
+import { Field, Modal, Notice, Segmented, Select, Slider, Tooltip, SearchBar } from "../components/ui";
 import { Icon } from "../components/Icon";
 import { useApp } from "../state/AppState";
 import { vex, errMsg } from "../lib/bridge";
 import type { Instance, Loader } from "../../electron/shared/settingsModel";
 import type { VersionList } from "../vex";
 import { ImportDialog } from "../features/ImportDialog";
+import { ModsDialog } from "../features/ModsDialog";
+import { tileColor } from "../components/PlayBar";
+
+const LOADER_NAME: Record<string, string> = { vanilla: "Vanilla", fabric: "Fabric", forge: "Forge", neoforge: "NeoForge", quilt: "Quilt" };
+const played = (t: number | null) => {
+  if (!t) return "Never played";
+  const m = Math.round((Date.now() - t) / 60_000);
+  return m < 1 ? "Just now" : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
+};
+
+function InstanceRow({ inst, selected, loaderVersion, onSelect, onMods, onEdit, onDelete }: { inst: Instance; selected: boolean; loaderVersion?: string; onSelect(): void; onMods(): void; onEdit(): void; onDelete(): void }) {
+  const { play, game, ms } = useApp();
+  const busy = game.state !== "idle";
+  const thisOne = busy && game.profileId === inst.id;
+  const canPlay = !!ms?.accounts.some((a) => a.active && !a.needsLogin);
+  return (
+    <div className={`inst-row ${selected ? "selected" : ""}`}>
+      <span className="inst-tile" style={{ background: tileColor(inst.id) }}>{inst.name[0]?.toUpperCase()}</span>
+      <div className="meta" onClick={onSelect} title="Select this instance">
+        <b>{inst.name}</b>
+        <div className="sub">
+          <span><Icon name="cube" size={13} />{inst.version}</span><i className="sep" />
+          <span>{LOADER_NAME[inst.loader]}{loaderVersion ? ` ${loaderVersion}` : ""}</span><i className="sep" />
+          <span>{thisOne ? (game.state === "running" ? "Playing now" : "Starting…") : played(inst.lastPlayed)}</span>
+          {selected && <span className="chip accent" style={{ height: 18 }}>Selected</span>}
+        </div>
+      </div>
+      {thisOne && game.state === "running"
+        ? <button className="btn play-row" onClick={() => vex().game.stop()}><Icon name="close" size={13} />STOP</button>
+        : <Tooltip text={canPlay ? (busy ? "Minecraft is already starting or running." : "Play this instance") : "Add a Microsoft account first (bottom left)."}>
+            <button className="btn play-row" disabled={busy || !canPlay} onClick={() => { onSelect(); play(inst.id); }}>{thisOne ? <span className="spinner" /> : <Icon name="play" size={13} />}{thisOne ? "STARTING" : "PLAY"}</button>
+          </Tooltip>}
+      <button className="btn mods-row" onClick={onMods}><Icon name="cube" size={14} />MODS</button>
+      <InstanceMenu inst={inst} onEdit={onEdit} onDelete={onDelete} />
+    </div>
+  );
+}
+
+function InstanceMenu({ inst, onEdit, onDelete }: { inst: Instance; onEdit(): void; onDelete(): void }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    const t = setTimeout(() => addEventListener("click", close), 0);
+    return () => { clearTimeout(t); removeEventListener("click", close); };
+  }, [open]);
+  return (
+    <span style={{ position: "relative" }}>
+      <button className="btn icon" aria-label={`Settings for ${inst.name}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}><Icon name="settings" size={16} /></button>
+      {open && (
+        <div className="account-menu" role="menu" style={{ bottom: "auto", top: "calc(100% + 6px)", left: "auto", right: 0, width: 200 }}>
+          <button className="list-item" role="menuitem" onClick={onEdit}><Icon name="edit" size={14} /><span className="small">Edit instance</span></button>
+          <button className="list-item" role="menuitem" onClick={() => vex().files.open("path", inst.gameDir)}><Icon name="folder" size={14} /><span className="small">Open folder</span></button>
+          <button className="list-item" role="menuitem" onClick={onDelete}><Icon name="trash" size={14} /><span className="small" style={{ color: "var(--danger)" }}>Delete…</span></button>
+        </div>
+      )}
+    </span>
+  );
+}
 
 function InstanceEditor({ initial, onClose }: { initial: Instance | null; onClose(): void }) {
   const { info, refreshInstances, toast, update, settings } = useApp();
@@ -79,6 +138,9 @@ export function InstancesPage() {
   const [deleteFiles, setDeleteFiles] = useState(false);
   const [q, setQ] = useState("");
   const [importing, setImporting] = useState(false);
+  const [modsFor, setModsFor] = useState<Instance | null>(null);
+  const [loaderVersions, setLoaderVersions] = useState<Record<string, string>>({});
+  useEffect(() => { if (desktop) vex().loaderVersions().then(setLoaderVersions).catch(() => {}); }, [desktop, instances]);
   const shown = instances.filter((i) => `${i.name} ${i.version} ${i.loader}`.toLowerCase().includes(q.toLowerCase())).sort((a, b) => b.createdAt - a.createdAt);
 
   const doDelete = async () => {
@@ -107,24 +169,15 @@ export function InstancesPage() {
           <span className="small">{instances.length ? "Try a different search." : "Create one, or import your mods and settings from another launcher."}</span>
           {!instances.length && desktop && <button className="btn sm" onClick={() => setImporting(true)}><Icon name="upload" size={14} />Import from another launcher</button>}</div>
       ) : (
-        <div className="grid grid-3">
+        <div className="inst-list">
           {shown.map((i) => (
-            <Card key={i.id} className={settings.selectedInstanceId === i.id ? "glow" : ""} title={<span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{i.name}</span>} icon="cube"
-              extra={settings.selectedInstanceId === i.id ? <span className="chip accent">Selected</span> : undefined}>
-              <dl className="kv"><dt>Version</dt><dd>{i.version}</dd><dt>Loader</dt><dd style={{ textTransform: "capitalize" }}>{i.loader}</dd><dt>Memory</dt><dd>{(i.memoryMb / 1024).toFixed(1)} GB</dd>
-                <dt>Folder</dt><dd className="mono" title={i.gameDir}>{i.gameDir}</dd></dl>
-              <div className="row" style={{ marginTop: 14 }}>
-                {i.installed ? <span className="chip ok"><span className="dot" />Ready</span> : <span className="chip"><span className="dot" />Downloads on first Play</span>}<span className="spacer" />
-                <Tooltip text="Open folder"><button className="btn sm icon" aria-label="Open folder" onClick={() => vex().files.open("path", i.gameDir)}><Icon name="folder" size={15} /></button></Tooltip>
-                <Tooltip text="Edit"><button className="btn sm icon" aria-label="Edit" onClick={() => setEditing(i)}><Icon name="edit" size={15} /></button></Tooltip>
-                <Tooltip text="Delete"><button className="btn sm icon danger" aria-label="Delete" onClick={() => setDeleting(i)}><Icon name="trash" size={15} /></button></Tooltip>
-                {settings.selectedInstanceId !== i.id && <button className="btn sm" onClick={() => update({ selectedInstanceId: i.id })}>Select</button>}
-              </div>
-            </Card>
+            <InstanceRow key={i.id} inst={i} selected={settings.selectedInstanceId === i.id} loaderVersion={loaderVersions[`${i.loader}:${i.version}`]}
+              onSelect={() => update({ selectedInstanceId: i.id })} onMods={() => setModsFor(i)} onEdit={() => setEditing(i)} onDelete={() => setDeleting(i)} />
           ))}
         </div>
       )}
       {importing && <ImportDialog onClose={() => setImporting(false)} />}
+      {modsFor && <ModsDialog inst={modsFor} onClose={() => setModsFor(null)} />}
       {editing && <InstanceEditor initial={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
       {deleting && (
         <Modal title={`Delete ${deleting.name}?`} onClose={() => setDeleting(null)}>

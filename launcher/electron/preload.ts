@@ -51,6 +51,8 @@ const api = {
     launch: (id: string, join?: { host: string; port: number }) => ipcRenderer.invoke("game:launch", id, join),
     stop: () => ipcRenderer.invoke("game:stop"),
     openLog: () => ipcRenderer.invoke("game:openLog"),
+    logSessions: () => ipcRenderer.invoke("logs:sessions"),
+    openLogsWindow: () => ipcRenderer.invoke("logs:open"),
     onEvent: (cb: (e: unknown) => void) => {
       const h = (_e: unknown, ev: unknown) => cb(ev);
       ipcRenderer.on("game:event", h);
@@ -62,6 +64,14 @@ const api = {
     ipcRenderer.on("instances:changed", h);
     return () => { ipcRenderer.removeListener("instances:changed", h); };
   },
+  mods: {
+    list: (id: string) => ipcRenderer.invoke("mods:list", id),
+    info: (hashes: string[]) => ipcRenderer.invoke("mods:info", hashes),
+    toggle: (id: string, file: string, enabled: boolean) => ipcRenderer.invoke("mods:toggle", id, file, enabled),
+    remove: (id: string, file: string) => ipcRenderer.invoke("mods:remove", id, file),
+    add: (id: string) => ipcRenderer.invoke("mods:add", id),
+  },
+  loaderVersions: () => ipcRenderer.invoke("instances:loaderVersions"),
   online: {
     home: () => ipcRenderer.invoke("online:home"),
     serviceVersion: () => ipcRenderer.invoke("online:serviceVersion"),
@@ -115,6 +125,7 @@ const api = {
   },
   onlineSetup: {
     state: () => ipcRenderer.invoke("online-setup:state"),
+    progress: () => ipcRenderer.invoke("online-setup:progress"),
     start: () => ipcRenderer.invoke("online-setup:start"),
     modrinth: (clientId: string, secret: string) => ipcRenderer.invoke("online-setup:modrinth", clientId, secret),
     open: (which: "modrinth" | "cloudflare") => ipcRenderer.invoke("online-setup:open", which),

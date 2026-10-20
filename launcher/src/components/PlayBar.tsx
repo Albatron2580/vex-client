@@ -9,7 +9,7 @@ const LOADER: Record<string, string> = { vanilla: "Vanilla", fabric: "Fabric", f
 
 /** Floating instance switcher + Play button, shown at the bottom of every page except Home. */
 export function PlayBar() {
-  const { instances, settings, update, go } = useApp();
+  const { instances, settings, update, go, game } = useApp();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const sel = instances.find((i) => i.id === settings.selectedInstanceId) ?? instances[0] ?? null;
@@ -40,6 +40,7 @@ export function PlayBar() {
           <Icon name="chevron" size={14} />
         </> : <><span className="inst-tile ghost"><Icon name="plus" size={14} /></span><span className="small">Create an instance</span></>}
       </button>
+      {game.state !== "idle" && <button className="btn icon sm" style={{ height: 40, width: 40 }} title="Minecraft Logs" aria-label="Open Minecraft Logs" onClick={() => window.vex?.game.openLogsWindow()}><Icon name="server" size={16} /></button>}
       <div className="stack" style={{ gap: 4 }}>
         <PlayButton />
       </div>

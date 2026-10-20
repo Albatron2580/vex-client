@@ -321,3 +321,57 @@ a { color: var(--accent); }
 .news-item { padding: 10px 12px; border-radius: var(--r-md); border: 1px solid var(--line); background: color-mix(in oklab, var(--bg) 35%, transparent); }
 .news-item.update { border-left: 3px solid var(--accent); }
 .news-item.warning { border-left: 3px solid var(--warn); }
+.setup-mini { display: flex; flex-wrap: wrap; gap: 6px; justify-content: inherit; }
+.setup-mini span { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 99px; border: 1px solid var(--line); font-size: 12px; color: var(--text-faint); }
+.setup-mini span i { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-strong); }
+.setup-mini span.done { color: var(--text); border-color: color-mix(in oklab, var(--ok) 40%, transparent); }
+.setup-mini span.done i { background: var(--ok); border-color: transparent; color: #0d1f16; }
+/* Instance rows (Modrinth-style) */
+.inst-list { display: flex; flex-direction: column; gap: 8px; }
+.inst-row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: var(--r-lg); border: 1px solid var(--line);
+  background: var(--surface); backdrop-filter: blur(14px); transition: border-color var(--dur), box-shadow var(--dur), transform var(--dur-fast); }
+.inst-row:hover { border-color: var(--line-strong); }
+.inst-row.selected { border-color: var(--border); box-shadow: var(--glow-sm); }
+.inst-row .inst-tile { width: 52px; height: 52px; border-radius: 12px; font-size: 22px; }
+.inst-row .meta { flex: 1; min-width: 0; cursor: pointer; }
+.inst-row .meta b { font: 600 16px var(--font-display); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inst-row .meta .sub { display: flex; gap: 10px; align-items: center; color: var(--text-faint); font-size: var(--fs-sm); margin-top: 3px; flex-wrap: wrap; }
+.inst-row .meta .sub span { display: inline-flex; gap: 5px; align-items: center; }
+.inst-row .meta .sub .sep { width: 1px; height: 12px; background: var(--line-strong); }
+.btn.play-row { height: 38px; padding: 0 18px; letter-spacing: 0.14em; font: 700 13px var(--font-display); }
+.btn.mods-row { letter-spacing: 0.12em; font: 700 12px var(--font-display); }
+.mods-list { display: flex; flex-direction: column; gap: 4px; max-height: 52vh; overflow: auto; }
+.mod-row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: var(--r-md); border: 1px solid transparent; }
+.mod-row:hover { background: color-mix(in oklab, var(--accent) 6%, transparent); border-color: var(--line); }
+.mod-row img { border-radius: 8px; flex: none; image-rendering: auto; }
+.mod-row.off { opacity: 0.55; }
+/* Minecraft Logs window */
+.logs-app { height: 100%; display: flex; flex-direction: column; background: #0c0f14; color: #d7dde8; font-family: var(--font-display); }
+.logs-titlebar { height: 38px; flex: none; display: flex; align-items: center; justify-content: space-between; padding-left: 14px; -webkit-app-region: drag; background: #12161e; border-bottom: 1px solid #1d2330; }
+.logs-titlebar > span { display: inline-flex; gap: 8px; align-items: center; color: #6ea8ff; font-weight: 600; font-size: 14px; letter-spacing: 0.03em; }
+.logs-titlebar .win-btns { display: flex; height: 100%; -webkit-app-region: no-drag; }
+.logs-titlebar .win-btns button { width: 46px; height: 100%; border: 0; background: transparent; color: #8a93a6; cursor: pointer; display: grid; place-items: center; }
+.logs-titlebar .win-btns button:hover { background: #1b2130; color: #fff; }
+.logs-titlebar .win-btns button.close:hover { background: #e5484d; color: #fff; }
+.logs-body { flex: 1; display: grid; grid-template-columns: 1fr 340px; min-height: 0; }
+.logs-main { margin: 10px 0 10px 10px; border-radius: 10px; background: linear-gradient(160deg, #0a0d12, #0d1117); border: 1px solid #1a2030; display: flex; flex-direction: column; min-height: 0; }
+.logs-empty { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #6f7889; text-align: center; }
+.logs-empty b { font-size: 18px; color: #8b94a7; font-weight: 600; } .logs-empty span { font-size: 12px; }
+.logs-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #1a2030; font-size: 13px; }
+.logs-toolbar .input { background: #0f131b; border-color: #232a3a; color: #d7dde8; }
+.logs-toolbar .btn { background: #141a25; border-color: #263048; color: #cdd5e3; }
+.logs-state { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid #2a3348; color: #8a93a6; }
+.logs-state.running { color: #5fe3a1; border-color: #1f5a3e; } .logs-state.starting { color: #ffc46b; border-color: #5a4720; }
+.logs-check { display: inline-flex; gap: 6px; align-items: center; color: #8a93a6; font-size: 12px; cursor: pointer; }
+.logs-lines { flex: 1; overflow: auto; padding: 10px 12px; font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; user-select: text; color: #c5ccd8; }
+.logs-lines .err { color: #ff6b6b; } .logs-lines .warn { color: #ffc46b; } .logs-lines .vex { color: #6ea8ff; }
+.logs-side { display: flex; flex-direction: column; padding: 14px 14px 12px; gap: 6px; background: #12161e; border-left: 1px solid #1d2330; min-height: 0; overflow: auto; }
+.logs-side-title { display: flex; gap: 8px; align-items: center; color: #6ea8ff; font-weight: 600; margin: 6px 0 10px; }
+.logs-none { margin: 50px auto 0; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #8b94a7; font-size: 15px; }
+.logs-inst { display: flex; gap: 10px; align-items: center; text-align: left; padding: 9px 10px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #d7dde8; cursor: pointer; font: inherit; }
+.logs-inst:hover { background: #171d29; } .logs-inst.on { background: #182033; border-color: #2a3a5c; }
+.logs-inst b { display: block; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logs-inst span span { font-size: 11px; color: #7d879b; }
+.logs-inst .dot { width: 9px; height: 9px; border-radius: 50%; background: #4a5265; flex: none; }
+.logs-inst .dot.running { background: #5fe3a1; box-shadow: 0 0 8px #5fe3a1; } .logs-inst .dot.starting { background: #ffc46b; }
+.logs-count { margin-top: auto; color: #8a93a6; font-size: 13px; padding-top: 8px; }

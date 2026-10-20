@@ -78,7 +78,10 @@ function GameCard() {
           options={["854x480", "1280x720", "1600x900", "1920x1080", "2560x1440"].concat([`${g.width}x${g.height}`]).filter((v, i, a) => a.indexOf(v) === i).map((v) => ({ value: v, label: v.replace("x", " × ") }))} /></div>}
       <div className="toggle-row"><div className="text"><b>Java</b><span>{g.javaPath ? g.javaPath : "Automatic — VEX downloads Mojang's Java when needed"}</span></div>
         {g.javaPath && <button className="btn sm" onClick={() => set({ javaPath: "" })}>Use automatic</button>}</div>
-      <button className="btn sm" style={{ marginTop: 8 }} onClick={() => window.vex!.game.openLog()}><Icon name="folder" size={14} />Open game log</button>
+      <div className="row" style={{ marginTop: 8 }}>
+        <button className="btn sm" onClick={() => window.vex!.game.openLogsWindow()}><Icon name="server" size={14} />Minecraft Logs window</button>
+        <button className="btn sm" onClick={() => window.vex!.game.openLog()}><Icon name="folder" size={14} />Open log file</button>
+      </div>
     </Card>
   );
 }

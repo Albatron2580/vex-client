@@ -38,6 +38,9 @@ export type GameEvent =
   | { type: "log"; lines: string[] }
   | { type: "game"; state: "starting" | "running" | "closed" | "idle"; profileId: string; code?: number; crashed?: boolean }
   | { type: "accounts" };
+export interface ModFile { file: string; enabled: boolean; size: number; sha1: string }
+export interface ModInfo { title: string; icon: string | null; slug: string; version: string }
+export interface LogSession { id: string; instanceId: string; name: string; state: "starting" | "running" | "closed"; startedAt: number; endedAt: number | null; code: number | null; lines: string[] }
 export interface VersionList { versions: { id: string; type: string; releaseTime: string }[]; latest: string | null; fromCache: boolean; error?: string }
 
 declare global {
@@ -71,9 +74,16 @@ declare global {
         settings(): Promise<GameSettings>; setSettings(p: Partial<GameSettings>): Promise<GameSettings>;
         state(): Promise<{ state: "idle" | "starting" | "running"; profileId?: string }>;
         launch(id: string, join?: { host: string; port: number }): Promise<void>; stop(): Promise<void>; openLog(): Promise<string>;
+        logSessions(): Promise<LogSession[]>; openLogsWindow(): Promise<void>;
         onEvent(cb: (e: GameEvent) => void): () => void;
       };
       onInstancesChanged(cb: () => void): () => void;
+      mods: {
+        list(id: string): Promise<ModFile[]>; info(hashes: string[]): Promise<Record<string, ModInfo>>;
+        toggle(id: string, file: string, enabled: boolean): Promise<ModFile[]>; remove(id: string, file: string): Promise<ModFile[]>;
+        add(id: string): Promise<{ added: number; mods: ModFile[] } | null>;
+      };
+      loaderVersions(): Promise<Record<string, string>>;
       online: {
         home(): Promise<PublicHome>; serviceVersion(): Promise<string | null>; bundledServerVersion(): Promise<string | null>;
         link(): Promise<AccountState>; reportBug(title: string, body: string): Promise<unknown>;
@@ -100,7 +110,7 @@ declare global {
         add(id: string): Promise<{ relation: string }>; remove(id: string): Promise<{ relation: string }>;
       };
       onlineSetup: {
-        state(): Promise<SetupState>; start(): Promise<SetupState>; modrinth(clientId: string, secret: string): Promise<SetupState>;
+        state(): Promise<SetupState>; progress(): Promise<{ started: boolean; database: boolean; deployed: boolean; url: string | null; modrinth: boolean }>; start(): Promise<SetupState>; modrinth(clientId: string, secret: string): Promise<SetupState>;
         open(which: "modrinth" | "cloudflare"): Promise<void>; onState(cb: (s: SetupState) => void): () => void;
       };
       onSettingsChanged(cb: (s: LauncherSettings) => void): () => void;

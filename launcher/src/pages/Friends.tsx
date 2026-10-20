@@ -22,14 +22,28 @@ export function SignInCard({ compact }: { compact?: boolean }) {
   const [wizard, setWizard] = useState(false);
   // The wizard stays mounted after setup connects VEX, so it can show "All done".
   const wiz = wizard && <OnlineSetupWizard onClose={() => setWizard(false)} />;
-  if (!account?.configured) return (
-    <div className="stack" style={{ alignItems: compact ? "flex-start" : "center", textAlign: compact ? "left" : "center", gap: 10 }}>
-      {!compact && <><Icon name="friends" size={40} /><b style={{ fontSize: 18 }}>Set up VEX online</b></>}
-      <span className="small muted" style={{ maxWidth: 460 }}>Friends and Modrinth sign-in need the VEX online service. VEX can set it up for you on a free Cloudflare account — it takes a few minutes.</span>
-      <button className="btn primary" disabled={!desktop} onClick={() => setWizard(true)}><Icon name="sparkle" size={16} />Set up online service</button>
-      {wiz}
-    </div>
-  );
+  const [progress, setProgress] = useState<{ started: boolean; database: boolean; deployed: boolean; url: string | null; modrinth: boolean } | null>(null);
+  useEffect(() => { if (!account?.configured && window.vex) window.vex.onlineSetup.progress().then(setProgress).catch(() => {}); }, [account?.configured, wizard]);
+  if (!account?.configured) {
+    const steps: [boolean, string][] = [[!!progress?.database, "Database"], [!!progress?.deployed, "Online"], [!!progress?.modrinth, "Modrinth sign-in"], [false, "Connected"]];
+    const doneCount = steps.filter(([d]) => d).length;
+    return (
+      <div className="stack" style={{ alignItems: compact ? "flex-start" : "center", textAlign: compact ? "left" : "center", gap: 10 }}>
+        {!compact && <><Icon name="friends" size={40} /><b style={{ fontSize: 18 }}>{progress?.started ? "Finish setting up VEX online" : "Set up VEX online"}</b></>}
+        <span className="small muted" style={{ maxWidth: 460 }}>{progress?.started
+          ? progress.deployed && !progress.modrinth ? "Almost done — the last step is registering VEX on Modrinth so players can sign in. VEX shows you exactly what to click."
+            : "You've started setting this up. Continue where you left off."
+          : "Friends and Modrinth sign-in need the VEX online service. VEX can set it up for you on a free Cloudflare account — it takes a few minutes."}</span>
+        {progress?.started && (
+          <div className="setup-mini" aria-label={`${doneCount} of ${steps.length} steps done`}>
+            {steps.map(([done, label]) => <span key={label} className={done ? "done" : ""}><i>{done ? <Icon name="check" size={11} /> : null}</i>{label}</span>)}
+          </div>
+        )}
+        <button className="btn primary" disabled={!desktop} onClick={() => setWizard(true)}><Icon name="sparkle" size={16} />{progress?.started ? "Continue setup" : "Set up online service"}</button>
+        {wiz}
+      </div>
+    );
+  }
   const signIn = async () => {
     setBusy(true);
     try { const s = await vex().account.login(); toast("success", `Signed in as ${s.profile?.username}`); }

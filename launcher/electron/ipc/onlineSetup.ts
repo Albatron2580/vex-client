@@ -168,7 +168,7 @@ async function deployCapture() {
 }
 async function stepDeploy() {
   const d = await deployCapture();
-  if (d.url) return d.url.replace(/\/+$/, "");
+  if (d.url) { const url = d.url.replace(/\/+$/, ""); fs.writeFileSync(path.join(workDir(), "deployed-url.txt"), url); return url; }
   if (/workers\.dev subdomain|register a workers\.dev/i.test(d.out)) {
     state.need = { kind: "subdomain" }; broadcast();
     throw new NeedsInput("Pick your workers.dev name on Cloudflare, then click Continue.");
@@ -244,6 +244,18 @@ export function provideModrinth(clientId: string, secret: string) {
   if (s.length < 8 || /\s/.test(s)) throw new Error("That doesn't look like a Client Secret — copy it again from Modrinth.");
   modrinthInput = { clientId: id, secret: s };
   return startSetup();
+}
+
+/** How far an earlier setup got (survives restarts — read from the working folder). */
+export function setupProgress() {
+  const dir = workDir();
+  const read = (f: string) => { try { return fs.readFileSync(path.join(dir, f), "utf8").trim(); } catch { return ""; } };
+  const toml = read("wrangler.toml");
+  const get = (k: string) => new RegExp(`^\\s*${k}\\s*=\\s*"([^"]*)"`, "m").exec(toml)?.[1] ?? "";
+  const url = read("deployed-url.txt") || null;
+  const database = !!get("database_id") && !/REPLACE/.test(get("database_id"));
+  const modrinth = !!get("MODRINTH_CLIENT_ID") && !/REPLACE/.test(get("MODRINTH_CLIENT_ID"));
+  return { started: fs.existsSync(path.join(dir, "package.json")), database, deployed: !!url, url, modrinth };
 }
 
 export function openHelper(which: "modrinth" | "cloudflare") {

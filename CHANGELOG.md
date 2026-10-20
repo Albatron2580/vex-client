@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2.0 — 2026-10-20
+- **Minecraft Logs window** opens when the game starts: live log with warnings/errors coloured, filter, copy, stop game. Closing it doesn't stop Minecraft. Reopen it from the Play bar or Settings → Game.
+- **Instances** are now rows like the Modrinth app: version, loader version, last played, **PLAY**, **MODS** and a settings menu.
+- **Mods** window per instance: names and icons from Modrinth, turn mods on/off, remove, add .jar files.
+- **Admin** shows as soon as you use an admin Minecraft account, with clear steps for what's still needed for the online parts.
+- Friends shows how far the online setup got, with **Continue setup**; clearer steps for registering VEX on Modrinth.
+- New app icon: a plain grey V.
+
 ## 2.1.0 — 2026-10-20
 - **Play works:** sign in with Microsoft and launch Minecraft. VEX downloads the game, Java and Fabric/Forge/NeoForge for you.
 - **Several accounts:** add as many Microsoft accounts as you like and switch from the account menu (bottom left). Your real skin shows next to each one.

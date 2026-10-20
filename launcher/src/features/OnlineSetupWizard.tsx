@@ -72,16 +72,18 @@ export function OnlineSetupWizard({ onClose }: { onClose(): void }) {
 
         {need?.kind === "modrinth" && !s?.running && (
           <div className="card" style={{ padding: 16 }}>
-            <b>Register VEX on Modrinth</b>
+            <b>Last step: register VEX on Modrinth</b>
+            <p className="tiny muted" style={{ margin: "4px 0 0" }}>This lets players sign in to VEX with their Modrinth account. You do it once, on your own Modrinth account.</p>
             <ol className="small muted" style={{ paddingLeft: 18, margin: "8px 0" }}>
-              <li>Open Modrinth and click <b>New application</b>.</li>
-              <li>Name: <span className="mono">VEX CLIENT</span>. Scopes: only <b>Read user data</b>.</li>
-              <li>Redirect URI — copy this:
+              <li>Click <b>Open Modrinth</b> below and log in. You land on <b>Settings → Applications</b>.</li>
+              <li>Click <b>New application</b>. Name it <span className="mono">VEX CLIENT</span> and click <b>Create</b>.</li>
+              <li>In the application, under <b>Scopes</b>, tick only <b>Read user data</b>.</li>
+              <li>Under <b>Redirect URIs</b>, paste this address and click <b>Add</b>, then <b>Save changes</b>:
                 <div className="row" style={{ margin: "6px 0" }}>
                   <input className="input mono" readOnly value={need.redirect} onFocus={(e) => e.target.select()} />
                   <button className="btn sm" onClick={() => copy(need.redirect)}><Icon name={copied ? "check" : "save"} size={14} />{copied ? "Copied" : "Copy"}</button>
                 </div></li>
-              <li>Save, then paste the two values below.</li>
+              <li>Copy the <b>Client ID</b> and the <b>Client secret</b> from the top of that page (the secret may be behind a <i>Reveal</i> or <i>Regenerate</i> button) and paste them below.</li>
             </ol>
             <button className="btn sm" style={{ marginBottom: 10 }} onClick={() => vex().onlineSetup.open("modrinth")}><Icon name="external" size={14} />Open Modrinth</button>
             <div className="grid grid-2" style={{ gap: 10 }}>
