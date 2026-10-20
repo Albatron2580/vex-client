@@ -1,0 +1,33 @@
+/* VEX CLIENT design tokens. Theme colours are set at runtime by lib/theme.ts;
+   everything else derives from them so a theme switch restyles the whole launcher. */
+:root {
+  --accent: #ff6fb5; --accent-2: #b77dff; --bg: #170b16; --panel: #2a1328; --border: #ff8cc6; --text: #fbeaf4;
+  --panel-alpha: 0.72; --glow: 0.65; --radius: 16px;
+
+  --text-dim: color-mix(in oklab, var(--text) 62%, transparent);
+  --text-faint: color-mix(in oklab, var(--text) 40%, transparent);
+  --surface: color-mix(in oklab, var(--panel) calc(var(--panel-alpha) * 100%), transparent);
+  --surface-2: color-mix(in oklab, var(--panel) 70%, var(--bg));
+  --surface-raised: color-mix(in oklab, var(--panel) 85%, var(--accent) 6%);
+  --line: color-mix(in oklab, var(--border) 22%, transparent);
+  --line-strong: color-mix(in oklab, var(--border) 55%, transparent);
+  --gradient: linear-gradient(135deg, var(--accent), var(--accent-2));
+  --glow-sm: 0 0 calc(10px * var(--glow)) color-mix(in oklab, var(--accent) 45%, transparent);
+  --glow-md: 0 0 calc(24px * var(--glow)) color-mix(in oklab, var(--accent) 40%, transparent);
+  --shadow: 0 18px 40px -18px rgb(0 0 0 / 0.7), 0 2px 6px rgb(0 0 0 / 0.25);
+
+  --ok: #5fe3a1; --warn: #ffc46b; --danger: #ff5c7a;
+
+  --font-display: "Chakra Petch", system-ui, sans-serif;
+  --font-body: "Manrope", system-ui, sans-serif;
+  --fs-xs: 11.5px; --fs-sm: 13px; --fs-md: 14.5px; --fs-lg: 18px; --fs-xl: 26px; --fs-hero: 44px;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+  --r-sm: calc(var(--radius) * 0.5); --r-md: calc(var(--radius) * 0.75); --r-lg: var(--radius); --r-xl: calc(var(--radius) * 1.4);
+
+  --dur-fast: 120ms; --dur: 220ms; --dur-slow: 420ms; --ease: cubic-bezier(.2, .8, .2, 1);
+  --focus: 0 0 0 2px var(--bg), 0 0 0 4px color-mix(in oklab, var(--accent) 80%, white);
+}
+:root[data-anim="reduced"] { --dur: 120ms; --dur-slow: 180ms; }
+:root[data-anim="off"] { --dur-fast: 0ms; --dur: 0ms; --dur-slow: 0ms; }
+:root[data-anim="off"] *, :root[data-anim="off"] *::before, :root[data-anim="off"] *::after { animation: none !important; }

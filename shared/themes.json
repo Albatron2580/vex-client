@@ -1,0 +1,12 @@
+{
+  "$schema": "./theme.schema.json",
+  "schemaVersion": 1,
+  "presets": [
+    { "id": "sakura",     "name": "Sakura",     "accent": "#ff6fb5", "accent2": "#b77dff", "background": "#170b16", "panel": "#2a1328", "border": "#ff8cc6", "text": "#fbeaf4", "opacity": 0.72, "glow": 0.65, "radius": 16 },
+    { "id": "rose",       "name": "Rose",       "accent": "#ff4d6a", "accent2": "#a8203f", "background": "#150709", "panel": "#2b0d14", "border": "#ff6b84", "text": "#fde9ec", "opacity": 0.74, "glow": 0.6,  "radius": 14 },
+    { "id": "sunflower",  "name": "Sunflower",  "accent": "#ffbf3f", "accent2": "#ff8a2b", "background": "#150f06", "panel": "#2a1e0c", "border": "#ffd27a", "text": "#fff6e3", "opacity": 0.72, "glow": 0.55, "radius": 16 },
+    { "id": "lavender",   "name": "Lavender",   "accent": "#b48cff", "accent2": "#7c5cff", "background": "#100b1a", "panel": "#1f1533", "border": "#c7a8ff", "text": "#f1ebff", "opacity": 0.72, "glow": 0.6,  "radius": 16 },
+    { "id": "cornflower", "name": "Cornflower", "accent": "#5b9dff", "accent2": "#3a62ff", "background": "#080d18", "panel": "#111c33", "border": "#86b6ff", "text": "#e8f0ff", "opacity": 0.72, "glow": 0.55, "radius": 16 },
+    { "id": "snowdrop",   "name": "Snowdrop",   "accent": "#4fe0c0", "accent2": "#2fa8a0", "background": "#06130f", "panel": "#0f2620", "border": "#7cf0d6", "text": "#e6fff8", "opacity": 0.72, "glow": 0.5,  "radius": 16 }
+  ]
+}

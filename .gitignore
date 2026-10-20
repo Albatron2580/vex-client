@@ -1,7 +1,15 @@
 node_modules/
-dist/
-tests/screens/
-# private update signing key: never commit
-update-signing-key.pem
+launcher/dist/
+launcher/dist-electron/
+launcher/release/
+server/.wrangler/
+server/.dev.vars
+server/vex-online-url.txt
+*.log
+# private signing keys: never commit
 *.pem
+*.pfx
+# Fabric mod build output
+mod/build/
+mod/.gradle/
 assets/vex-client-mod.jar

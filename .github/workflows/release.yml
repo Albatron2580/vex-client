@@ -1,39 +1,17 @@
-# Builds the Windows installer and publishes it as a GitHub release. Two ways to start it:
-#   - push a version tag (v1.2.3) made with `npm run release` on your PC, or
-#   - press Publish in the launcher's Admin panel (workflow_dispatch): this job then bumps the
-#     version, writes the changelog entry, commits and tags it itself.
-# Installed launchers pick up the published release automatically.
-# Secrets used:
-#   VEX_UPDATE_PRIVATE_KEY  (required) Ed25519 key from `npm run setup-updates`; signs vex-release.json
-#   CSC_LINK, CSC_KEY_PASSWORD (optional) Windows code-signing certificate (.pfx as base64) + password
+# Builds the VEX CLIENT installer and publishes it as a GitHub release. Two ways to start it:
+#   - push a version tag that matches launcher/package.json, e.g.  git tag v2.0.1 && git push --tags
+#   - Actions → Release → Run workflow (uses the version already in launcher/package.json)
+# Every installed VEX CLIENT checks the latest release, downloads VEX-CLIENT-Setup-x.y.z.exe,
+# verifies it against the .sha256 file, then asks the player to restart.
 name: Release
 
 on:
   push:
-    tags: ['v*.*.*']
+    tags: ["v*.*.*"]
   workflow_dispatch:
-    inputs:
-      bump:
-        description: 'Update type'
-        type: choice
-        options: [patch, minor, major]
-        default: patch
-      critical:
-        description: 'Critical update (security/compatibility)'
-        type: boolean
-        default: false
-      minimum:
-        description: 'Minimum version (optional, e.g. 1.2.0)'
-        type: string
-        default: ''
-      notes:
-        description: 'Release notes (Markdown)'
-        type: string
-        required: true
 
 permissions:
   contents: write
-  actions: read
 
 concurrency:
   group: release
@@ -42,83 +20,54 @@ concurrency:
 jobs:
   windows:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: launcher
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
+          cache-dependency-path: launcher/package-lock.json
 
-      - name: Check update setup
-        shell: bash
+      - name: Work out the version
+        id: ver
+        shell: pwsh
         run: |
-          node -e "const p=require('./package.json'); if(!p.vexUpdate||/YOUR_|REPLACE/.test(JSON.stringify(p.vexUpdate))){console.error('Run npm run setup-updates first');process.exit(1)}"
-
-      - name: Prepare version (Admin panel)
-        if: github.event_name == 'workflow_dispatch'
-        shell: bash
+          $v = (Get-Content package.json | ConvertFrom-Json).version
+          if ("${{ github.ref_type }}" -eq "tag" -and "v$v" -ne "${{ github.ref_name }}") { throw "Tag ${{ github.ref_name }} doesn't match launcher/package.json version $v" }
+          gh release view "v$v" --repo "${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Release v$v already exists. Bump the version in launcher/package.json first." }
+          "version=$v" >> $env:GITHUB_OUTPUT
         env:
-          # inputs go through environment variables, never straight into the shell
-          BUMP: ${{ inputs.bump }}
-          CRITICAL: ${{ inputs.critical }}
-          MINIMUM: ${{ inputs.minimum }}
-          RELEASE_NOTES: ${{ inputs.notes }}
-        run: |
-          case "$BUMP" in patch|minor|major) ;; *) echo "bad bump"; exit 1;; esac
-          git config user.name "Vex Client release bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          args=("$BUMP" --notes-env RELEASE_NOTES)
-          if [ "$CRITICAL" = "true" ]; then args+=(--critical); fi
-          if [ -n "$MINIMUM" ]; then args+=(--minimum "$MINIMUM"); fi
-          node scripts/release.js "${args[@]}"
-          git push origin HEAD --follow-tags
+          GH_TOKEN: ${{ github.token }}
 
-      - name: Work out the tag
-        shell: bash
-        run: |
-          v=$(node -p "require('./package.json').version")
-          echo "TAG=v$v" >> "$GITHUB_ENV"
-          if [ "${{ github.event_name }}" = "push" ] && [ "v$v" != "${GITHUB_REF_NAME}" ]; then echo "Tag ${GITHUB_REF_NAME} but package.json is $v"; exit 1; fi
+      - run: npm ci
+      - run: npm test
 
-      - name: Bundle the Vex Client mod (built by the Mod workflow)
-        shell: bash
+      - name: Make sure NSIS is installed
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe") -and -not (Get-Command makensis -ErrorAction SilentlyContinue)) { choco install nsis -y --no-progress }
+
+      - name: Build the installer
+        run: npm run dist
+
+      - name: Checksum
+        shell: pwsh
+        run: |
+          $exe = Get-Item "release/VEX-CLIENT-Setup-${{ steps.ver.outputs.version }}.exe"
+          (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower() + "  " + $exe.Name | Out-File -Encoding ascii -NoNewline "$($exe.FullName).sha256"
+          Get-Content "$($exe.FullName).sha256"
+
+      - name: Publish the release
+        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download vex-mod -p vex-client-mod.jar -D assets --clobber || echo "No mod build yet: the installer ships without it"
-          ls -la assets
-
-      - name: Install
-        run: npm install --no-audit --no-fund
-
-      - name: Test
-        run: npm test
-
-      - name: Build installer
-        shell: bash
-        env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-        run: |
-          if [ -z "$CSC_LINK" ]; then unset CSC_LINK CSC_KEY_PASSWORD; fi
-          npx electron-builder --win nsis --x64 --publish never
-
-      - name: Sign release manifest
-        env:
-          VEX_UPDATE_PRIVATE_KEY: ${{ secrets.VEX_UPDATE_PRIVATE_KEY }}
-        run: node scripts/make-manifest.js dist
-
-      - name: Publish GitHub release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          cd dist
-          title="Vex Client ${TAG#v}"
-          if node -e "process.exit(require('./vex-release.json').critical?0:1)"; then title="$title (critical)"; fi
-          # Upload everything to a draft first, then publish, so users never see a half-uploaded release.
-          gh release create "$TAG" --draft --title "$title" --notes-file release-notes.md \
-            Vex-Client-Setup-*.exe Vex-Client-Setup-*.exe.blockmap latest.yml vex-release.json vex-release.json.sig
-          gh release edit "$TAG" --draft=false --latest
+          $v = "${{ steps.ver.outputs.version }}"
+          $exe = "release/VEX-CLIENT-Setup-$v.exe"
+          $notes = "VEX CLIENT $v. Installed copies update themselves - this file is only needed for a first install."
+          gh release create "v$v" $exe "$exe.sha256" --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "VEX CLIENT $v" --notes "$notes" --latest

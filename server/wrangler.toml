@@ -1,0 +1,14 @@
+name = "vex-online"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+
+[vars]
+# Your Modrinth application's Client ID (modrinth.com/settings/applications). Not secret.
+MODRINTH_CLIENT_ID = "REPLACE_WITH_CLIENT_ID"
+# Set MODRINTH_CLIENT_SECRET with:  npx wrangler secret put MODRINTH_CLIENT_SECRET
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vex-online"
+database_id = "REPLACE_WITH_DATABASE_ID"
+migrations_dir = "migrations"
