@@ -167,7 +167,7 @@ export function modCredentials(): { url: string; token: string } | null {
 /** Login check: makes sure VEX online is signed in as the active Microsoft account. Quiet on failure. */
 export async function ensureSignedIn(activeName: string | null) {
   if (!serviceUrl) return accountState();
-  if (!activeName) { if (token) await logout(true); return accountState(); }
+  if (!activeName) { if (token) await logout(true); loginError = "Sign in with a Microsoft account first."; return accountState(); }
   if (token && profile && (profile.mcName ?? profile.username)?.toLowerCase() === activeName.toLowerCase()) return accountState();
   try { const st = await login(); loginError = null; return st; }
   catch (e: any) { loginError = e?.message || "Couldn't connect to VEX online."; log("warn", `Automatic VEX online sign-in failed: ${loginError}`); broadcast(); return accountState(); }

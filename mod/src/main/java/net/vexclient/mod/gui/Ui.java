@@ -71,6 +71,28 @@ public final class Ui {
         }
     }
 
+    /** A circle outline of the given thickness (only the ring is drawn, so see-through fills stay clean). */
+    public static void ring(GuiGraphics g, float cx, float cy, float r, float thick, int c) {
+        float ri = r - thick;
+        int n = (int) Math.ceil(r);
+        for (int dy = -n; dy < n; dy++) {
+            double yy = dy + 0.5;
+            if (Math.abs(yy) > r) continue;
+            int wo = (int) Math.round(Math.sqrt(r * r - yy * yy));
+            int x = Math.round(cx), y = Math.round(cy) + dy;
+            if (Math.abs(yy) >= ri) { g.fill(x - wo, y, x + wo, y + 1, c); continue; }
+            int wi = (int) Math.round(Math.sqrt(ri * ri - yy * yy));
+            if (wo > wi) { g.fill(x - wo, y, x - wi, y + 1, c); g.fill(x + wi, y, x + wo, y + 1, c); }
+        }
+    }
+
+    /** See-through glass disc with a light outline (the Right Shift menu). */
+    public static void glassCircle(GuiGraphics g, float cx, float cy, float r, float hover) {
+        ellipse(g, cx, cy, r, r, alpha(mix(0xFFFFFFFF, ORANGE, 0.25f + 0.25f * hover), 0.08f + 0.10f * hover));
+        ellipse(g, cx - r * 0.18f, cy - r * 0.30f, r * 0.62f, r * 0.42f, alpha(0xFFFFFFFF, 0.03f + 0.03f * hover)); // soft shine
+        ring(g, cx, cy, r, 1f + hover, alpha(mix(0xFFFFFFFF, ORANGE_HI, hover), 0.70f + 0.25f * hover));
+    }
+
     /** The big window: border, body, and an accent line along the top. */
     public static void panel(GuiGraphics g, int x0, int y0, int x1, int y1) {
         g.fill(x0 + 3, y0 + 3, x1 + 3, y1 + 3, 0x60000000); // drop shadow

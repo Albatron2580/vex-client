@@ -15,8 +15,8 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The Right Shift menu: five petals around your player head (Client, Settings, Misc, Mod Menu, Combat)
- * and a search bar for every module and setting at the bottom. Typing searches straight away.
+ * The Right Shift menu: five see-through circles around your face (Client, Settings, Misc, Mod Menu, Combat).
+ * Click your face for every module; typing searches every module and setting straight away.
  */
 public final class VexRadialScreen extends VexScreen {
     private record Petal(String name, String icon, String tip, VexMenuScreen.Page page) {}
@@ -81,107 +81,91 @@ public final class VexRadialScreen extends VexScreen {
     protected void draw() {
         open = Math.min(1f, open + dt * 5f);
         float ease = 1f - (1f - open) * (1f - open);
-        // fit the flower between the header (ends at y 36) and the hint above the search bar (H - 48)
-        int top = 40, bottom = H - 50;
-        float R0 = Math.max(40, Math.min(112, Math.min(W * 0.27f, (bottom - top) / 2.8f)));
-        int cx = W / 2, cy = Math.round(top + 1.5f * R0);
-        float R = R0 * (0.85f + 0.15f * ease);
 
-        // header
-        int tw = Ui.titleWidth(this.font, 1.5f);
-        Ui.title(g, this.font, cx - tw / 2, 10, 1.5f);
-        String sub = "v" + VERSION + " · Right Shift or Esc to close";
-        g.drawString(this.font, sub, cx - this.font.width(sub) / 2, 26, Ui.DIM, false);
+        // layout: five see-through circles around a smaller one with your face, a slim search pill below
+        int pillH = 16, pillY = H - pillH - 8;
+        float avail = pillY - 10 - 6;
+        float D = Math.max(46, Math.min(150, Math.min(avail / 2.75f, (W - 20) / 2.86f)));  // centre → circle centre
+        float r = D * 0.47f, r0 = D * 0.31f;
+        int cx = W / 2, cy = Math.round(6 + D + r);
+        float k = 0.82f + 0.18f * ease;
 
-        // petals
+        // small brand in the corner
+        Ui.title(g, this.font, 8, 8, 1f);
+        g.drawString(this.font, "v" + VERSION, 8, 19, Ui.alpha(0xFFFFFFFF, 0.55f), true);
+
         int hovered = -1;
         for (int i = 0; i < PETALS.length; i++) {
             double a = Math.toRadians(-90 + i * 72);
-            float px = cx + (float) Math.cos(a) * R * 0.98f, py = cy + (float) Math.sin(a) * R * 0.98f;
-            float rx = R * 0.50f, ry = R * 0.38f; // radial / sideways half sizes
-            // mouse in petal space
-            double dx = mx - px, dy = my - py;
-            double lx = dx * Math.cos(a) + dy * Math.sin(a), ly = -dx * Math.sin(a) + dy * Math.cos(a);
-            boolean hv = (lx * lx) / (rx * rx) + (ly * ly) / (ry * ry) <= 1.0;
+            float px = cx + (float) Math.cos(a) * D * k, py = cy + (float) Math.sin(a) * D * k;
+            boolean hv = (mx - px) * (mx - px) + (my - py) * (my - py) <= r * r;
             if (hv) hovered = i;
             float t = animate("petal" + i, hv);
-            float grow = 1f + 0.08f * t;
+            float rr = r * k * (1f + 0.05f * t);
+            Ui.glassCircle(g, px, py, rr, t);
+            Petal p = PETALS[i];
             var pose = g.pose();
             pose.pushMatrix();
-            pose.translate(px, py);
-            pose.rotate((float) a);
-            Ui.ellipse(g, 0, 0, rx * grow + 1.5f, ry * grow + 1.5f, Ui.mix(Ui.EDGE, Ui.ORANGE, t));
-            Ui.ellipse(g, 0, 0, rx * grow, ry * grow, Ui.alpha(Ui.mix(Ui.PANEL, Ui.CARD_HOVER, t), 0.96f));
-            Ui.ellipse(g, -rx * 0.18f * grow, -ry * 0.25f * grow, rx * 0.55f * grow, ry * 0.35f * grow, Ui.alpha(Ui.ORANGE_HI, 0.06f + 0.08f * t));
+            pose.translate(px, py - rr * 0.22f);
+            pose.scale(1.8f, 1.8f);
+            g.drawString(this.font, p.icon, -this.font.width(p.icon) / 2, -4, Ui.mix(0xFFFFFFFF, Ui.ORANGE_HI, t), true);
             pose.popMatrix();
-            // icon + label (upright)
-            Petal p = PETALS[i];
-            pose.pushMatrix();
-            pose.translate(px, py - 6);
-            pose.scale(1.6f, 1.6f);
-            g.drawString(this.font, p.icon, -this.font.width(p.icon) / 2, -4, Ui.mix(Ui.ORANGE, Ui.ORANGE_HI, t), false);
-            pose.popMatrix();
-            g.drawString(this.font, p.name, Math.round(px) - this.font.width(p.name) / 2, Math.round(py) + 6, Ui.mix(Ui.TEXT, 0xFFFFFFFF, t), false);
+            g.drawString(this.font, p.name, Math.round(px) - this.font.width(p.name) / 2, Math.round(py + rr * 0.18f), 0xFFFFFFFF, true);
             if (hv) tip(p.tip);
             if (hv && pressed) { open(p.page, 0); return; }
         }
 
-        // centre: your head and name
-        float cr = R * 0.40f;
-        Ui.ellipse(g, cx, cy, cr + 2, cr + 2, Ui.ORANGE_DARK);
-        Ui.ellipse(g, cx, cy, cr + 1, cr + 1, Ui.ORANGE);
-        Ui.ellipse(g, cx, cy, cr, cr, Ui.PANEL);
-        int head = Math.max(16, Math.round(cr * 0.9f));
+        // centre: your face, name and the VEX tag; click it for every module
+        boolean ch = (mx - cx) * (mx - cx) + (my - cy) * (my - cy) <= r0 * r0;
+        float ct = animate("centre", ch);
+        float cr = r0 * k * (1f + 0.05f * ct);
+        Ui.glassCircle(g, cx, cy, cr, ct);
+        int head = Math.max(14, Math.round(cr * 0.78f));
+        int hy = Math.round(cy - cr * 0.62f);
         try {
-            if (mc.player != null) PlayerFaceRenderer.draw(g, mc.player.getSkin(), cx - head / 2, cy - head / 2 - 5, head);
-            else PlayerFaceRenderer.draw(g, DefaultPlayerSkin.get(mc.getUser().getProfileId()), cx - head / 2, cy - head / 2 - 5, head);
-        } catch (Throwable ignored) { Ui.logo(g, cx - head / 2, cy - head / 2 - 5, head, Ui.LOGO); }
+            if (mc.player != null) PlayerFaceRenderer.draw(g, mc.player.getSkin(), cx - head / 2, hy, head);
+            else PlayerFaceRenderer.draw(g, DefaultPlayerSkin.get(mc.getUser().getProfileId()), cx - head / 2, hy, head);
+        } catch (Throwable ignored) { Ui.logo(g, cx - head / 2, hy, head, Ui.LOGO); }
         String name = mc.getUser().getName();
-        g.drawString(this.font, name, cx - this.font.width(name) / 2, cy + head / 2 - 1, Ui.TEXT, true);
+        int ny = hy + head + 3;
+        g.drawString(this.font, name, cx - this.font.width(name) / 2, ny, 0xFFFFFFFF, true);
+        String tag = "VEX";
+        int tw = this.font.width(tag) + 14, ty = ny + 11;
+        Ui.card(g, cx - tw / 2, ty, cx + tw / 2, ty + 11, Ui.alpha(Ui.ORANGE, 0.35f), Ui.alpha(Ui.ORANGE_HI, 0.9f));
+        Ui.logo(g, cx - tw / 2 + 3, ty + 2, 7, 0xFFD8D8DE);
+        g.drawString(this.font, tag, cx - tw / 2 + 11, ty + 2, 0xFFFFFFFF, false);
+        if (ch) tip("Every module and HUD element on one page");
+        if (ch && pressed) { open(VexMenuScreen.Page.ALL, 0); return; }
 
-        // bottom bar: search + buttons
-        int bw = Math.min(W - 24, 380), bx0 = cx - bw / 2, bx1 = cx + bw / 2, by0 = H - 32, by1 = H - 10;
-        Ui.card(g, bx0, by0, bx1, by1, Ui.PANEL, input.isFocused() ? Ui.ORANGE : Ui.EDGE);
-        String[] labels = {"Edit HUD", "Close"};
-        int x = bx1 - 4;
-        int[] bxs = new int[labels.length];
-        for (int i = labels.length - 1; i >= 0; i--) { int w = this.font.width(labels[i]) + 16; x -= w; bxs[i] = x; x -= 4; }
-        g.drawString(this.font, "⌕", bx0 + 7, by0 + 7, Ui.DIM, false);
-        drawInput(bx0 + 19, by0 + 7, x - bx0 - 22, "Search modules and settings");
-        for (int i = 0; i < labels.length; i++) {
-            int w = this.font.width(labels[i]) + 16, x0 = bxs[i];
-            boolean hv = over(x0, by0 + 4, x0 + w, by1 - 4);
-            Ui.chip(g, this.font, x0, by0 + 4, x0 + w, by1 - 4, labels[i], i == 0 ? 1 : 0, hv, true);
-            if (hv && pressed) {
-                sound();
-                if (i == 0) { mc.setScreen(new HudEditorScreen(this)); return; }
-                closeAll(); return;
-            }
-        }
+        // search pill (typing searches straight away)
+        int bw = Math.min(W - 40, 330), bx0 = cx - bw / 2, bx1 = cx + bw / 2;
+        boolean typing = !input.getValue().isBlank();
+        Ui.round(g, bx0, pillY, bx1, pillY + pillH, Ui.alpha(0xFF000000, typing ? 0.45f : 0.25f));
+        g.fill(bx0 + 2, pillY + pillH - 1, bx1 - 2, pillY + pillH, Ui.alpha(typing ? Ui.ORANGE : 0xFFFFFFFF, typing ? 0.9f : 0.25f));
+        String esc = "Esc to close";
+        g.drawString(this.font, esc, bx1 - 6 - this.font.width(esc), pillY + 4, Ui.alpha(0xFFFFFFFF, 0.45f), false);
+        g.drawString(this.font, "⌕", bx0 + 6, pillY + 4, Ui.alpha(0xFFFFFFFF, 0.6f), false);
+        drawInput(bx0 + 17, pillY + 4, bw - 30 - this.font.width(esc), "Type to search · click a section · click your face for every module");
 
-        // search results, just above the bar
-        List<Hit> hits = search(input.getValue());
-        if (!input.getValue().isBlank()) {
-            int rh = 18, n = Math.max(1, hits.size());
-            int ry1 = by0 - 4, ry0 = ry1 - n * rh - 8;
-            Ui.card(g, bx0, ry0, bx1, ry1, Ui.alpha(Ui.PANEL, 0.98f), Ui.EDGE);
-            if (hits.isEmpty()) g.drawString(this.font, "Nothing found for “" + input.getValue() + "”", bx0 + 10, ry0 + 9, Ui.DIM, false);
+        // results above the pill
+        if (typing) {
+            List<Hit> hits = search(input.getValue());
+            int rh = 16, n = Math.max(1, hits.size());
+            int ry1 = pillY - 4, ry0 = ry1 - n * rh - 6;
+            Ui.card(g, bx0, ry0, bx1, ry1, Ui.alpha(0xFF0C0810, 0.88f), Ui.alpha(0xFFFFFFFF, 0.35f));
+            if (hits.isEmpty()) g.drawString(this.font, "Nothing found for “" + input.getValue() + "”", bx0 + 10, ry0 + 7, Ui.DIM, false);
             for (int i = 0; i < hits.size(); i++) {
                 Hit h = hits.get(i);
-                int y0 = ry0 + 4 + i * rh;
+                int y0 = ry0 + 3 + i * rh;
                 boolean hv = over(bx0 + 3, y0, bx1 - 3, y0 + rh);
-                if (hv) Ui.round(g, bx0 + 3, y0, bx1 - 3, y0 + rh, Ui.CARD_HOVER);
-                g.drawString(this.font, this.font.plainSubstrByWidth(h.label, bw - 120), bx0 + 10, y0 + 5, Ui.TEXT, false);
-                int ww = this.font.width(h.where);
-                int right = bx1 - 10;
-                if (h.state != null) { Ui.toggle(g, right - 22, y0 + 3, animate("hit" + h.label, h.state), hv); right -= 28; }
-                else { g.drawString(this.font, "›", right - 4, y0 + 5, Ui.ORANGE, false); right -= 10; }
-                g.drawString(this.font, h.where, right - ww, y0 + 5, Ui.DIM, false);
+                if (hv) Ui.round(g, bx0 + 3, y0, bx1 - 3, y0 + rh, Ui.alpha(Ui.ORANGE, 0.22f));
+                g.drawString(this.font, this.font.plainSubstrByWidth(h.label, bw - 120), bx0 + 10, y0 + 4, 0xFFFFFFFF, false);
+                int ww = this.font.width(h.where), right = bx1 - 10;
+                if (h.state != null) { Ui.toggle(g, right - 22, y0 + 2, animate("hit" + h.label, h.state), hv); right -= 28; }
+                else { g.drawString(this.font, "›", right - 4, y0 + 4, Ui.ORANGE_HI, false); right -= 10; }
+                g.drawString(this.font, h.where, right - ww, y0 + 4, Ui.alpha(0xFFFFFFFF, 0.55f), false);
                 if (hv && pressed) { sound(); h.action.run(); return; }
             }
-        } else if (hovered < 0) {
-            String hint = "Click a petal, or just start typing to search";
-            g.drawString(this.font, hint, cx - this.font.width(hint) / 2, by0 - 14, Ui.alpha(Ui.DIM, 0.8f), false);
         }
     }
 

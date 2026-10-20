@@ -33,7 +33,8 @@ public final class VexMenuScreen extends VexScreen {
         COMBAT("Combat", "Combat"),
         MISC("Misc", "Modules", "Shaders"),
         MODS("Mod Menu", "Mods"),
-        GUI("GUI Settings", "GUI Settings");
+        GUI("GUI Settings", "GUI Settings"),
+        ALL("Every module", "All");
         public final String title;
         public final String[] sections;
         Page(String title, String... sections) { this.title = title; this.sections = sections; }
@@ -161,6 +162,7 @@ public final class VexMenuScreen extends VexScreen {
                 case MISC -> { if (section == 0) moduleList(Module.Category.MISC, "Misc", "Handy extras. Click a card to switch it, click the key to rebind."); else shaderContent(); }
                 case MODS -> modsContent();
                 case GUI -> guiContent();
+                case ALL -> allContent();
             }
         } finally { g.disableScissor(); }
         maxScroll = Math.max(0, cursor - (vy1 - vy0));
@@ -502,6 +504,16 @@ public final class VexMenuScreen extends VexScreen {
         heading("Combat HUD", "Shown on your screen while playing. Move them with Edit HUD.");
         for (HudElement e : Hud.ELEMENTS) if (e.combat) hudRow(e);
         if (buttons(new String[]{"Edit HUD layout…"}, new int[]{1}) == 0) mc.setScreen(new HudEditorScreen(this));
+    }
+
+    // ---------- Every module (click your face in the Right Shift menu) ----------
+    private void allContent() {
+        for (Module.Category c : Module.Category.values()) {
+            heading(c.label, null);
+            for (Module m : Modules.in(c)) moduleRow(m);
+        }
+        heading("HUD", "Shown on your screen while playing. Move them with Edit HUD.");
+        for (HudElement e : Hud.ELEMENTS) hudRow(e);
     }
 
     // ---------- Mod Menu ----------

@@ -13,6 +13,7 @@ import initSqlJs from "sql.js";
 import { prepareVexMod } from "./ipc/vexmod";
 import { defaultRoots, findModrinth, findNoRisk, findCurseForge, findPrismLike, findVanilla, findInFolder, copyParts, copyModJars, modJars, measure, type FoundInstance, type ImportPart } from "./ipc/importers";
 import { initAccount, setServiceUrl, accountState, login, cancelLogin, logout, friends, setMinecraftTokenSource, linkMinecraft, ensureSignedIn, publicHome, serviceVersion, online, adminApi, modCredentials } from "./ipc/account";
+import { DEFAULT_ONLINE_URL } from "./config";
 import { listMods, setModEnabled, removeMod, addMods, modInfo, installedLoaderVersions } from "./ipc/mods";
 import { buildRecipe, installRecipeMods, serverStatus, type Recipe } from "./ipc/collab";
 import { connectGithub, disconnectGithub, publishStatus, publishUpdate } from "./ipc/publish";
@@ -250,7 +251,14 @@ function registerIpc() {
   ipcMain.handle("ms:add", async () => { const r = await addMicrosoftAccount(); loginCheck(); return r; });
   ipcMain.handle("ms:setActive", (_e, uuid: string) => { const r = setActiveAccount(uuid); loginCheck(); return r; });
   ipcMain.handle("ms:signOut", (_e, uuid: string) => { const r = signOutAccount(uuid); loginCheck(); return r; });
-  ipcMain.handle("online:loginCheck", () => ensureSignedIn(activeName()));
+  ipcMain.handle("online:loginCheck", async () => {
+    const st = await ensureSignedIn(activeName());
+    if (st.signedIn || !st.configured) return st;
+    // The usual reason sign-in fails: the online service is older than this VEX. When this PC set it up,
+    // update it in the background; VEX connects by itself when that's done.
+    if (await autoUpdateService()) return { ...accountState(), loginError: "Your online service is being updated to the newest version (1–3 minutes). VEX connects by itself when it's done." };
+    return st;
+  });
   ipcMain.handle("ms:skin", (_e, uuid: string) => accountSkin(uuid));
   ipcMain.handle("ms:capes", (_e, uuid: string) => accountCapes(uuid));
   ipcMain.handle("ms:setCape", (_e, uuid: string, id: string | null) => setAccountCape(uuid, id));
@@ -289,9 +297,7 @@ function registerIpc() {
   // VEX online: news, bug reports, Collab, admin
   ipcMain.handle("online:home", () => publicHome());
   ipcMain.handle("online:serviceVersion", () => serviceVersion());
-  ipcMain.handle("online:bundledServerVersion", () => {
-    try { return JSON.parse(fs.readFileSync(path.join(app.isPackaged ? path.join(process.resourcesPath, "online-server") : path.join(__dirname, "..", "..", "server"), "package.json"), "utf8")).version; } catch { return null; }
-  });
+  ipcMain.handle("online:bundledServerVersion", () => bundledServerVersion());
   ipcMain.handle("online:link", () => linkMinecraft());
   ipcMain.handle("online:reportBug", (_e, title: string, body: string) => online.reportBug(String(title ?? ""), String(body ?? ""), app.getVersion()));
   ipcMain.handle("online:serverStatus", (_e, address: string) => serverStatus(String(address ?? "")));
@@ -343,6 +349,28 @@ function registerIpc() {
   ipcMain.handle("log", (_e, level: "info" | "warn" | "error", msg: string) => log(level, `[ui] ${String(msg).slice(0, 2000)}`));
 }
 
+/** Version of the online service bundled with this VEX (SERVER_VERSION in server/src/index.ts). */
+function bundledServerVersion(): string | null {
+  const dir = app.isPackaged ? path.join(process.resourcesPath, "online-server") : path.join(__dirname, "..", "..", "server");
+  try { return /const SERVER_VERSION = "([\d.]+)"/.exec(fs.readFileSync(path.join(dir, "src", "index.ts"), "utf8"))?.[1] ?? null; } catch { return null; }
+}
+
+/** Updates the online service in the background when it's older than this VEX and was set up on this PC. */
+let serviceUpdating = false;
+async function autoUpdateService(): Promise<boolean> {
+  if (serviceUpdating) return true;
+  const prog = setupProgress();
+  const url = settings.onlineServiceUrl || DEFAULT_ONLINE_URL;
+  if (!prog.deployed || !prog.url || prog.url.replace(/\/+$/, "") !== url.replace(/\/+$/, "")) return false;
+  const [deployed, bundled] = [await serviceVersion(), bundledServerVersion()];
+  if (!deployed || !bundled || deployed === bundled) return false;
+  serviceUpdating = true;
+  log("info", `Updating the VEX online service ${deployed} → ${bundled} in the background`);
+  startSetup().then((st) => log(st.finished ? "info" : "warn", st.finished ? "Online service updated" : `Online service update stopped: ${st.error ?? "needs you (Settings → VEX online)"}`))
+    .catch(() => {}).finally(() => { serviceUpdating = false; });
+  return true;
+}
+
 app.whenReady().then(() => {
   if (process.platform === "win32") app.setAppUserModelId("net.vexclient.launcher");
   initLogger();
@@ -350,6 +378,7 @@ app.whenReady().then(() => {
   registerIpc();
   initAccount(settings.onlineServiceUrl)
     .then(() => ensureSignedIn(accountsStatus().accounts.find((a) => a.active)?.name ?? null))
+    .then((st) => { if (st.configured && !st.signedIn) autoUpdateService(); })
     .catch(() => {});
   createWindow();
   startAutoCheck();
