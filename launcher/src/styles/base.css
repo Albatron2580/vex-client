@@ -229,8 +229,8 @@ a { color: var(--accent); }
 .tip:hover > [role="tooltip"], .tip:focus-within > [role="tooltip"] { opacity: 1; transform: translate(-50%, 0); }
 
 /* Modal */
-.modal-back { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgb(8 3 8 / 0.6); backdrop-filter: blur(6px); animation: fade var(--dur) ease; }
-.modal { width: min(560px, calc(100vw - 48px)); max-height: calc(100vh - 80px); overflow: auto; animation: pop var(--dur-slow) var(--ease); }
+.modal-back { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; zoom: var(--ui-scale, 1); padding: 24px; background: rgb(8 3 8 / 0.6); backdrop-filter: blur(6px); animation: fade var(--dur) ease; }
+.modal { width: min(560px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: auto; margin: auto; animation: pop var(--dur-slow) var(--ease); }
 .modal .card-title button { margin-left: auto; }
 @keyframes fade { from { opacity: 0; } } @keyframes pop { from { opacity: 0; transform: scale(0.96) translateY(8px); } }
 
@@ -309,3 +309,4 @@ a { color: var(--accent); }
 .setup-step.waiting .setup-icon { background: var(--accent); border-color: transparent; color: #fff; }
 .setup-log { max-height: 180px; overflow: auto; margin: 0; padding: 10px; border-radius: var(--r-md); background: color-mix(in oklab, var(--bg) 80%, black); border: 1px solid var(--line); white-space: pre-wrap; user-select: text; }
 .modal { text-align: left; }
+.modal.wide { width: min(640px, calc(100vw - 48px)); }

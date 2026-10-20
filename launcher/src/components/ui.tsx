@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 import type { Rgba } from "../lib/pixels";
 
@@ -89,22 +90,26 @@ export function Notice({ kind = "info", children }: { kind?: "info" | "warn" | "
   return <div className={`notice ${kind}`} role={kind === "danger" ? "alert" : undefined}><Icon name={kind === "info" ? "info" : "alert"} size={16} /><div>{children}</div></div>;
 }
 
-export function Modal({ title, onClose, children }: { title: string; onClose(): void; children: ReactNode }) {
+export function Modal({ title, onClose, children, wide }: { title: string; onClose(): void; children: ReactNode; wide?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose); close.current = onClose;
+  // Focus the first field once when the window opens (not on every re-render).
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
     ref.current?.querySelector<HTMLElement>("input, select, button:not(.x)")?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close.current(); };
     window.addEventListener("keydown", onKey);
     return () => { window.removeEventListener("keydown", onKey); prev?.focus(); };
-  }, [onClose]);
-  return (
-    <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div ref={ref} className="card glow modal" role="dialog" aria-modal="true" aria-label={title}>
-        <h2 className="card-title">{title}<button className="btn ghost sm icon x" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button></h2>
+  }, []);
+  // Rendered straight into <body> so blurred/zoomed parents can't push it off-centre.
+  return createPortal(
+    <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && close.current()}>
+      <div ref={ref} className={`card glow modal ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+        <h2 className="card-title">{title}<button className="btn ghost sm icon x" onClick={() => close.current()} aria-label="Close"><Icon name="close" size={16} /></button></h2>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

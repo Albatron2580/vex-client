@@ -36,7 +36,7 @@ export function OnlineSetupWizard({ onClose }: { onClose(): void }) {
   const need = s?.need;
 
   return (
-    <Modal title="Set up VEX online" onClose={onClose}>
+    <Modal title="Set up VEX online" onClose={onClose} wide>
       <div className="stack">
         {!s?.finished && <p className="small muted">This puts Modrinth sign-in and Friends online on your own free Cloudflare account. VEX does every step — you just click <b>Allow</b> in your browser and paste two values from Modrinth.</p>}
         <ol className="setup-steps">
@@ -56,7 +56,13 @@ export function OnlineSetupWizard({ onClose }: { onClose(): void }) {
 
         {need?.kind === "subdomain" && !s?.running && (
           <Notice kind="warn">
-            <b>Cloudflare needs a name for your address.</b> Open Cloudflare, go to <b>Workers &amp; Pages</b> and pick your <i>workers.dev</i> name (any name you like). Then come back and click Continue.
+            <b>Cloudflare needs a name for your address</b> (one time only).
+            <ol style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+              <li>Click <b>Open Cloudflare</b>. In the menu go to <b>Compute → Workers &amp; Pages</b>.</li>
+              <li>On the right, next to <b>Subdomain</b> (or <i>your workers.dev</i>), click <b>Change</b> / <b>Set up</b>.</li>
+              <li>Type any name, e.g. your username, and confirm.</li>
+              <li>Come back here and click <b>Continue</b>.</li>
+            </ol>
             <div className="row" style={{ marginTop: 8 }}>
               <button className="btn sm" onClick={() => vex().onlineSetup.open("cloudflare")}><Icon name="external" size={14} />Open Cloudflare</button>
               <button className="btn primary sm" onClick={() => vex().onlineSetup.start()}>Continue</button>
