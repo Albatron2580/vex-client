@@ -11,8 +11,9 @@ const ROADMAP: { name: string; status: "ready" | "next" | "planned"; note: strin
   { name: "Custom Sky", status: "ready", note: "Any image → seamless sky pack (needs Nuit or OptiFine)." },
   { name: "Desktop & Start menu shortcuts", status: "ready", note: "Added by the installer; toggle in Settings." },
   { name: "Instance manager", status: "ready", note: "Create, edit and organise instances." },
-  { name: "Microsoft sign-in, game install & launch", status: "next", note: "Stage 4 — official auth, Mojang downloads, Fabric." },
-  { name: "In-game radial menu, GUI settings, theme editor", status: "planned", note: "Stage 5 — Fabric mod." },
+  { name: "Microsoft sign-in, game install & launch", status: "ready", note: "Several accounts, Java and loaders downloaded for you." },
+  { name: "Collab, news, featured server, admin panel", status: "ready", note: "Share instances with friends; admins run VEX online." },
+  { name: "In-game radial menu, GUI settings, theme editor", status: "next", note: "Next — Fabric mod." },
   { name: "Launcher ↔ client config sync", status: "planned", note: "Stage 6 — shared theme & settings files." },
   { name: "Friends & cosmetics shop", status: "planned", note: "Needs a VEX online service." },
 ];

@@ -11,8 +11,11 @@ import { listSkins, addSkin, removeSkin } from "./ipc/skinLibrary";
 import { shortcutStatus, setShortcut } from "./ipc/shortcuts";
 import initSqlJs from "sql.js";
 import { defaultRoots, findModrinth, findCurseForge, findPrismLike, findVanilla, findInFolder, copyParts, measure, type FoundInstance, type ImportPart } from "./ipc/importers";
-import { initAccount, setServiceUrl, accountState, login, cancelLogin, logout, friends } from "./ipc/account";
+import { initAccount, setServiceUrl, accountState, login, cancelLogin, logout, friends, setMinecraftTokenSource, linkMinecraft, publicHome, serviceVersion, online, adminApi } from "./ipc/account";
+import { buildRecipe, installRecipeMods, serverStatus, type Recipe } from "./ipc/collab";
+import { connectGithub, disconnectGithub, publishStatus, publishUpdate } from "./ipc/publish";
 import { setupState, startSetup, provideModrinth, openHelper, setConnectHandler } from "./ipc/onlineSetup";
+import { activeMinecraftToken, initGame, accountsStatus, addMicrosoftAccount, setActiveAccount, signOutAccount, accountSkin, accountCapes, setAccountCape, gameSettings, setGameSettings, gameState, launchInstance, stopGame, gameLogPath } from "./ipc/game";
 import { checkForUpdates, getUpdateState, installAndRestart, startAutoCheck } from "./ipc/updater";
 import { defaultMinecraftDir, instancesRoot, safeFileName, isInside } from "./ipc/paths";
 import { validateSettings, validateInstance, type LauncherSettings, type Instance } from "./shared/settingsModel";
@@ -70,7 +73,7 @@ function registerIpc() {
     return settings;
   });
 
-  // Instances (records only in Stage 3 — installing/launching arrives in Stage 4)
+  // Instances (game files download on first Play — see ipc/game.ts)
   ipcMain.handle("instances:list", () => loadInstances());
   ipcMain.handle("instances:save", (_e, raw: unknown) => {
     const inst = validateInstance(raw);
@@ -200,6 +203,81 @@ function registerIpc() {
   ipcMain.handle("online-setup:start", () => startSetup());
   ipcMain.handle("online-setup:modrinth", (_e, clientId: string, secret: string) => provideModrinth(clientId, secret));
   ipcMain.handle("online-setup:open", (_e, which: "modrinth" | "cloudflare") => openHelper(which === "cloudflare" ? "cloudflare" : "modrinth"));
+
+  // Microsoft accounts + launching Minecraft
+  initGame({
+    instances: () => loadInstances(),
+    updateInstance: (id, patch) => {
+      const list = loadInstances().map((i) => (i.id === id ? { ...i, ...patch } : i));
+      saveInstances(list);
+      BrowserWindow.getAllWindows().forEach((w) => w.webContents.send("instances:changed"));
+    },
+    afterLaunch: () => settings.afterLaunch,
+    onLaunched: (id) => {
+      settings = validateSettings({ ...settings, recentInstanceIds: [id, ...settings.recentInstanceIds.filter((x) => x !== id)].slice(0, 8) });
+      writeJson("settings.json", settings);
+      BrowserWindow.getAllWindows().forEach((w) => w.webContents.send("settings:changed", settings));
+    },
+  });
+  ipcMain.handle("ms:status", () => accountsStatus());
+  setMinecraftTokenSource(activeMinecraftToken);
+  ipcMain.handle("ms:add", async () => { const r = await addMicrosoftAccount(); linkMinecraft().catch(() => {}); return r; });
+  ipcMain.handle("ms:setActive", (_e, uuid: string) => { const r = setActiveAccount(uuid); linkMinecraft().catch(() => {}); return r; });
+  ipcMain.handle("ms:signOut", (_e, uuid: string) => signOutAccount(uuid));
+  ipcMain.handle("ms:skin", (_e, uuid: string) => accountSkin(uuid));
+  ipcMain.handle("ms:capes", (_e, uuid: string) => accountCapes(uuid));
+  ipcMain.handle("ms:setCape", (_e, uuid: string, id: string | null) => setAccountCape(uuid, id));
+  ipcMain.handle("game:settings", () => gameSettings());
+  ipcMain.handle("game:setSettings", (_e, patch: unknown) => setGameSettings((patch ?? {}) as any));
+  ipcMain.handle("game:state", () => gameState());
+  ipcMain.handle("game:launch", (_e, id: string, join?: { host: string; port: number }) => launchInstance(String(id), join));
+  ipcMain.handle("game:stop", () => stopGame());
+  ipcMain.handle("game:openLog", () => shell.openPath(gameLogPath()));
+
+  // VEX online: news, bug reports, Collab, admin
+  ipcMain.handle("online:home", () => publicHome());
+  ipcMain.handle("online:serviceVersion", () => serviceVersion());
+  ipcMain.handle("online:bundledServerVersion", () => {
+    try { return JSON.parse(fs.readFileSync(path.join(app.isPackaged ? path.join(process.resourcesPath, "online-server") : path.join(__dirname, "..", "..", "server"), "package.json"), "utf8")).version; } catch { return null; }
+  });
+  ipcMain.handle("online:link", () => linkMinecraft());
+  ipcMain.handle("online:reportBug", (_e, title: string, body: string) => online.reportBug(String(title ?? ""), String(body ?? ""), app.getVersion()));
+  ipcMain.handle("online:serverStatus", (_e, address: string) => serverStatus(String(address ?? "")));
+  ipcMain.handle("collab:shares", () => online.shares());
+  ipcMain.handle("collab:dismiss", (_e, id: number) => online.dismissShare(id));
+  ipcMain.handle("collab:share", async (_e, instanceId: string, friendId: string) => {
+    const inst = loadInstances().find((i) => i.id === instanceId);
+    if (!inst) throw new Error("That instance no longer exists.");
+    const recipe = await buildRecipe(inst);
+    await online.share(friendId, recipe);
+    return { mods: recipe.mods.length, missing: recipe.missing };
+  });
+  ipcMain.handle("collab:install", async (e, recipe: Recipe) => {
+    const id = crypto.randomUUID();
+    const inst = validateInstance({ id, name: `${String(recipe?.name ?? "Shared").slice(0, 30)} (shared)`, version: recipe?.version, loader: recipe?.loader, gameDir: path.join(instancesRoot(), id),
+      memoryMb: recipe?.memoryMb ?? 4096, jvmArgs: "", createdAt: Date.now(), lastPlayed: null, installed: false });
+    if (!inst) throw new Error("That shared instance is broken.");
+    fs.mkdirSync(inst.gameDir, { recursive: true });
+    try {
+      const r = await installRecipeMods(recipe, inst.gameDir, (done, total, title) => e.sender.send("collab:progress", { done, total, title }));
+      const list = loadInstances(); list.push(inst); saveInstances(list);
+      BrowserWindow.getAllWindows().forEach((w) => w.webContents.send("instances:changed"));
+      return { instance: inst, ...r };
+    } catch (err) { fs.rmSync(inst.gameDir, { recursive: true, force: true }); throw err; }
+  });
+  ipcMain.handle("admin:overview", () => adminApi.overview());
+  ipcMain.handle("admin:users", (_e, q: string, filter: string) => adminApi.users(q, filter));
+  ipcMain.handle("admin:ban", (_e, id: string, banned: boolean) => adminApi.ban(id, banned));
+  ipcMain.handle("admin:announce", (_e, t: string, b: string, k: string) => adminApi.announce(String(t ?? ""), String(b ?? ""), String(k ?? "news")));
+  ipcMain.handle("admin:unannounce", (_e, id: number) => adminApi.unannounce(id));
+  ipcMain.handle("admin:setFeatured", (_e, f: unknown) => adminApi.setFeatured(f));
+  ipcMain.handle("admin:clearFeatured", () => adminApi.clearFeatured());
+  ipcMain.handle("admin:bugs", (_e, status: string) => adminApi.bugs(String(status ?? "open")));
+  ipcMain.handle("admin:setBug", (_e, id: number, status: string) => adminApi.setBug(id, String(status)));
+  ipcMain.handle("admin:githubStatus", () => publishStatus());
+  ipcMain.handle("admin:githubConnect", (_e, token: string) => connectGithub(token));
+  ipcMain.handle("admin:githubDisconnect", () => disconnectGithub());
+  ipcMain.handle("admin:publish", (_e, bump: string, notes: string) => publishUpdate(String(bump), String(notes ?? "")));
 
   // Updates
   ipcMain.handle("updater:state", () => getUpdateState());

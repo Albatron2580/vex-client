@@ -10,7 +10,7 @@ import { app, BrowserWindow, safeStorage, shell } from "electron";
 import { log } from "./logger";
 import { DEFAULT_ONLINE_URL } from "../config";
 
-export interface Profile { id: string; username: string; avatar: string | null }
+export interface Profile { id: string; username: string; avatar: string | null; mcName?: string | null; admin?: boolean }
 export interface AccountState { configured: boolean; serviceUrl: string; signedIn: boolean; profile: Profile | null; persistent: boolean }
 
 let serviceUrl = "";
@@ -59,7 +59,59 @@ async function call<T>(method: string, p: string, body?: unknown): Promise<T> {
 async function refreshProfile() {
   profile = await call<Profile>("GET", "/v1/me");
   startHeartbeat(); broadcast();
+  linkMinecraft().catch(() => {});
 }
+
+// Proves which Minecraft account this player uses (the server checks it with Mojang).
+// That's what unlocks the admin panel for the admin accounts.
+let mcTokenSource: () => Promise<{ token: string; name: string } | null> = async () => null;
+export function setMinecraftTokenSource(fn: typeof mcTokenSource) { mcTokenSource = fn; }
+export async function linkMinecraft() {
+  if (!token || !profile) return accountState();
+  const mc = await mcTokenSource().catch(() => null);
+  if (!mc) return accountState();
+  if (profile.mcName === mc.name && profile.admin !== undefined) return accountState();
+  const r = await call<{ mcName: string; admin: boolean }>("POST", "/v1/link-minecraft", { token: mc.token });
+  profile = { ...profile, mcName: r.mcName, admin: r.admin };
+  log("info", `Linked Minecraft account ${r.mcName} to VEX online${r.admin ? " (admin)" : ""}`);
+  broadcast();
+  return accountState();
+}
+
+/** Announcements + featured server — public, works without signing in. */
+export async function publicHome() {
+  if (!serviceUrl) return { announcements: [], featured: null, configured: false };
+  try {
+    const r = await fetch(`${serviceUrl}/v1/public/home`, { signal: AbortSignal.timeout(10_000) });
+    if (!r.ok) throw new Error(String(r.status));
+    return { ...(await r.json() as object), configured: true };
+  } catch { return { announcements: [], featured: null, configured: true, offline: true }; }
+}
+
+export async function serviceVersion(): Promise<string | null> {
+  if (!serviceUrl) return null;
+  try { const r = await fetch(`${serviceUrl}/`, { signal: AbortSignal.timeout(10_000) }); return ((await r.json()) as any).version ?? "1.0.0"; } catch { return null; }
+}
+
+const id = (v: unknown) => { const s = String(v ?? ""); if (!/^[A-Za-z0-9]{1,40}$/.test(s)) throw new Error("Bad id."); return s; };
+const num = (v: unknown) => { const n = Number(v); if (!Number.isInteger(n) || n < 1) throw new Error("Bad id."); return n; };
+export const online = {
+  reportBug: (title: string, body: string, version: string) => call("POST", "/v1/bugs", { title, body, version }),
+  shares: () => call("GET", "/v1/shares"),
+  share: (to: string, instance: unknown) => call("POST", "/v1/shares", { to: id(to), instance }),
+  dismissShare: (shareId: number) => call("DELETE", `/v1/shares/${num(shareId)}`),
+};
+export const adminApi = {
+  overview: () => call("GET", "/v1/admin/overview"),
+  users: (q: string, filter: string) => call("GET", `/v1/admin/users?q=${encodeURIComponent(String(q ?? "").slice(0, 40))}&filter=${["online", "banned"].includes(filter) ? filter : ""}`),
+  ban: (userId: string, banned: boolean) => call("POST", `/v1/admin/users/${id(userId)}/ban`, { banned: !!banned }),
+  announce: (title: string, body: string, kind: string) => call("POST", "/v1/admin/announcements", { title, body, kind }),
+  unannounce: (annId: number) => call("DELETE", `/v1/admin/announcements/${num(annId)}`),
+  setFeatured: (f: unknown) => call("PUT", "/v1/admin/featured", f),
+  clearFeatured: () => call("DELETE", "/v1/admin/featured"),
+  bugs: (status: string) => call("GET", `/v1/admin/bugs?status=${["open", "fixed", "wontfix"].includes(status) ? status : "open"}`),
+  setBug: (bugId: number, status: string) => call("POST", `/v1/admin/bugs/${num(bugId)}`, { status }),
+};
 
 function clearToken() {
   token = null; profile = null;

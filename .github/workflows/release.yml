@@ -1,6 +1,8 @@
 # Builds the VEX CLIENT installer and publishes it as a GitHub release. Two ways to start it:
 #   - push a version tag that matches launcher/package.json, e.g.  git tag v2.0.1 && git push --tags
-#   - Actions → Release → Run workflow (uses the version already in launcher/package.json)
+#   - Actions → Release → Run workflow, or VEX → Admin → Publish update. With "bump" set, the job
+#     raises the version itself (patch 2.0.1 → 2.0.2, minor → 2.1.0, major → 3.0.0), adds the notes
+#     to CHANGELOG.md, commits that to main, then builds. "none" uses the version already in package.json.
 # Every installed VEX CLIENT checks the latest release, downloads VEX-CLIENT-Setup-x.y.z.exe,
 # verifies it against the .sha256 file, then asks the player to restart.
 name: Release
@@ -9,6 +11,16 @@ on:
   push:
     tags: ["v*.*.*"]
   workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump"
+        type: choice
+        options: [none, patch, minor, major]
+        default: none
+      notes:
+        description: "What changed (shown to players)"
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -31,6 +43,26 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: launcher/package-lock.json
+
+      - name: Bump the version (Admin panel / manual)
+        if: github.event_name == 'workflow_dispatch' && inputs.bump != 'none' && inputs.bump != ''
+        shell: pwsh
+        env:
+          NOTES: ${{ inputs.notes }}
+        run: |
+          npm version "${{ inputs.bump }}" --no-git-tag-version | Out-Null
+          $v = (Get-Content package.json | ConvertFrom-Json).version
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $notes = if ($env:NOTES) { ($env:NOTES -split "`n" | ForEach-Object { "- " + $_.Trim().TrimStart('-', ' ') } | Where-Object { $_ -ne "- " }) -join "`n" } else { "- Small fixes and improvements." }
+          $log = Get-Content ../CHANGELOG.md -Raw
+          $log = $log -replace '^# Changelog\r?\n', "# Changelog`n`n## $v — $date`n$notes`n"
+          [IO.File]::WriteAllText("$PWD/../CHANGELOG.md", $log)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json ../CHANGELOG.md
+          git commit -m "Release v$v"
+          git push origin HEAD:main
+          exit 0
 
       - name: Work out the version
         id: ver
@@ -67,8 +99,11 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ inputs.notes }}
         run: |
           $v = "${{ steps.ver.outputs.version }}"
           $exe = "release/VEX-CLIENT-Setup-$v.exe"
-          $notes = "VEX CLIENT $v. Installed copies update themselves - this file is only needed for a first install."
-          gh release create "v$v" $exe "$exe.sha256" --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "VEX CLIENT $v" --notes "$notes" --latest
+          $notes = if ($env:NOTES) { $env:NOTES } else { "Small fixes and improvements." }
+          $notes += "`n`nInstalled copies of VEX update themselves - this file is only needed for a first install."
+          $sha = git rev-parse HEAD
+          gh release create "v$v" $exe "$exe.sha256" --repo "${{ github.repository }}" --target $sha --title "VEX CLIENT $v" --notes "$notes" --latest

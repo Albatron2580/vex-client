@@ -1,13 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DEFAULT_SETTINGS, type LauncherSettings, type Instance } from "../../electron/shared/settingsModel";
-import type { AppInfo, AccountState } from "../vex";
+import type { AppInfo, AccountState, MsStatus, GameEvent } from "../vex";
 import { applyTheme, resolveTheme } from "../lib/theme";
 import { hasBridge, vex, errMsg } from "../lib/bridge";
 import { translator } from "../lib/i18n";
 
 export type ToastKind = "success" | "error" | "info";
 export interface Toast { id: number; kind: ToastKind; title: string; body?: string }
-export type PageId = "home" | "instances" | "discover" | "skins" | "features" | "friends" | "shop" | "settings";
+export type PageId = "home" | "instances" | "discover" | "skins" | "features" | "friends" | "collab" | "shop" | "settings" | "admin";
 
 interface Ctx {
   ready: boolean; desktop: boolean;
@@ -18,7 +18,10 @@ interface Ctx {
   page: PageId; go(p: PageId): void;
   t: ReturnType<typeof translator>;
   account: AccountState | null;
+  ms: MsStatus | null; refreshMs(): Promise<void>;
+  game: GameUi; play(id: string, join?: { host: string; port: number }): Promise<void>;
 }
+export interface GameUi { state: "idle" | "starting" | "running"; profileId?: string; status?: string; task?: { label: string; pct: number | null } }
 const AppCtx = createContext<Ctx | null>(null);
 export const useApp = () => { const c = useContext(AppCtx); if (!c) throw new Error("useApp outside provider"); return c; };
 
@@ -32,6 +35,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [page, setPage] = useState<PageId>("home");
   const [account, setAccount] = useState<AccountState | null>(null);
   useEffect(() => { if (!window.vex) return; window.vex.account.get().then(setAccount).catch(() => {}); return window.vex.account.onChange(setAccount); }, []);
+  const [ms, setMs] = useState<MsStatus | null>(null);
+  const [game, setGame] = useState<GameUi>({ state: "idle" });
+  const refreshMs = useCallback(async () => { if (window.vex) setMs(await window.vex.ms.status()); }, []);
   const nextId = useRef(1);
   const settingsRef = useRef(settings); settingsRef.current = settings;
 
@@ -44,6 +50,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [dismiss]);
 
   const refreshInstances = useCallback(async () => { if (desktop) setInstances(await vex().instances.list()); }, [desktop]);
+
+  // Microsoft accounts + game state from the main process.
+  useEffect(() => {
+    if (!window.vex) return;
+    refreshMs().catch(() => {});
+    window.vex.game.state().then((s) => setGame({ state: s.state, profileId: s.profileId })).catch(() => {});
+    const offInst = window.vex.onInstancesChanged(() => { refreshInstances(); });
+    const off = window.vex.game.onEvent((ev: GameEvent) => {
+      if (ev.type === "accounts") refreshMs();
+      else if (ev.type === "status") setGame((g) => ({ ...g, status: ev.text }));
+      else if (ev.type === "task") setGame((g) => ({ ...g, task: ev.done ? undefined : { label: ev.label, pct: ev.total ? Math.min(100, Math.floor(((ev.received ?? 0) / ev.total) * 100)) : null } }));
+      else if (ev.type === "game") {
+        if (ev.state === "starting") setGame({ state: "starting", profileId: ev.profileId, status: "Starting…" });
+        else if (ev.state === "running") setGame({ state: "running", profileId: ev.profileId, status: "Minecraft is running" });
+        else {
+          setGame({ state: "idle" });
+          if (ev.state === "closed" && ev.crashed) toast("error", "Minecraft closed right after starting", "Open the game log (Settings → Game) to see why.");
+        }
+      }
+    });
+    return () => { off(); offInst(); };
+  }, [refreshMs, refreshInstances, toast]);
+
+  const play = useCallback(async (id: string, join?: { host: string; port: number }) => {
+    setGame({ state: "starting", profileId: id, status: "Getting ready…" });
+    try { await vex().game.launch(id, join); }
+    catch (e) { setGame({ state: "idle" }); toast("error", "Couldn't start Minecraft", errMsg(e)); refreshMs(); }
+  }, [toast, refreshMs]);
 
   useEffect(() => {
     (async () => {
@@ -78,7 +112,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [desktop, toast]);
 
   const value = useMemo<Ctx>(() => ({
-    ready, desktop, settings, update, instances, refreshInstances, info, toasts, toast, dismiss, page, go: setPage, t: translator(settings.language), account,
-  }), [ready, desktop, settings, update, instances, refreshInstances, info, toasts, toast, dismiss, page, account]);
+    ready, desktop, settings, update, instances, refreshInstances, info, toasts, toast, dismiss, page, go: setPage, t: translator(settings.language), account, ms, refreshMs, game, play,
+  }), [ready, desktop, settings, update, instances, refreshInstances, info, toasts, toast, dismiss, page, account, ms, refreshMs, game, play]);
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

@@ -72,7 +72,7 @@ export function SkinLookupPanel({ onUseForTotem, onSaved, compact }: { onUseForT
                   <button className="btn sm" onClick={() => download(state.skin)}><Icon name="download" size={14} />Download</button>
                   <button className="btn sm" onClick={() => saveToLibrary(state.skin)}><Icon name="plus" size={14} />Library</button>
                   {onUseForTotem && <button className="btn sm" onClick={() => onUseForTotem(state.skin)}><Icon name="totem" size={14} />Totem</button>}
-                  <Tooltip text="Changing your own skin needs Microsoft sign-in, which arrives in Stage 4.">
+                  <Tooltip text="Applying a skin to your Microsoft account from VEX is coming soon.">
                     <button className="btn sm" disabled><Icon name="lock" size={14} />Apply</button>
                   </Tooltip>
                 </div>

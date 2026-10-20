@@ -49,13 +49,13 @@ export function SkinsPage() {
                     <b className="small" style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</b>
                     <div className="row" style={{ gap: 4 }}>
                       <Tooltip text="Download"><button className="btn sm icon" aria-label="Download" onClick={async () => { const r = await vex().files.saveAs(s.name, "png", dataUrlToBytes(s.dataUrl)); if (r.ok) toast("success", "Skin saved", r.path); }}><Icon name="download" size={14} /></button></Tooltip>
-                      <Tooltip text="Applying skins needs Microsoft sign-in (Stage 4)"><button className="btn sm icon" aria-label="Apply (unavailable)" disabled><Icon name="lock" size={14} /></button></Tooltip>
+                      <Tooltip text="Applying skins to your Microsoft account is coming soon"><button className="btn sm icon" aria-label="Apply (unavailable)" disabled><Icon name="lock" size={14} /></button></Tooltip>
                       <Tooltip text="Remove"><button className="btn sm icon danger" aria-label="Remove" onClick={async () => { await vex().skins.remove(s.id); load(); }}><Icon name="trash" size={14} /></button></Tooltip>
                     </div>
                   </div>
                 ))}
               </div>}
-          <div style={{ marginTop: 14 }}><Notice>Skins are stored only on this PC. Changing the skin on your Minecraft account will use Mojang's official skin API after you sign in with Microsoft (Stage 4).</Notice></div>
+          <div style={{ marginTop: 14 }}><Notice>Skins are stored only on this PC. Changing the skin on your Minecraft account from VEX is coming soon.</Notice></div>
         </Card>
         <SkinLookupPanel compact onSaved={load} />
       </div>

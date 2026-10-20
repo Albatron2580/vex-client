@@ -35,6 +35,67 @@ const api = {
     status: () => ipcRenderer.invoke("shortcuts:status"),
     set: (kind: "desktop" | "startMenu", enabled: boolean) => ipcRenderer.invoke("shortcuts:set", kind, enabled),
   },
+  ms: {
+    status: () => ipcRenderer.invoke("ms:status"),
+    add: () => ipcRenderer.invoke("ms:add"),
+    setActive: (uuid: string) => ipcRenderer.invoke("ms:setActive", uuid),
+    signOut: (uuid: string) => ipcRenderer.invoke("ms:signOut", uuid),
+    skin: (uuid: string) => ipcRenderer.invoke("ms:skin", uuid),
+    capes: (uuid: string) => ipcRenderer.invoke("ms:capes", uuid),
+    setCape: (uuid: string, id: string | null) => ipcRenderer.invoke("ms:setCape", uuid, id),
+  },
+  game: {
+    settings: () => ipcRenderer.invoke("game:settings"),
+    setSettings: (p: unknown) => ipcRenderer.invoke("game:setSettings", p),
+    state: () => ipcRenderer.invoke("game:state"),
+    launch: (id: string, join?: { host: string; port: number }) => ipcRenderer.invoke("game:launch", id, join),
+    stop: () => ipcRenderer.invoke("game:stop"),
+    openLog: () => ipcRenderer.invoke("game:openLog"),
+    onEvent: (cb: (e: unknown) => void) => {
+      const h = (_e: unknown, ev: unknown) => cb(ev);
+      ipcRenderer.on("game:event", h);
+      return () => { ipcRenderer.removeListener("game:event", h); };
+    },
+  },
+  onInstancesChanged: (cb: () => void) => {
+    const h = () => cb();
+    ipcRenderer.on("instances:changed", h);
+    return () => { ipcRenderer.removeListener("instances:changed", h); };
+  },
+  online: {
+    home: () => ipcRenderer.invoke("online:home"),
+    serviceVersion: () => ipcRenderer.invoke("online:serviceVersion"),
+    bundledServerVersion: () => ipcRenderer.invoke("online:bundledServerVersion"),
+    link: () => ipcRenderer.invoke("online:link"),
+    reportBug: (title: string, body: string) => ipcRenderer.invoke("online:reportBug", title, body),
+    serverStatus: (address: string) => ipcRenderer.invoke("online:serverStatus", address),
+  },
+  collab: {
+    shares: () => ipcRenderer.invoke("collab:shares"),
+    dismiss: (id: number) => ipcRenderer.invoke("collab:dismiss", id),
+    share: (instanceId: string, friendId: string) => ipcRenderer.invoke("collab:share", instanceId, friendId),
+    install: (recipe: unknown) => ipcRenderer.invoke("collab:install", recipe),
+    onProgress: (cb: (p: unknown) => void) => {
+      const h = (_e: unknown, p: unknown) => cb(p);
+      ipcRenderer.on("collab:progress", h);
+      return () => { ipcRenderer.removeListener("collab:progress", h); };
+    },
+  },
+  admin: {
+    overview: () => ipcRenderer.invoke("admin:overview"),
+    users: (q: string, filter: string) => ipcRenderer.invoke("admin:users", q, filter),
+    ban: (id: string, banned: boolean) => ipcRenderer.invoke("admin:ban", id, banned),
+    announce: (t: string, b: string, k: string) => ipcRenderer.invoke("admin:announce", t, b, k),
+    unannounce: (id: number) => ipcRenderer.invoke("admin:unannounce", id),
+    setFeatured: (f: unknown) => ipcRenderer.invoke("admin:setFeatured", f),
+    clearFeatured: () => ipcRenderer.invoke("admin:clearFeatured"),
+    bugs: (status: string) => ipcRenderer.invoke("admin:bugs", status),
+    setBug: (id: number, status: string) => ipcRenderer.invoke("admin:setBug", id, status),
+    githubStatus: () => ipcRenderer.invoke("admin:githubStatus"),
+    githubConnect: (token: string) => ipcRenderer.invoke("admin:githubConnect", token),
+    githubDisconnect: () => ipcRenderer.invoke("admin:githubDisconnect"),
+    publish: (bump: string, notes: string) => ipcRenderer.invoke("admin:publish", bump, notes),
+  },
   account: {
     get: () => ipcRenderer.invoke("account:get"),
     login: () => ipcRenderer.invoke("account:login"),

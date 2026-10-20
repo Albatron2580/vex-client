@@ -6,11 +6,100 @@ import { PRESET_THEMES, applyTheme, resolveTheme, exportTheme, importTheme } fro
 import { LANGUAGES } from "../lib/i18n";
 import { vex, errMsg } from "../lib/bridge";
 import { DEFAULT_SETTINGS, DEFAULT_TRAIL, type ThemeDef, type TrailSettings, type TrailStyle } from "../../electron/shared/settingsModel";
-import type { ShortcutStatus } from "../vex";
+import type { ShortcutStatus, GameSettings } from "../vex";
+import { McHead } from "../components/McHead";
+import { OnlineSetupWizard } from "../features/OnlineSetupWizard";
 import { useUpdateState } from "../components/UpdateBanner";
 import { SignInCard } from "./Friends";
 import { Avatar } from "../components/Shell";
 import { isServiceUrl } from "../../electron/shared/settingsModel";
+
+function BugReport({ onClose }: { onClose(): void }) {
+  const { toast, account } = useApp();
+  const [title, setTitle] = useState(""); const [body, setBody] = useState(""); const [busy, setBusy] = useState(false);
+  const send = async () => {
+    setBusy(true);
+    try { await window.vex!.online.reportBug(title, body); toast("success", "Bug report sent", "Thanks! The VEX admins will look at it."); onClose(); }
+    catch (e) { toast("error", "Couldn't send the report", errMsg(e)); } finally { setBusy(false); }
+  };
+  return (
+    <Modal title="Report a bug" onClose={onClose}>
+      {!account?.signedIn ? <SignInCard compact /> : (
+        <div className="stack">
+          <Field label="What went wrong?">{(id) => <input id={id} className="input" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Crosshair pack doesn't show in 1.21.11" />}</Field>
+          <Field label="Details" hint="What did you do, what happened, what did you expect? Your VEX version is added automatically.">{(id) => <textarea id={id} className="input" style={{ height: 130, padding: 10, resize: "vertical" }} maxLength={4000} value={body} onChange={(e) => setBody(e.target.value)} />}</Field>
+          <div className="row" style={{ justifyContent: "flex-end" }}><button className="btn ghost" onClick={onClose}>Cancel</button>
+            <button className="btn primary" disabled={busy || title.trim().length < 4 || body.trim().length < 10} onClick={send}>{busy ? <span className="spinner" /> : <Icon name="bug" size={15} />}Send report</button></div>
+        </div>)}
+    </Modal>
+  );
+}
+
+function MicrosoftCard() {
+  const { ms, refreshMs, toast } = useApp();
+  const [busy, setBusy] = useState(false);
+  const add = async () => {
+    setBusy(true);
+    try { await window.vex!.ms.add(); toast("success", "Microsoft account added"); }
+    catch (e) { toast("error", "Microsoft sign-in didn't finish", errMsg(e)); }
+    finally { setBusy(false); refreshMs(); }
+  };
+  return (
+    <Card title="Minecraft accounts" icon="user" sub="Microsoft accounts that own Minecraft: Java Edition. Needed to play. Add as many as you like.">
+      <div className="stack" style={{ gap: 4 }}>
+        {ms?.accounts.length ? ms.accounts.map((a) => (
+          <div key={a.uuid} className={`list-item ${a.active ? "selected" : ""}`}>
+            <McHead uuid={a.uuid} name={a.name} size={36} />
+            <div style={{ flex: 1 }}><b className="small">{a.name}</b>
+              <div className="tiny faint">{a.needsLogin ? <span style={{ color: "var(--warn)" }}>Sign-in expired — remove and add again</span> : a.active ? "Used when you press Play" : "Microsoft account"}</div></div>
+            {!a.active && <button className="btn sm" onClick={async () => { await window.vex!.ms.setActive(a.uuid); refreshMs(); }}>Use</button>}
+            <button className="btn ghost sm danger" aria-label={`Sign out ${a.name}`} onClick={async () => { await window.vex!.ms.signOut(a.uuid); refreshMs(); toast("info", `Signed out ${a.name}`); }}><Icon name="trash" size={14} /></button>
+          </div>
+        )) : <p className="small faint">No Microsoft accounts yet.</p>}
+        <button className="btn primary" style={{ alignSelf: "flex-start", marginTop: 6 }} disabled={busy} onClick={add}>{busy ? <span className="spinner" /> : <Icon name="plus" size={15} />}{busy ? "Waiting for Microsoft…" : "Add Microsoft account"}</button>
+        <p className="tiny faint">You sign in on Microsoft's own page. VEX never sees your password; the sign-in is stored encrypted by Windows{ms && !ms.secureStorage ? " (not available on this PC — you'll sign in each time)" : ""}.</p>
+      </div>
+    </Card>
+  );
+}
+
+function GameCard() {
+  const { desktop } = useApp();
+  const [g, setG] = useState<GameSettings | null>(null);
+  useEffect(() => { if (desktop) window.vex!.game.settings().then(setG); }, [desktop]);
+  const set = async (patch: Partial<GameSettings>) => setG(await window.vex!.game.setSettings(patch));
+  if (!g) return null;
+  return (
+    <Card title="Game" icon="play" sub="Applies to every instance. Memory is set per instance.">
+      <div className="toggle-row"><div className="text"><b>Window</b></div>
+        <Segmented label="Window mode" value={g.windowMode} onChange={(v) => set({ windowMode: v })} options={[{ value: "windowed", label: "Windowed" }, { value: "fullscreen", label: "Fullscreen" }]} /></div>
+      {g.windowMode === "windowed" && <div className="toggle-row"><div className="text"><b>Window size</b></div>
+        <Select<string> label="Window size" value={`${g.width}x${g.height}`} onChange={(v) => { const [w, h] = v.split("x").map(Number); set({ width: w, height: h }); }}
+          options={["854x480", "1280x720", "1600x900", "1920x1080", "2560x1440"].concat([`${g.width}x${g.height}`]).filter((v, i, a) => a.indexOf(v) === i).map((v) => ({ value: v, label: v.replace("x", " × ") }))} /></div>}
+      <div className="toggle-row"><div className="text"><b>Java</b><span>{g.javaPath ? g.javaPath : "Automatic — VEX downloads Mojang's Java when needed"}</span></div>
+        {g.javaPath && <button className="btn sm" onClick={() => set({ javaPath: "" })}>Use automatic</button>}</div>
+      <button className="btn sm" style={{ marginTop: 8 }} onClick={() => window.vex!.game.openLog()}><Icon name="folder" size={14} />Open game log</button>
+    </Card>
+  );
+}
+
+function ServiceUpdate() {
+  const { account } = useApp();
+  const [v, setV] = useState<{ deployed: string | null; bundled: string | null } | null>(null);
+  const [wizard, setWizard] = useState(false);
+  useEffect(() => {
+    if (!account?.configured || !window.vex) return;
+    Promise.all([window.vex.online.serviceVersion(), window.vex.online.bundledServerVersion()]).then(([deployed, bundled]) => setV({ deployed, bundled }));
+  }, [account?.configured, wizard]);
+  if (!v?.deployed || !v.bundled || v.deployed === v.bundled) return wizard ? <OnlineSetupWizard onClose={() => setWizard(false)} /> : null;
+  return (
+    <>
+      <Notice kind="warn"><b>Your online service can be updated</b> ({v.deployed} → {v.bundled}) for Collab, admin, news and bug reports. Do this on the PC that set it up.
+        <div style={{ marginTop: 8 }}><button className="btn primary sm" onClick={() => setWizard(true)}><Icon name="refresh" size={14} />Update online service</button></div></Notice>
+      {wizard && <OnlineSetupWizard onClose={() => setWizard(false)} />}
+    </>
+  );
+}
 
 function AccountCard() {
   const { account, settings, update, toast } = useApp();
@@ -18,7 +107,7 @@ function AccountCard() {
   const p = account?.signedIn ? account.profile : null;
   const urlOk = url === "" || isServiceUrl(url);
   return (
-    <Card title="Account" icon="user" sub="Sign in with Modrinth for friends and online status. Playing Minecraft will use Microsoft sign-in (Stage 4).">
+    <Card title="Friends account" icon="friends" sub="Sign in with Modrinth for friends, Collab and online status.">
       {p ? (
         <div className="row">
           <Avatar name={p.username} url={p.avatar} size={44} />
@@ -26,6 +115,7 @@ function AccountCard() {
           <button className="btn sm" onClick={async () => { await window.vex!.account.logout(); toast("info", "Signed out"); }}>Sign out</button>
         </div>
       ) : <SignInCard compact />}
+      <div style={{ marginTop: 12 }}><ServiceUpdate /></div>
       <details style={{ marginTop: 14 }}>
         <summary className="small muted" style={{ cursor: "pointer" }}>Online service address</summary>
         <div className="row" style={{ marginTop: 8 }}>
@@ -170,6 +260,7 @@ export function SettingsPage() {
   const { settings, update, toast, info, desktop } = useApp();
   const [editing, setEditing] = useState<ThemeDef | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [bug, setBug] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const current = resolveTheme(settings.themeId, settings.customThemes);
   const isCustom = settings.customThemes.some((t) => t.id === current.id);
@@ -225,7 +316,9 @@ export function SettingsPage() {
           </Card>
         </div>
         <div className="stack" style={{ gap: "var(--s4)" }}>
+          <MicrosoftCard />
           <AccountCard />
+          <GameCard />
           <Card title="Startup & launching" icon="play">
             <ShortcutRows />
             <ToggleRow title="Open VEX when Windows starts" desc={desktop ? "Takes effect in the installed app" : undefined} checked={settings.openAtLogin} onChange={(v) => update({ openAtLogin: v })} />
@@ -252,12 +345,14 @@ export function SettingsPage() {
               <button className="btn sm" disabled={!desktop} onClick={() => vex().files.open("logs")}><Icon name="folder" size={14} />Open logs</button>
               <button className="btn sm" disabled={!desktop} onClick={() => vex().files.open("userData")}><Icon name="folder" size={14} />Open data folder</button>
               <span className="spacer" />
+              <button className="btn sm" onClick={() => setBug(true)}><Icon name="bug" size={14} />Report a bug</button>
               <button className="btn sm danger" onClick={() => setConfirmReset(true)}><Icon name="refresh" size={14} />Reset to defaults</button>
             </div>
             <p className="tiny faint" style={{ marginTop: 10 }}>VEX {info?.version ?? "dev"} · {info?.platform ?? "browser"} · Settings never contain passwords or sign-in tokens.</p>
           </Card>
         </div>
       </div>
+      {bug && <BugReport onClose={() => setBug(false)} />}
       {editing && <ThemeEditor base={editing} onClose={() => setEditing(null)} />}
       {confirmReset && (
         <Modal title="Reset all settings?" onClose={() => setConfirmReset(false)}>

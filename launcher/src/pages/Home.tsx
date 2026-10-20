@@ -1,13 +1,16 @@
-import { Card, Notice, Progress, ToggleRow, Tooltip, Select } from "../components/ui";
+import { Card, Notice, Progress, ToggleRow, Select } from "../components/ui";
 import { Icon } from "../components/Icon";
 import { Logo } from "../components/Logo";
 import { useEffect, useState } from "react";
 import { useApp } from "../state/AppState";
+import { PlayButton, GameProgress } from "../components/PlayButton";
+import { HomeOnline } from "../features/HomeOnline";
 import { vex, errMsg } from "../lib/bridge";
 import type { ShortcutStatus } from "../vex";
 
 export function HomePage() {
-  const { t, instances, settings, update, go, info, desktop, toast } = useApp();
+  const { t, instances, settings, update, go, info, desktop, toast, ms } = useApp();
+  const activeMs = ms?.accounts.find((a) => a.active);
   const selected = instances.find((i) => i.id === settings.selectedInstanceId) ?? instances[0] ?? null;
   const recent = settings.recentInstanceIds.map((id) => instances.find((i) => i.id === id)).filter(Boolean);
   const mcDir = settings.minecraftDir || info?.defaultMinecraftDir || "—";
@@ -36,13 +39,13 @@ export function HomePage() {
             </div>
           </div>
           <div className="stack" style={{ alignItems: "flex-end", gap: 10 }}>
-            <Tooltip text={!selected ? "Create an instance first." : "Installing and launching Minecraft arrives in Stage 4 (Microsoft sign-in + game download)."}>
-              <button className="play-btn" disabled><Icon name="play" size={22} />{t("home.play")}</button>
-            </Tooltip>
-            <span className="tiny faint">Launching isn't available yet — Stage 4</span>
+            <PlayButton big />
+            <div style={{ width: 260 }}><GameProgress /></div>
           </div>
         </div>
       </section>
+
+      <HomeOnline />
 
       <div className="grid grid-3">
         <Card title="Selected instance" icon="cube">
@@ -52,14 +55,15 @@ export function HomePage() {
               <dt>Version</dt><dd>{selected.version} · {selected.loader}</dd>
               <dt>Memory</dt><dd>{(selected.memoryMb / 1024).toFixed(1)} GB</dd>
               <dt>Folder</dt><dd title={selected.gameDir} className="mono">{selected.gameDir}</dd>
-              <dt>Status</dt><dd>{selected.installed ? <span className="chip ok"><span className="dot" />Installed</span> : <span className="chip warn"><span className="dot" />Not installed</span>}</dd>
+              <dt>Status</dt><dd>{selected.installed ? <span className="chip ok"><span className="dot" />Ready to play</span> : <span className="chip"><span className="dot" />Downloads on first Play</span>}</dd>
             </dl>
           ) : <div className="empty"><Icon name="cube" size={28} /><span className="small">No instance selected</span><button className="btn sm" onClick={() => go("instances")}>Open Instances</button></div>}
         </Card>
 
         <Card title="Status" icon="info">
           <div className="stack">
-            <div className="row small"><span className="muted" style={{ flex: 1 }}>Account</span><span className="chip warn"><span className="dot" />Not signed in</span></div>
+            <div className="row small"><span className="muted" style={{ flex: 1 }}>Minecraft account</span>
+              {activeMs ? <span className={`chip ${activeMs.needsLogin ? "warn" : "ok"}`}><span className="dot" />{activeMs.name}</span> : <span className="chip warn"><span className="dot" />Not signed in</span>}</div>
             <div className="row small"><span className="muted" style={{ flex: 1 }}>Minecraft folder</span>
               {info?.defaultMinecraftDirExists || settings.minecraftDir ? <span className="chip ok"><span className="dot" />Found</span> : <span className="chip">Not found</span>}</div>
             <div className="mono faint" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={mcDir}>{mcDir}</div>

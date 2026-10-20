@@ -8,7 +8,14 @@ export interface Env {
   MODRINTH_CLIENT_SECRET: string;
   MODRINTH_WEB?: string;  // overrides for local testing only
   MODRINTH_API?: string;
+  MC_API?: string;
+  ADMINS?: string;        // comma-separated Minecraft names; defaults to DEFAULT_ADMINS
 }
+
+const SERVER_VERSION = "2.0.0";
+// Admins are checked against the Minecraft account the player linked — the server verifies that
+// account with Mojang itself, so nobody can make themselves an admin by renaming anything.
+const DEFAULT_ADMINS = "HAckerbest11,RaxMc,UNCdel";
 
 const SESSION_DAYS = 60;
 const ONLINE_MS = 120_000;   // a heartbeat every 60 s keeps you online
@@ -29,7 +36,9 @@ async function sha256(s: string) {
 }
 const loopback = (port: number, params: Record<string, string>) => `http://127.0.0.1:${port}/callback?${new URLSearchParams(params)}`;
 
-interface UserRow { id: string; username: string; avatar_url: string | null; last_seen: number; status: string; detail: string | null }
+interface UserRow { id: string; username: string; avatar_url: string | null; last_seen: number; status: string; detail: string | null; mc_name: string | null; mc_uuid: string | null; banned: number; created_at: number }
+const adminList = (env: Env) => (env.ADMINS || DEFAULT_ADMINS).split(",").map((n) => n.trim().toLowerCase()).filter(Boolean);
+const isAdmin = (env: Env, u: UserRow) => !!u.mc_name && adminList(env).includes(u.mc_name.toLowerCase());
 const publicUser = (u: UserRow, withPresence: boolean) => ({
   id: u.id, username: u.username, avatar: u.avatar_url,
   ...(withPresence ? { online: now() - u.last_seen < ONLINE_MS, status: now() - u.last_seen < ONLINE_MS ? u.status : "offline", detail: now() - u.last_seen < ONLINE_MS ? u.detail : null, lastSeen: u.last_seen || null } : {}),
@@ -43,6 +52,8 @@ async function authed(req: Request, env: Env): Promise<UserRow | null> {
   const row = await env.DB.prepare("SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?").bind(await sha256(m[1]), now()).first<UserRow>();
   return row ?? null;
 }
+
+const clip = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 async function authStart(url: URL, env: Env) {
   const port = Number(url.searchParams.get("port"));
@@ -109,7 +120,62 @@ async function relation(env: Env, me: string, other: string) {
 
 async function api(req: Request, url: URL, env: Env, me: UserRow) {
   const p = url.pathname;
-  if (p === "/v1/me" && req.method === "GET") return json(publicUser(me, false));
+  if (me.banned) return fail(403, "This account is banned from VEX online.");
+  if (p === "/v1/me" && req.method === "GET") return json({ ...publicUser(me, false), mcName: me.mc_name, admin: isAdmin(env, me) });
+
+  // Link the player's Minecraft account: the launcher sends a fresh Minecraft access token once,
+  // the server asks Mojang whose it is, keeps only the name + uuid, and drops the token.
+  if (p === "/v1/link-minecraft" && req.method === "POST") {
+    const body = (await req.json().catch(() => ({}))) as { token?: string };
+    if (typeof body.token !== "string" || body.token.length < 20 || body.token.length > 4000) return fail(400, "Missing Minecraft token.");
+    const r = await fetch(`${env.MC_API ?? "https://api.minecraftservices.com"}/minecraft/profile`, { headers: { authorization: `Bearer ${body.token}` } });
+    if (!r.ok) return fail(400, "Mojang didn't accept that Minecraft sign-in.");
+    const prof = (await r.json()) as { id?: string; name?: string };
+    if (!prof.id || !prof.name) return fail(400, "That account has no Minecraft profile.");
+    await env.DB.prepare("UPDATE users SET mc_name = ?, mc_uuid = ? WHERE id = ?").bind(prof.name, prof.id, me.id).run();
+    const updated = { ...me, mc_name: prof.name, mc_uuid: prof.id };
+    return json({ mcName: prof.name, admin: isAdmin(env, updated) });
+  }
+
+  // Bug reports from players.
+  if (p === "/v1/bugs" && req.method === "POST") {
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const title = clip(body.title, 120), text = clip(body.body, 4000), version = clip(body.version, 20);
+    if (title.length < 4 || text.length < 10) return fail(400, "Give the bug a short title and describe what happened.");
+    const recent = await env.DB.prepare("SELECT COUNT(*) AS n FROM bug_reports WHERE user_id = ? AND created_at > ?").bind(me.id, now() - 86_400_000).first<{ n: number }>();
+    if ((recent?.n ?? 0) >= 5) return fail(429, "You've sent 5 reports today. Thanks — try again tomorrow.");
+    await env.DB.prepare("INSERT INTO bug_reports (user_id, title, body, version, created_at) VALUES (?, ?, ?, ?, ?)").bind(me.id, title, text, version || null, now()).run();
+    return json({ ok: true });
+  }
+
+  // Collab: send an instance recipe to a friend.
+  if (p === "/v1/shares" && req.method === "GET") {
+    const { results } = await env.DB.prepare(`SELECT s.id, s.payload, s.created_at, s.from_user, s.to_user, fu.username AS from_name, fu.avatar_url AS from_avatar, tu.username AS to_name
+      FROM shares s JOIN users fu ON fu.id = s.from_user JOIN users tu ON tu.id = s.to_user WHERE s.to_user = ?1 OR s.from_user = ?1 ORDER BY s.created_at DESC LIMIT 100`).bind(me.id).all<any>();
+    const map = (r: any) => ({ id: r.id, createdAt: r.created_at, from: { id: r.from_user, username: r.from_name, avatar: r.from_avatar }, to: { id: r.to_user, username: r.to_name }, instance: JSON.parse(r.payload) });
+    return json({ incoming: results.filter((r) => r.to_user === me.id).map(map), sent: results.filter((r) => r.from_user === me.id).map(map) });
+  }
+  if (p === "/v1/shares" && req.method === "POST") {
+    const body = (await req.json().catch(() => ({}))) as { to?: string; instance?: any };
+    const to = typeof body.to === "string" ? body.to : "";
+    if ((await relation(env, me.id, to)) !== "friends") return fail(403, "You can only share with friends.");
+    const inst = validateRecipe(body.instance);
+    if (!inst) return fail(400, "That instance couldn't be shared.");
+    const sent = await env.DB.prepare("SELECT COUNT(*) AS n FROM shares WHERE from_user = ? AND created_at > ?").bind(me.id, now() - 86_400_000).first<{ n: number }>();
+    if ((sent?.n ?? 0) >= 30) return fail(429, "You've shared 30 instances today. Try again tomorrow.");
+    await env.DB.prepare("INSERT INTO shares (from_user, to_user, payload, created_at) VALUES (?, ?, ?, ?)").bind(me.id, to, JSON.stringify(inst), now()).run();
+    return json({ ok: true });
+  }
+  const sm = /^\/v1\/shares\/(\d{1,12})$/.exec(p);
+  if (sm && req.method === "DELETE") {
+    await env.DB.prepare("DELETE FROM shares WHERE id = ? AND (to_user = ?2 OR from_user = ?2)").bind(Number(sm[1]), me.id).run();
+    return json({ ok: true });
+  }
+
+  if (p.startsWith("/v1/admin/")) {
+    if (!isAdmin(env, me)) return fail(403, me.mc_name ? "Your Minecraft account isn't a VEX admin." : "Link your Minecraft account first (sign in with Microsoft in VEX).");
+    return admin(req, url, env, me);
+  }
 
   if (p === "/v1/presence" && req.method === "POST") {
     const body = (await req.json().catch(() => ({}))) as { status?: string; detail?: string };
@@ -128,7 +194,7 @@ async function api(req: Request, url: URL, env: Env, me: UserRow) {
     const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
     if (q.length < 2 || q.length > 40) return json([]);
     const like = q.replace(/[%_\\]/g, (c) => "\\" + c) + "%";
-    const { results } = await env.DB.prepare("SELECT * FROM users WHERE username_lower LIKE ? ESCAPE '\\' AND id != ? ORDER BY username_lower = ? DESC, length(username) LIMIT 15").bind(like, me.id, q).all<UserRow>();
+    const { results } = await env.DB.prepare("SELECT * FROM users WHERE username_lower LIKE ? ESCAPE '\\' AND id != ? AND banned = 0 ORDER BY username_lower = ? DESC, length(username) LIMIT 15").bind(like, me.id, q).all<UserRow>();
     return json(await Promise.all(results.map(async (u) => ({ ...publicUser(u, false), relation: await relation(env, me.id, u.id) }))));
   }
   if (p === "/v1/friends" && req.method === "GET") {
@@ -170,11 +236,110 @@ async function api(req: Request, url: URL, env: Env, me: UserRow) {
   return fail(404, "Not found.");
 }
 
+// Collab instance recipe: what a friend needs to rebuild the instance (mods come from Modrinth).
+function validateRecipe(raw: any) {
+  if (!raw || typeof raw !== "object") return null;
+  const name = clip(raw.name, 40), version = clip(raw.version, 40);
+  const loader = ["vanilla", "fabric", "forge", "neoforge", "quilt"].includes(raw.loader) ? raw.loader : null;
+  if (!name || !/^[\w.\- ]{1,40}$/.test(version) || !loader) return null;
+  const mods = Array.isArray(raw.mods) ? raw.mods.slice(0, 400).flatMap((m: any) => {
+    const projectId = clip(m?.projectId, 20), versionId = clip(m?.versionId, 20), title = clip(m?.title, 80), file = clip(m?.file, 120);
+    return /^[A-Za-z0-9]{6,20}$/.test(projectId) && /^[A-Za-z0-9]{6,20}$/.test(versionId) ? [{ projectId, versionId, title, file }] : [];
+  }) : [];
+  const missing = Array.isArray(raw.missing) ? raw.missing.slice(0, 200).map((f: unknown) => clip(f, 120)).filter(Boolean) : [];
+  return { name, version, loader, mods, missing, memoryMb: Math.min(32768, Math.max(1024, Number(raw.memoryMb) || 4096)) };
+}
+
+async function getConfig(env: Env, key: string) {
+  const r = await env.DB.prepare("SELECT value FROM config WHERE key = ?").bind(key).first<{ value: string }>();
+  try { return r ? JSON.parse(r.value) : null; } catch { return null; }
+}
+
+async function publicHome(env: Env) {
+  const { results } = await env.DB.prepare("SELECT id, title, body, kind, author, created_at FROM announcements ORDER BY created_at DESC LIMIT 5").all<any>();
+  return json({
+    announcements: results.map((a) => ({ id: a.id, title: a.title, body: a.body, kind: a.kind, author: a.author, createdAt: a.created_at })),
+    featured: await getConfig(env, "featured"),
+  });
+}
+
+async function admin(req: Request, url: URL, env: Env, me: UserRow) {
+  const p = url.pathname;
+  if (p === "/v1/admin/overview" && req.method === "GET") {
+    const c = await env.DB.prepare(`SELECT (SELECT COUNT(*) FROM users) AS users, (SELECT COUNT(*) FROM users WHERE last_seen > ?1) AS online,
+      (SELECT COUNT(*) FROM users WHERE created_at > ?2) AS newWeek, (SELECT COUNT(*) FROM bug_reports WHERE status = 'open') AS openBugs,
+      (SELECT COUNT(*) FROM users WHERE banned = 1) AS banned, (SELECT COUNT(*) FROM friendships WHERE status = 'accepted') AS friendships`)
+      .bind(now() - ONLINE_MS, now() - 7 * 86_400_000).first();
+    return json({ ...c, serverVersion: SERVER_VERSION, admins: (env.ADMINS || DEFAULT_ADMINS).split(",").map((n) => n.trim()).filter(Boolean) });
+  }
+  if (p === "/v1/admin/users" && req.method === "GET") {
+    const q = (url.searchParams.get("q") ?? "").trim().toLowerCase().slice(0, 40);
+    const filter = url.searchParams.get("filter");
+    const like = "%" + q.replace(/[%_\\]/g, (c) => "\\" + c) + "%";
+    const where = filter === "online" ? "AND last_seen > ?2" : filter === "banned" ? "AND banned = 1" : "";
+    const { results } = await env.DB.prepare(`SELECT * FROM users WHERE (username_lower LIKE ?1 ESCAPE '\\' OR lower(coalesce(mc_name,'')) LIKE ?1 ESCAPE '\\') ${where} ORDER BY last_seen DESC LIMIT 100`)
+      .bind(...(filter === "online" ? [like, now() - ONLINE_MS] : [like])).all<UserRow>();
+    return json(results.map((u) => ({ ...publicUser(u, true), mcName: u.mc_name, banned: !!u.banned, admin: isAdmin(env, u), joined: u.created_at })));
+  }
+  const bm = /^\/v1\/admin\/users\/([A-Za-z0-9]{1,40})\/ban$/.exec(p);
+  if (bm && req.method === "POST") {
+    if (bm[1] === me.id) return fail(400, "You can't ban yourself.");
+    const target = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(bm[1]).first<UserRow>();
+    if (!target) return fail(404, "No such player.");
+    if (isAdmin(env, target)) return fail(400, "Admins can't be banned.");
+    const banned = ((await req.json().catch(() => ({}))) as { banned?: boolean }).banned !== false;
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET banned = ? WHERE id = ?").bind(banned ? 1 : 0, target.id),
+      ...(banned ? [env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(target.id)] : []),
+    ]);
+    return json({ ok: true, banned });
+  }
+  if (p === "/v1/admin/announcements" && req.method === "POST") {
+    const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const title = clip(b.title, 100), body = clip(b.body, 2000);
+    const kind = ["news", "update", "warning"].includes(b.kind as string) ? (b.kind as string) : "news";
+    if (!title || !body) return fail(400, "An announcement needs a title and text.");
+    await env.DB.prepare("INSERT INTO announcements (title, body, kind, author, created_at) VALUES (?, ?, ?, ?, ?)").bind(title, body, kind, me.mc_name ?? me.username, now()).run();
+    return publicHome(env);
+  }
+  const am = /^\/v1\/admin\/announcements\/(\d{1,12})$/.exec(p);
+  if (am && req.method === "DELETE") {
+    await env.DB.prepare("DELETE FROM announcements WHERE id = ?").bind(Number(am[1])).run();
+    return publicHome(env);
+  }
+  if (p === "/v1/admin/featured" && req.method === "PUT") {
+    const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const name = clip(b.name, 60), address = clip(b.address, 120).toLowerCase(), description = clip(b.description, 200), version = clip(b.version, 40);
+    if (!name || !/^[a-z0-9.-]{1,253}(:\d{1,5})?$/.test(address)) return fail(400, "Give the server a name and a valid address like play.example.net.");
+    const value = JSON.stringify({ name, address, description, version, updatedBy: me.mc_name, updatedAt: now() });
+    await env.DB.prepare("INSERT INTO config (key, value) VALUES ('featured', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind(value).run();
+    return publicHome(env);
+  }
+  if (p === "/v1/admin/featured" && req.method === "DELETE") {
+    await env.DB.prepare("DELETE FROM config WHERE key = 'featured'").run();
+    return publicHome(env);
+  }
+  if (p === "/v1/admin/bugs" && req.method === "GET") {
+    const status = ["open", "fixed", "wontfix"].includes(url.searchParams.get("status") ?? "") ? url.searchParams.get("status") : "open";
+    const { results } = await env.DB.prepare(`SELECT b.*, u.username, u.mc_name FROM bug_reports b JOIN users u ON u.id = b.user_id WHERE b.status = ? ORDER BY b.created_at DESC LIMIT 200`).bind(status).all<any>();
+    return json(results.map((b) => ({ id: b.id, title: b.title, body: b.body, version: b.version, status: b.status, createdAt: b.created_at, by: b.mc_name || b.username })));
+  }
+  const gm = /^\/v1\/admin\/bugs\/(\d{1,12})$/.exec(p);
+  if (gm && req.method === "POST") {
+    const status = ((await req.json().catch(() => ({}))) as { status?: string }).status;
+    if (!["open", "fixed", "wontfix"].includes(status ?? "")) return fail(400, "Bad status.");
+    await env.DB.prepare("UPDATE bug_reports SET status = ? WHERE id = ?").bind(status, Number(gm[1])).run();
+    return json({ ok: true });
+  }
+  return fail(404, "Not found.");
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     try {
-      if (url.pathname === "/") return json({ service: "vex-online", ok: true });
+      if (url.pathname === "/") return json({ service: "vex-online", ok: true, version: SERVER_VERSION });
+      if (url.pathname === "/v1/public/home" && req.method === "GET") return await publicHome(env);
       if (url.pathname === "/auth/start") return await authStart(url, env);
       if (url.pathname === "/auth/callback") return await authCallback(url, env);
       if (url.pathname.startsWith("/v1/")) {

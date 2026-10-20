@@ -40,6 +40,11 @@ const P: Record<string, string> = {
   panelClose: "M4 4h16v16H4zM9 4v16M15 9l-3 3 3 3",
   panelOpen: "M4 4h16v16H4zM9 4v16M13 9l3 3-3 3",
   chevron: "m6 9 6 6 6-6",
+  collab: "M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 20a6 6 0 0 1 9.5-4.9M22 20a6 6 0 0 0-9.5-4.9M12 13v8m-3-3 3 3 3-3",
+  shield: "M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6zm-3 9 2 2 4-4",
+  bug: "M8 9h8v6a4 4 0 0 1-8 0zM9 9V7a3 3 0 0 1 6 0v2M4 13h4m8 0h4M5 8l3 2m11-2-3 2M5 19l3-2m11 2-3-2",
+  megaphone: "M3 10v4h3l7 4V6l-7 4zm13-2a5 5 0 0 1 0 8M6 14l1 5h3l-1-5",
+  server: "M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01",
   sparkle: "M12 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7Z",
 };
 export type IconName = keyof typeof P;

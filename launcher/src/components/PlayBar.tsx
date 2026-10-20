@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "../state/AppState";
 import { Icon } from "./Icon";
-import { Tooltip } from "./ui";
+import { PlayButton, GameProgress } from "./PlayButton";
 
 const TILE = ["#7cc4ff", "#7cf0d6", "#ffb37c", "#ff8cc6", "#b48cff", "#ffd27a"];
 export const tileColor = (id: string) => TILE[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % TILE.length];
@@ -40,9 +40,10 @@ export function PlayBar() {
           <Icon name="chevron" size={14} />
         </> : <><span className="inst-tile ghost"><Icon name="plus" size={14} /></span><span className="small">Create an instance</span></>}
       </button>
-      <Tooltip text="Launching arrives in Stage 4 (Microsoft sign-in + game download)">
-        <button className="playbar-play" disabled><Icon name="play" size={14} />Play</button>
-      </Tooltip>
+      <div className="stack" style={{ gap: 4 }}>
+        <PlayButton />
+      </div>
+      <div className="playbar-progress"><GameProgress /></div>
     </div>
   );
 }

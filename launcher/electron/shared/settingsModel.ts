@@ -174,7 +174,7 @@ export interface Instance {
   id: string; name: string; version: string; loader: Loader;
   gameDir: string; memoryMb: number; jvmArgs: string;
   createdAt: number; lastPlayed: number | null;
-  installed: boolean;   // true only after Stage 4 installer verifies files
+  installed: boolean;   // true once the game has been downloaded and started
 }
 
 export function validateInstance(raw: unknown): Instance | null {

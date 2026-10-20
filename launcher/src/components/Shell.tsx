@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { McHead } from "./McHead";
+import { errMsg } from "../lib/bridge";
 import { useApp, type PageId } from "../state/AppState";
 import { Icon } from "./Icon";
 import { Logo } from "./Logo";
 
-const SECTIONS: { title: string; items: { id: PageId; icon: string; badge?: string }[] }[] = [
+const SECTIONS: { title: string; items: { id: PageId; icon: string; badge?: string; adminOnly?: boolean }[] }[] = [
   { title: "Main", items: [{ id: "home", icon: "home" }, { id: "instances", icon: "cube" }, { id: "discover", icon: "discover" }] },
-  { title: "Social", items: [{ id: "friends", icon: "friends" }, { id: "shop", icon: "shop", badge: "Soon" }] },
+  { title: "Social", items: [{ id: "friends", icon: "friends" }, { id: "collab", icon: "collab" }, { id: "shop", icon: "shop", badge: "Soon" }] },
   { title: "Customization", items: [{ id: "skins", icon: "skins" }, { id: "features", icon: "features" }] },
-  { title: "Client", items: [{ id: "settings", icon: "settings" }] },
+  { title: "Client", items: [{ id: "settings", icon: "settings" }, { id: "admin", icon: "shield", adminOnly: true }] },
 ];
 
 export function TitleBar() {
@@ -27,8 +29,9 @@ export function TitleBar() {
 }
 
 export function Sidebar() {
-  const { page, go, t, settings, update } = useApp();
+  const { page, go, t, settings, update, account } = useApp();
   const collapsed = settings.sidebarCollapsed;
+  const isAdmin = !!account?.profile?.admin;
   return (
     <nav className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Main">
       <div className="brand"><Logo size={collapsed ? 34 : 40} />{!collapsed && <div className="brand-name">VEX<small>CLIENT</small></div>}</div>
@@ -36,7 +39,7 @@ export function Sidebar() {
         {SECTIONS.map((sec) => (
           <div key={sec.title} className="nav-section">
             {collapsed ? <hr className="nav-rule" /> : <div className="nav-title">{sec.title}</div>}
-            {sec.items.map((n) => {
+            {sec.items.filter((n) => !n.adminOnly || isAdmin).map((n) => {
               const label = t(`nav.${n.id}` as any);
               return (
                 <button key={n.id} className="nav-item" aria-current={page === n.id ? "page" : undefined} onClick={() => go(n.id)} title={collapsed ? label : undefined} aria-label={label}>
@@ -65,14 +68,55 @@ export function Avatar({ name, url, size = 32 }: { name: string; url: string | n
 }
 
 function AccountBox({ collapsed }: { collapsed: boolean }) {
-  const { go, account } = useApp();
-  const p = account?.signedIn ? account.profile : null;
+  const { go, account, ms, refreshMs, toast } = useApp();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => { if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.contains(e.target as Node)) setOpen(false); };
+    addEventListener("mousedown", close); addEventListener("keydown", close);
+    return () => { removeEventListener("mousedown", close); removeEventListener("keydown", close); };
+  }, [open]);
+  const active = ms?.accounts.find((a) => a.active) ?? null;
+  const modrinth = account?.signedIn ? account.profile : null;
+  const addMs = async () => {
+    setBusy(true);
+    try { const s = await window.vex!.ms.add(); toast("success", `Signed in as ${s.accounts.find((a) => a.active)?.name ?? "your account"}`); }
+    catch (e) { toast("error", "Microsoft sign-in didn't finish", errMsg(e)); }
+    finally { setBusy(false); refreshMs(); }
+  };
   return (
-    <button className="account-box" onClick={() => go(p ? "friends" : "settings")} title={collapsed ? (p ? p.username : "Add account") : undefined} aria-label={p ? `Signed in as ${p.username}` : "Add account"}>
-      {p ? <span style={{ position: "relative" }}><Avatar name={p.username} url={p.avatar} /><span className="presence-dot online" /></span> : <span className="nav-tile"><Icon name="plus" size={17} /></span>}
-      {!collapsed && <span style={{ minWidth: 0, textAlign: "left" }}>
-        <b className="small" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p ? p.username : "No account"}</b>
-        <span className="tiny faint">{p ? "Modrinth · Online" : "Add account"}</span></span>}
-    </button>
+    <div ref={ref} style={{ position: "relative" }}>
+      {open && (
+        <div className="account-menu" role="menu">
+          <div className="label" style={{ padding: "4px 8px" }}>Minecraft accounts</div>
+          {ms?.accounts.map((a) => (
+            <button key={a.uuid} role="menuitemradio" aria-checked={a.active} className={`list-item ${a.active ? "selected" : ""}`}
+              onClick={async () => { await window.vex!.ms.setActive(a.uuid); refreshMs(); setOpen(false); }}>
+              <McHead uuid={a.uuid} name={a.name} size={28} />
+              <span style={{ flex: 1, textAlign: "left" }}><b className="small">{a.name}</b>{a.needsLogin && <span className="tiny" style={{ display: "block", color: "var(--warn)" }}>Sign in again</span>}</span>
+              {a.active && <Icon name="check" size={14} />}
+            </button>
+          ))}
+          <button className="list-item" disabled={busy} onClick={addMs}><span className="nav-tile">{busy ? <span className="spinner" /> : <Icon name="plus" size={15} />}</span><span className="small">{busy ? "Waiting for Microsoft…" : "Add Microsoft account"}</span></button>
+          <hr className="divider" />
+          <div className="label" style={{ padding: "4px 8px" }}>Friends (Modrinth)</div>
+          <button className="list-item" onClick={() => { go(modrinth ? "friends" : "settings"); setOpen(false); }}>
+            {modrinth ? <Avatar name={modrinth.username} url={modrinth.avatar} size={28} /> : <span className="nav-tile"><Icon name="friends" size={15} /></span>}
+            <span className="small">{modrinth ? modrinth.username : "Sign in with Modrinth"}</span>
+          </button>
+          <hr className="divider" />
+          <button className="list-item" onClick={() => { go("settings"); setOpen(false); }}><span className="nav-tile"><Icon name="settings" size={15} /></span><span className="small">Manage accounts</span></button>
+        </div>
+      )}
+      <button className="account-box" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} title={collapsed ? (active?.name ?? "Add account") : undefined} aria-label={active ? `Account: ${active.name}` : "Add account"}>
+        {active ? <span style={{ position: "relative" }}><McHead uuid={active.uuid} name={active.name} /><span className={`presence-dot ${active.needsLogin ? "" : "online"}`} /></span> : <span className="nav-tile"><Icon name="plus" size={17} /></span>}
+        {!collapsed && <span style={{ minWidth: 0, textAlign: "left", flex: 1 }}>
+          <b className="small" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{active ? active.name : "No account"}</b>
+          <span className="tiny faint">{active ? (active.needsLogin ? "Sign in again" : modrinth ? `Microsoft · ${modrinth.username}` : "Microsoft") : "Add account"}</span></span>}
+        {!collapsed && <Icon name="chevron" size={14} />}
+      </button>
+    </div>
   );
 }

@@ -310,3 +310,14 @@ a { color: var(--accent); }
 .setup-log { max-height: 180px; overflow: auto; margin: 0; padding: 10px; border-radius: var(--r-md); background: color-mix(in oklab, var(--bg) 80%, black); border: 1px solid var(--line); white-space: pre-wrap; user-select: text; }
 .modal { text-align: left; }
 .modal.wide { width: min(640px, calc(100vw - 48px)); }
+.playbar-progress { position: absolute; left: 14px; right: 14px; bottom: -22px; }
+.game-progress { display: flex; flex-direction: column; gap: 4px; color: var(--text-dim); }
+.play-btn.busy, .playbar-play.busy { cursor: progress; filter: none; }
+.account-menu { position: absolute; bottom: calc(100% + 8px); left: 0; width: 260px; max-height: 70vh; overflow: auto; z-index: 35; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+  border-radius: var(--r-lg); border: 1px solid var(--line-strong); background: color-mix(in oklab, var(--panel) 96%, black); box-shadow: var(--shadow), var(--glow-sm); animation: pop var(--dur) var(--ease); }
+.account-menu .list-item { border: 0; background: none; color: var(--text); cursor: pointer; width: 100%; padding: 6px 8px; }
+.account-menu .list-item svg { color: var(--accent); }
+.account-box > svg { color: var(--text-faint); }
+.news-item { padding: 10px 12px; border-radius: var(--r-md); border: 1px solid var(--line); background: color-mix(in oklab, var(--bg) 35%, transparent); }
+.news-item.update { border-left: 3px solid var(--accent); }
+.news-item.warning { border-left: 3px solid var(--warn); }

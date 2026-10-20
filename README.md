@@ -62,14 +62,17 @@ The installer is per-user (no admin prompt) and puts a **VEX CLIENT icon on the 
 | **Auto-update** | Checks GitHub releases, downloads in the background, verifies SHA-256, then asks to restart. Push a `v*.*.*` tag and `.github/workflows/release.yml` builds and publishes the release |
 | **Cursor trail** | Sakura petals, aurora, cyan light, stardust, soft, minimal; length, density, opacity, speed, size, glow, colour, performance mode |
 | **Layout** | Sectioned, collapsible sidebar with account box; floating instance switcher + Play bar |
+| **Microsoft & Play** | Several Microsoft accounts (msmc, Microsoft's own sign-in page, tokens encrypted with DPAPI), account switcher with real skins; Play downloads Minecraft, Mojang's Java and Fabric/Forge/NeoForge and launches (minecraft-launcher-core). Join a server straight from Home |
+| **Collab** | Share an instance with a friend as a recipe (version, loader, Modrinth mods matched by SHA-1); friends install it with hash-checked downloads |
+| **Admin panel** | For the Minecraft accounts in `server/src/index.ts → DEFAULT_ADMINS` (HAckerbest11, RaxMc, UNCdel), verified by the server with Mojang: announcements, featured server, players & bans, bug reports, publish updates (uses the admin's own GitHub token) |
 | **Shortcuts** | Installer adds Desktop + Start menu icons; toggle them in Settings, or “Add to desktop” on Home |
 | **Crosshair Designer** | 15×15 pixel editor (draw/erase/right-click erase, 4 mirror modes, keyboard painting), palette + custom colour, 8 presets, arm length / thickness / gap / outline / dot, day & night preview with vanilla blending simulation, save/load designs, PNG export, resource pack install/ZIP (1.20.2+), in-app instructions |
 
 ## Not yet — clearly labelled in the app
 
 - **Online service:** until it's set up, Friends shows a **Set up online service** button. The in-app wizard (or `server/Set up VEX online.bat`) deploys it.
-- **Stage 4:** Microsoft sign-in (official OAuth device/browser flow), downloading game files from Mojang, Java runtime, Fabric/Forge install, **Play**. The Play button is disabled until this exists; it never fakes a launch.
-- **Applying a skin** to your account needs Microsoft sign-in (Stage 4).
+- **Quilt** instances can't launch yet (use Fabric).
+- **Applying a skin** to your Microsoft account from VEX isn't built yet.
 - **Stage 5:** In-game radial menu, GUI settings, theme editor and module manager (Fabric mod). Combat module names from the brief will appear as clearly marked placeholders — automation that gives an unfair advantage (auto crystal, anchor macro, auto totem, etc.) is banned on most servers and won't be implemented.
 - **Stage 6:** Launcher ↔ client config sync via `shared/`.
 - **Friends & Shop** need an online VEX service; both pages explain this instead of showing fake data.

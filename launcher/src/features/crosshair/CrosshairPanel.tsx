@@ -182,7 +182,7 @@ export function CrosshairPanel() {
             <li><b>Install pack</b> puts <span className="mono">VEX Crosshair.zip</span> in the instance's <span className="mono">resourcepacks</span> folder. Or use <b>Save as ZIP</b> and drop the file into that folder yourself.</li>
             <li>In Minecraft, open <b>Options → Resource Packs</b>, hover <i>VEX Crosshair</i> and click the arrow to move it to <b>Selected</b>. Put it above other packs that change the HUD.</li>
             <li>Click <b>Done</b>. The crosshair updates immediately; no restart needed.</li>
-            <li>Vanilla draws the crosshair with inverted blending: white shows as the opposite of what's behind it, colours shift, and pure black disappears completely. “Simulate vanilla inverted blending” previews exactly that, so black outlines only show with the blending switched off (the VEX in-game client will offer that in Stage 5).</li>
+            <li>Vanilla draws the crosshair with inverted blending: white shows as the opposite of what's behind it, colours shift, and pure black disappears completely. “Simulate vanilla inverted blending” previews exactly that, so black outlines only show with the blending switched off (the VEX in-game client will offer that later).</li>
             <li>Works on Java 1.20.2 and newer (the crosshair became its own sprite then). <b>PNG</b> exports the bare 15×15 texture, e.g. for other clients.</li>
           </ol>
         </Modal>

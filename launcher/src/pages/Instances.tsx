@@ -51,7 +51,7 @@ function InstanceEditor({ initial, onClose }: { initial: Instance | null; onClos
             : <div className="row"><Select id={id} value={version} onChange={setVersion} options={list.map((v) => ({ value: v.id, label: v.id + (v.id === versions.latest ? " (latest)" : "") }))} />
                 <label className="row tiny muted" style={{ whiteSpace: "nowrap", cursor: "pointer" }}><input type="checkbox" checked={showSnapshots} onChange={(e) => setShowSnapshots(e.target.checked)} />Snapshots</label></div>}
         </Field>
-        <Field label="Mod loader" hint="Saved now; the loader itself is installed in Stage 4. VEX's in-game client needs Fabric.">
+        <Field label="Mod loader" hint="The loader installs itself the first time you press Play. Quilt can't launch yet.">
           {() => <Segmented label="Mod loader" value={loader} onChange={setLoader} options={[{ value: "vanilla", label: "Vanilla" }, { value: "fabric", label: "Fabric" }, { value: "forge", label: "Forge" }, { value: "neoforge", label: "NeoForge" }, { value: "quilt", label: "Quilt" }]} />}
         </Field>
         <Field label="Memory" hint={`Your PC has ${((info?.totalMemMb ?? 0) / 1024).toFixed(0)} GB. VEX caps this at 75% so Windows stays responsive.`}>
@@ -100,7 +100,7 @@ export function InstancesPage() {
           <button className="btn primary" disabled={!desktop} onClick={() => setEditing("new")}><Icon name="plus" size={16} />New instance</button>
         </div>
       </div>
-      <Notice><b>Stage 3 build.</b> You can create and organise instances, and Features can install resource packs into them. Downloading game files, installing Fabric/Forge and launching arrive in Stage 4.</Notice>
+      
       {instances.length > 3 && <SearchBar value={q} onChange={setQ} placeholder="Search instances" />}
       {shown.length === 0 ? (
         <div className="empty"><Icon name="cube" size={34} /><b style={{ color: "var(--text)" }}>{instances.length ? "No matches" : "No instances yet"}</b>
@@ -114,7 +114,7 @@ export function InstancesPage() {
               <dl className="kv"><dt>Version</dt><dd>{i.version}</dd><dt>Loader</dt><dd style={{ textTransform: "capitalize" }}>{i.loader}</dd><dt>Memory</dt><dd>{(i.memoryMb / 1024).toFixed(1)} GB</dd>
                 <dt>Folder</dt><dd className="mono" title={i.gameDir}>{i.gameDir}</dd></dl>
               <div className="row" style={{ marginTop: 14 }}>
-                <span className="chip warn"><span className="dot" />Not installed</span><span className="spacer" />
+                {i.installed ? <span className="chip ok"><span className="dot" />Ready</span> : <span className="chip"><span className="dot" />Downloads on first Play</span>}<span className="spacer" />
                 <Tooltip text="Open folder"><button className="btn sm icon" aria-label="Open folder" onClick={() => vex().files.open("path", i.gameDir)}><Icon name="folder" size={15} /></button></Tooltip>
                 <Tooltip text="Edit"><button className="btn sm icon" aria-label="Edit" onClick={() => setEditing(i)}><Icon name="edit" size={15} /></button></Tooltip>
                 <Tooltip text="Delete"><button className="btn sm icon danger" aria-label="Delete" onClick={() => setDeleting(i)}><Icon name="trash" size={15} /></button></Tooltip>
