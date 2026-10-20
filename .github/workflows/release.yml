@@ -38,9 +38,10 @@ jobs:
         run: |
           $v = (Get-Content package.json | ConvertFrom-Json).version
           if ("${{ github.ref_type }}" -eq "tag" -and "v$v" -ne "${{ github.ref_name }}") { throw "Tag ${{ github.ref_name }} doesn't match launcher/package.json version $v" }
-          gh release view "v$v" --repo "${{ github.repository }}" *> $null
-          if ($LASTEXITCODE -eq 0) { throw "Release v$v already exists. Bump the version in launcher/package.json first." }
+          $existing = gh release list --repo "${{ github.repository }}" --limit 100 --json tagName --jq '.[].tagName'
+          if ($existing -contains "v$v") { throw "Release v$v already exists. Bump the version in launcher/package.json first." }
           "version=$v" >> $env:GITHUB_OUTPUT
+          exit 0
         env:
           GH_TOKEN: ${{ github.token }}
 
