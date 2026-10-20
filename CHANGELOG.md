@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2.4.0 — 2026-10-20
+- VEX in Minecraft: the launcher adds the VEX mod + Fabric API to Fabric 1.21.11 instances. Right Shift opens the petal menu (Client, Settings, Misc, Mod Menu, Combat) with search, GUI Settings, themes, combat HUD (addons only), and the grey V badge.
+
+## 2.4.0 — 2026-10-20
 - **VEX in Minecraft.** VEX now adds its in-game mod (and Fabric API) to your Fabric 1.21.11 instances before they start. Turn it off in Settings → Game.
 - **Right Shift opens the VEX menu:** five petals around your head and name (Client, Settings, Misc, **Mod Menu**, Combat) and a search bar for every module and setting. Just start typing.
 - **GUI Settings:** Show Particles, Background Dim, Tooltips, Always Show Advanced, Edit HUD Layout, Notification Sound, Themes (Sakura, Vex, Aurora, Midnight, Mono), GUI Scale (Auto/1x/2x/3x), Auto Switch Profiles.
