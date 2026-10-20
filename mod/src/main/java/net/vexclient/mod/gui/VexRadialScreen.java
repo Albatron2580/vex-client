@@ -86,7 +86,7 @@ public final class VexRadialScreen extends VexScreen {
         int pillH = 16, pillY = H - pillH - 8;
         float avail = pillY - 10 - 6;
         float D = Math.max(46, Math.min(150, Math.min(avail / 2.75f, (W - 20) / 2.86f)));  // centre → circle centre
-        float r = D * 0.47f, r0 = D * 0.31f;
+        float r = D * 0.47f, r0 = D * 0.37f;
         int cx = W / 2, cy = Math.round(6 + D + r);
         float k = 0.82f + 0.18f * ease;
 
@@ -120,8 +120,8 @@ public final class VexRadialScreen extends VexScreen {
         float ct = animate("centre", ch);
         float cr = r0 * k * (1f + 0.05f * ct);
         Ui.glassCircle(g, cx, cy, cr, ct);
-        int head = Math.max(14, Math.round(cr * 0.78f));
-        int hy = Math.round(cy - cr * 0.62f);
+        int head = Math.max(12, Math.round(cr * 0.62f));
+        int hy = Math.round(cy - (head + 25) / 2f);
         try {
             if (mc.player != null) PlayerFaceRenderer.draw(g, mc.player.getSkin(), cx - head / 2, hy, head);
             else PlayerFaceRenderer.draw(g, DefaultPlayerSkin.get(mc.getUser().getProfileId()), cx - head / 2, hy, head);
@@ -130,10 +130,9 @@ public final class VexRadialScreen extends VexScreen {
         int ny = hy + head + 3;
         g.drawString(this.font, name, cx - this.font.width(name) / 2, ny, 0xFFFFFFFF, true);
         String tag = "VEX";
-        int tw = this.font.width(tag) + 14, ty = ny + 11;
+        int tw = this.font.width(tag) + 12, ty = ny + 11;
         Ui.card(g, cx - tw / 2, ty, cx + tw / 2, ty + 11, Ui.alpha(Ui.ORANGE, 0.35f), Ui.alpha(Ui.ORANGE_HI, 0.9f));
-        Ui.logo(g, cx - tw / 2 + 3, ty + 2, 7, 0xFFD8D8DE);
-        g.drawString(this.font, tag, cx - tw / 2 + 11, ty + 2, 0xFFFFFFFF, false);
+        g.drawString(this.font, tag, cx - this.font.width(tag) / 2, ty + 2, 0xFFFFFFFF, false);
         if (ch) tip("Every module and HUD element on one page");
         if (ch && pressed) { open(VexMenuScreen.Page.ALL, 0); return; }
 
