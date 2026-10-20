@@ -5,7 +5,7 @@ import net.vexclient.mod.module.Module;
 
 /** Keeps sprint held so you never have to double-tap or hold Ctrl. */
 public final class SprintModule extends Module {
-    public SprintModule() { super("sprint", "Always Sprint", "Sprint automatically whenever you walk forward.", Category.GENERAL, false); }
+    public SprintModule() { super("sprint", "Always Sprint", "Sprint automatically whenever you walk forward.", Category.CLIENT, false); }
 
     @Override public void tick(Minecraft mc) {
         if (mc.player != null && mc.screen == null) mc.options.keySprint.setDown(true);

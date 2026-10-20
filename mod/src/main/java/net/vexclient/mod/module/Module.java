@@ -11,7 +11,7 @@ import java.util.List;
  */
 public abstract class Module {
     public enum Category {
-        GENERAL("General"), CHEATS("Cheats (singleplayer only)");
+        CLIENT("Client"), COMBAT("Combat"), MISC("Misc");
         public final String label;
         Category(String label) { this.label = label; }
     }

@@ -159,6 +159,11 @@ export function login(): Promise<AccountState> {
   return loginBusy;
 }
 
+/** For the in-game mod: the VEX online address + session token (null when not signed in). */
+export function modCredentials(): { url: string; token: string } | null {
+  return serviceUrl && token && profile ? { url: serviceUrl, token } : null;
+}
+
 /** Login check: makes sure VEX online is signed in as the active Microsoft account. Quiet on failure. */
 export async function ensureSignedIn(activeName: string | null) {
   if (!serviceUrl) return accountState();

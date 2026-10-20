@@ -28,15 +28,13 @@ public final class Modules {
     public static ZoomModule zoom;
     public static FullbrightModule fullbright;
     public static SprintModule sprint;
-    public static PlayerEspModule playerEsp;
-    public static FlightModule flight;
+    public static LowHealthModule lowHealth;
 
     public static void init() {
         register(zoom = new ZoomModule());
         register(sprint = new SprintModule());
         register(fullbright = new FullbrightModule());
-        register(playerEsp = new PlayerEspModule());
-        register(flight = new FlightModule());
+        register(lowHealth = new LowHealthModule());
         load();
     }
 
@@ -116,9 +114,11 @@ public final class Modules {
                 if (down && !held.contains(m.key)) {
                     m.toggle();
                     save();
+                    if (net.vexclient.mod.VexConfig.get().notificationSound)
+                        mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, m.isEnabled() ? 1.4F : 0.9F));
                     if (mc.player != null) {
-                        String state = m.isEnabled() ? (m.isActive() ? "§aON" : "§6ON §7(singleplayer only)") : "§cOFF";
-                        mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§d[Vex] §f" + m.name + ": " + state), true);
+                        String state = m.isEnabled() ? "§aON" : "§cOFF";
+                        mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§7§lV §r§f" + m.name + ": " + state), true);
                     }
                 }
                 if (down) held.add(m.key); else held.remove(m.key);

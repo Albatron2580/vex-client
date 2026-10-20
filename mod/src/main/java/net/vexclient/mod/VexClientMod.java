@@ -10,7 +10,7 @@ import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Vex Client: the Right Shift menu, movable HUD, modules (zoom, sprint, fullbright, singleplayer cheats), shaders page. */
+/** VEX CLIENT: the Right Shift menu, movable HUD, legit addons (zoom, sprint, fullbright, combat HUD), the grey V badge. No hacks. */
 public final class VexClientMod implements ClientModInitializer {
     public static final Logger LOG = LoggerFactory.getLogger("vexclient");
 
@@ -20,14 +20,17 @@ public final class VexClientMod implements ClientModInitializer {
     public void onInitializeClient() {
         VexConfig.load();
         net.vexclient.mod.module.Modules.init();
+        net.vexclient.mod.hud.CombatStats.init();
+        net.vexclient.mod.online.VexOnline.start();
 
         openSettings = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.vexclient.settings", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, KeyMapping.Category.MISC));
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             while (openSettings.consumeClick()) {
-                if (mc.screen == null) mc.setScreen(new net.vexclient.mod.gui.VexMenuScreen(null));
+                if (mc.screen == null) mc.setScreen(new net.vexclient.mod.gui.VexRadialScreen(null));
             }
             net.vexclient.mod.module.Modules.tick(mc);
+            net.vexclient.mod.hud.Hud.tick(mc);
         });
 
         LOG.info("Vex Client mod loaded");
@@ -68,7 +71,7 @@ public final class VexClientMod implements ClientModInitializer {
         if (shift > 0) for (var c : children) if (c instanceof net.minecraft.client.gui.components.AbstractWidget w && w.getY() >= insertY) w.setY(w.getY() + shift);
         var mc = Minecraft.getInstance();
         add.accept(net.minecraft.client.gui.components.Button.builder(
-                net.minecraft.network.chat.Component.literal("Vex Client"),
-                b -> mc.setScreen(new net.vexclient.mod.gui.VexMenuScreen(screen))).bounds(x, insertY, width, 20).build());
+                net.minecraft.network.chat.Component.literal("VEX CLIENT"),
+                b -> mc.setScreen(new net.vexclient.mod.gui.VexRadialScreen(screen))).bounds(x, insertY, width, 20).build());
     }
 }

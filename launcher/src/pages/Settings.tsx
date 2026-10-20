@@ -64,7 +64,7 @@ function MicrosoftCard() {
 }
 
 function GameCard() {
-  const { desktop } = useApp();
+  const { desktop, settings, update } = useApp();
   const [g, setG] = useState<GameSettings | null>(null);
   useEffect(() => { if (desktop) window.vex!.game.settings().then(setG); }, [desktop]);
   const set = async (patch: Partial<GameSettings>) => setG(await window.vex!.game.setSettings(patch));
@@ -76,6 +76,7 @@ function GameCard() {
       {g.windowMode === "windowed" && <div className="toggle-row"><div className="text"><b>Window size</b></div>
         <Select<string> label="Window size" value={`${g.width}x${g.height}`} onChange={(v) => { const [w, h] = v.split("x").map(Number); set({ width: w, height: h }); }}
           options={["854x480", "1280x720", "1600x900", "1920x1080", "2560x1440"].concat([`${g.width}x${g.height}`]).filter((v, i, a) => a.indexOf(v) === i).map((v) => ({ value: v, label: v.replace("x", " × ") }))} /></div>}
+      <ToggleRow title="VEX in-game mod" desc="Adds the VEX mod and Fabric API to Fabric instances (Minecraft 1.21.11). In game, Right Shift opens the VEX menu." checked={settings.vexMod} onChange={(v) => update({ vexMod: v })} />
       <div className="toggle-row"><div className="text"><b>Java</b><span>{g.javaPath ? g.javaPath : "Automatic — VEX downloads Mojang's Java when needed"}</span></div>
         {g.javaPath && <button className="btn sm" onClick={() => set({ javaPath: "" })}>Use automatic</button>}</div>
       <div className="row" style={{ marginTop: 8 }}>

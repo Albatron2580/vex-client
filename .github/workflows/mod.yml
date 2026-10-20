@@ -48,6 +48,12 @@ jobs:
       - name: Build UI resource pack
         run: python3 -m pip install --quiet pillow && python3 tools/make-ui-pack.py ui-packs && (cd ui-packs && zip -q ../vex-ui-packs.zip *.zip)
 
+      - name: Start the game and screenshot every Vex screen
+        working-directory: mod
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri > /dev/null
+          xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX" gradle runClientGameTest --no-daemon --stacktrace 2>&1 | tee gametest.log; exit ${PIPESTATUS[0]}
+
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
@@ -59,12 +65,6 @@ jobs:
           gh release view vex-mod >/dev/null 2>&1 || gh release create vex-mod --prerelease --latest=false --title "Vex Client mod + UI pack" --notes "In-game settings mod for Fabric 1.21.11 (needs Fabric API) and the Vex UI resource pack. The launcher installs these automatically."
           gh release upload vex-mod vex-client-mod.jar vex-ui-pack.zip vex-ui-packs.zip SHA256SUMS.txt --clobber
           gh release edit vex-mod --notes "Built from ${GITHUB_SHA::7} on $(date -u +%F). In-game settings mod for Fabric 1.21.11 (needs Fabric API) and the Vex UI resource pack. The launcher installs these automatically."
-
-      - name: Start the game and screenshot every Vex screen
-        working-directory: mod
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri > /dev/null
-          xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX" gradle runClientGameTest --no-daemon --stacktrace 2>&1 | tee gametest.log; exit ${PIPESTATUS[0]}
 
       - name: Upload screenshots
         if: always()
@@ -81,6 +81,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          (echo '```'; tail -c 30000 mod/build.log 2>/dev/null || echo 'no build log'; echo '--- game test ---'; grep -vE '^\s+at ' mod/gametest.log 2>/dev/null | tail -c 28000; echo '```') > ci-log.md
+          JAR=$(find ~/.gradle mod/.gradle -name '*.jar' 2>/dev/null | grep -E 'minecraft-(merged|client)[^/]*\.jar$' | grep -v sources | head -1)
+          (echo '```'; grep -E 'error:|warning: \[|FAILED|What went wrong' -A3 mod/build.log 2>/dev/null | head -c 25000 || echo 'no build log'; echo '--- game test ---'; grep -vE '^\s+at ' mod/gametest.log 2>/dev/null | tail -c 20000; echo '--- signatures ('"$JAR"') ---';
+           [ -n "$JAR" ] && for c in net.minecraft.client.gui.components.PlayerFaceRenderer net.minecraft.client.resources.DefaultPlayerSkin net.minecraft.client.gui.components.EditBox net.minecraft.client.gui.components.PlayerTabOverlay net.minecraft.client.multiplayer.PlayerInfo net.minecraft.client.player.AbstractClientPlayer net.minecraft.client.gui.GuiGraphics net.minecraft.client.gui.screens.Screen; do javap -cp "$JAR" -public $c 2>&1 | grep -iE 'class |draw|get|skin|hint|bordered|textcolor|profile|scissor|render|focus|widget' | head -40; done; echo '```') > ci-log.md
           gh release view mod-ci-log >/dev/null 2>&1 || gh release create mod-ci-log --prerelease --latest=false --title "Mod build log" --notes "log"
           gh release edit mod-ci-log --notes-file ci-log.md

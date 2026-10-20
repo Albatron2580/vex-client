@@ -13,7 +13,7 @@ public final class ZoomModule extends Module {
     private float factor = 1f;
 
     public ZoomModule() {
-        super("zoom", "Zoom", "Hold the key to zoom in (like OptiFine zoom).", Category.GENERAL, false);
+        super("zoom", "Zoom", "Hold the key to zoom in (like OptiFine zoom).", Category.MISC, false);
         key = GLFW.GLFW_KEY_C;
         enabledByDefault();
     }

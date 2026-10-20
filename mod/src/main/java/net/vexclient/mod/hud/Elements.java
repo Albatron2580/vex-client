@@ -84,7 +84,7 @@ public final class Elements {
     /** Armour pieces with durability. */
     public static final class Armor extends HudElement {
         private static final EquipmentSlot[] SLOTS = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET, EquipmentSlot.MAINHAND};
-        public Armor() { super("armor", "Armor", true, 0.005f, 0.6f); }
+        public Armor() { super("armor", "Armor", true, 0.005f, 0.6f); combat = true; }
         protected List<String> lines(Minecraft mc) { return null; }
         public int[] draw(GuiGraphics g, Minecraft mc, boolean editing) {
             Player p = mc.player;
@@ -149,6 +149,49 @@ public final class Elements {
             return l;
         }
         protected List<String> preview() { return List.of("Friends", "RaxMc 12m"); }
+    }
+
+    /** VEX CLIENT watermark with the grey V. */
+    public static final class Watermark extends HudElement {
+        final Setting.Bool version = add(new Setting.Bool("version", "Show version", false));
+        public Watermark() { super("watermark", "VEX CLIENT logo", true, 0.86f, 0.008f); background = false; }
+        protected List<String> lines(Minecraft mc) { return null; }
+        public int[] draw(GuiGraphics g, Minecraft mc, boolean editing) {
+            String v = version.get() ? " " + net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("vexclient").map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("") : "";
+            int w = 11 + mc.font.width("VEX CLIENT" + v);
+            if (background) g.fill(-3, -3, w + 3, 11, 0x8C120A24);
+            net.vexclient.mod.gui.Ui.logo(g, 0, 0, 8, net.vexclient.mod.gui.Ui.LOGO);
+            g.drawString(mc.font, "VEX", 11, 0, color == 0xFFFFFFFF ? net.vexclient.mod.gui.Ui.ORANGE : color, true);
+            g.drawString(mc.font, " CLIENT" + v, 11 + mc.font.width("VEX"), 0, 0xFFFFFFFF, true);
+            return new int[]{w + 6, 14};
+        }
+    }
+
+    /** Clicks per second (left | right). */
+    public static final class Cps extends HudElement {
+        final Setting.Bool showRight = add(new Setting.Bool("right", "Right clicks too", true));
+        public Cps() { super("cps", "CPS", false, 0.005f, 0.32f); combat = true; }
+        protected List<String> lines(Minecraft mc) {
+            return List.of(showRight.get() ? CombatStats.leftCps() + " | " + CombatStats.rightCps() + " CPS" : CombatStats.leftCps() + " CPS");
+        }
+        protected List<String> preview() { return List.of("9 | 2 CPS"); }
+    }
+
+    /** Distance of your last hit. */
+    public static final class Reach extends HudElement {
+        public Reach() { super("reach", "Reach display", false, 0.005f, 0.38f); combat = true; }
+        protected List<String> lines(Minecraft mc) {
+            if (CombatStats.lastReach < 0 || System.currentTimeMillis() - CombatStats.lastHitAt > 5000) return List.of("Reach -");
+            return List.of(String.format(Locale.ROOT, "Reach %.2f m", CombatStats.lastReach));
+        }
+        protected List<String> preview() { return List.of("Reach 2.87 m"); }
+    }
+
+    /** Hits in a row without being hit back. */
+    public static final class Combo extends HudElement {
+        public Combo() { super("combo", "Combo counter", false, 0.005f, 0.44f); combat = true; }
+        protected List<String> lines(Minecraft mc) { return List.of(CombatStats.combo > 0 ? CombatStats.combo + " Combo" : "No combo"); }
+        protected List<String> preview() { return List.of("4 Combo"); }
     }
 
     static String cap(String s) { return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1); }

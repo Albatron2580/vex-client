@@ -21,6 +21,18 @@ public final class VexConfig {
     public boolean smoothZoom = true;
     public boolean menuLeaves = true;       // falling leaves on the menu background
 
+    // GUI Settings (Right Shift → Settings)
+    public boolean showParticles = true;     // petals drifting behind the VEX menus
+    public boolean backgroundDim = true;     // darken the game behind the VEX menus
+    public boolean tooltips = true;          // hover help in the VEX menus
+    public boolean alwaysShowAdvanced = false; // show module options even while a module is off
+    public boolean notificationSound = true; // a click when a keybind switches a module
+    public String theme = "Sakura";
+    public int guiScale = 0;                 // 0 = follow Minecraft, 1..3 = like Minecraft's GUI scale 1..3
+    public boolean autoSwitchProfiles = false; // remember the HUD layout per server/world
+    public java.util.Map<String, Integer> serverLayouts = new java.util.HashMap<>();
+    public boolean vexBadges = true;         // grey V in front of VEX players in the tab list and above their heads
+
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static VexConfig instance;
 
@@ -46,6 +58,10 @@ public final class VexConfig {
         }
         instance = c != null ? c : new VexConfig();
         instance.zoomLevel = Math.max(2, Math.min(8, instance.zoomLevel));
+        instance.guiScale = Math.max(0, Math.min(3, instance.guiScale));
+        if (instance.theme == null) instance.theme = "Sakura";
+        if (instance.serverLayouts == null) instance.serverLayouts = new java.util.HashMap<>();
+        net.vexclient.mod.gui.Ui.apply(instance.theme);
     }
 
     public static void save() {

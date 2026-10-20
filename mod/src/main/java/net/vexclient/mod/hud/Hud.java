@@ -17,9 +17,13 @@ import java.util.*;
 public final class Hud {
     private Hud() {}
 
-    public static final List<HudElement> ELEMENTS = List.of(
-            new Elements.Fps(), new Elements.Coords(), new Elements.Position(), new Elements.Ping(),
-            new Elements.Effects(), new Elements.Armor(), new Elements.WaypointList(), new Elements.FriendsNearby());
+    public static final List<HudElement> ELEMENTS = defaults();
+
+    private static List<HudElement> defaults() {
+        return List.of(new Elements.Watermark(), new Elements.Fps(), new Elements.Coords(), new Elements.Position(), new Elements.Ping(),
+                new Elements.Effects(), new Elements.Armor(), new Elements.WaypointList(), new Elements.FriendsNearby(),
+                new Elements.Cps(), new Elements.Reach(), new Elements.Combo());
+    }
     public static final int SLOTS = 3;
     private static int active = 1;
     private static Map<String, Map<String, Map<String, Object>>> layouts = new LinkedHashMap<>();
@@ -30,7 +34,10 @@ public final class Hud {
     public static void render(GuiGraphics g) {
         Minecraft mc = Minecraft.getInstance();
         if (!loaded) load();
-        if (mc.player == null || mc.options.hideGui || mc.screen instanceof HudEditorScreen) return;
+        if (mc.player == null || mc.options.hideGui) return;
+        CombatStats.frame(mc);
+        net.vexclient.mod.module.Modules.lowHealth.render(g, mc);
+        if (mc.screen instanceof HudEditorScreen) return;
         List<int[]> placed = new ArrayList<>();
         for (HudElement e : ELEMENTS) if (e.enabled) { int[] r = drawElement(g, mc, e, false, placed); if (r != null) placed.add(r); }
     }
@@ -141,12 +148,32 @@ public final class Hud {
         save();
     }
 
+    /** Auto Switch Profiles: each server/world remembers its layout. */
+    private static String lastPlace;
+    public static void tick(Minecraft mc) {
+        String place = net.vexclient.mod.data.Waypoints.worldKey(mc);
+        if (place != null) place = place.substring(0, place.indexOf('|') < 0 ? place.length() : place.indexOf('|'));
+        if (place == null || place.equals(lastPlace)) { lastPlace = place; return; }
+        lastPlace = place;
+        VexConfig c = VexConfig.get();
+        if (!c.autoSwitchProfiles) return;
+        Integer slot = c.serverLayouts.get(place);
+        if (slot != null && slot != active) { if (!loaded) load(); selectSlot(slot); }
+    }
+
+    /** Remembers the current layout for the server/world you're on (when Auto Switch Profiles is on). */
+    public static void rememberForHere(Minecraft mc) {
+        VexConfig c = VexConfig.get();
+        if (!c.autoSwitchProfiles || lastPlace == null) return;
+        c.serverLayouts.put(lastPlace, active);
+        VexConfig.save();
+    }
+
     public static boolean slotUsed(int slot) { return layouts.containsKey(String.valueOf(slot)); }
 
     /** Puts every element back to its default place and look (keeps which ones are on). */
     public static void resetPositions() {
-        List<HudElement> fresh = List.of(new Elements.Fps(), new Elements.Coords(), new Elements.Position(), new Elements.Ping(),
-                new Elements.Effects(), new Elements.Armor(), new Elements.WaypointList(), new Elements.FriendsNearby());
+        List<HudElement> fresh = defaults();
         for (int i = 0; i < ELEMENTS.size(); i++) {
             HudElement e = ELEMENTS.get(i), d = fresh.get(i);
             e.x = d.x; e.y = d.y; e.scale = d.scale; e.color = d.color; e.background = d.background;

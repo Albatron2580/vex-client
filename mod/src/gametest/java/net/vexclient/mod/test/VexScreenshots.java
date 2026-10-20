@@ -5,13 +5,16 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.vexclient.mod.VexConfig;
 import net.vexclient.mod.data.Friends;
 import net.vexclient.mod.gui.HudEditorScreen;
+import net.vexclient.mod.gui.Ui;
 import net.vexclient.mod.gui.VexMenuScreen;
+import net.vexclient.mod.gui.VexRadialScreen;
 import net.vexclient.mod.hud.Hud;
 import net.vexclient.mod.hud.HudElement;
 
-/** Starts the real game, opens every Vex screen and saves screenshots (CI uploads them for review). */
+/** Starts the real game, opens every VEX screen and saves screenshots (CI uploads them for review). */
 public final class VexScreenshots implements FabricClientGameTest {
     @Override
     public void runTest(ClientGameTestContext ctx) {
@@ -19,9 +22,9 @@ public final class VexScreenshots implements FabricClientGameTest {
         ctx.waitTicks(40);
         ctx.takeScreenshot("01-title-screen");
 
-        ctx.setScreen(() -> new VexMenuScreen(new TitleScreen()));
-        ctx.waitTicks(10);
-        ctx.takeScreenshot("02-menu-from-title");
+        ctx.setScreen(() -> new VexRadialScreen(new TitleScreen()));
+        ctx.waitTicks(15);
+        ctx.takeScreenshot("02-radial-from-title");
 
         try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
             sp.getClientWorld().waitForChunksRender();
@@ -36,21 +39,41 @@ public final class VexScreenshots implements FabricClientGameTest {
             ctx.waitTicks(10);
             ctx.takeScreenshot("04-pause-menu");
 
-            String[][] pages = {
-                    {"0", "0", "05-settings-general"}, {"0", "1", "06-settings-waypoints"}, {"0", "2", "07-settings-friends"},
-                    {"0", "3", "08-settings-controls"}, {"0", "4", "09-settings-performance"}, {"0", "5", "10-settings-mods"},
-                    {"0", "6", "11-settings-cheats"}, {"1", "0", "12-display-layout"}, {"1", "1", "13-display-fps"},
-                    {"1", "7", "14-display-waypoints"}, {"2", "0", "15-shaders"}};
-            for (String[] p : pages) {
-                ctx.runOnClient(mc -> VexMenuScreen.select(Integer.parseInt(p[0]), Integer.parseInt(p[1])));
-                ctx.setScreen(() -> new VexMenuScreen(null));
+            ctx.setScreen(() -> new VexRadialScreen(null));
+            ctx.waitTicks(15);
+            ctx.takeScreenshot("05-radial-ingame");
+
+            ctx.runOnClient(mc -> VexRadialScreen.presetSearch = "zoom");
+            ctx.setScreen(() -> new VexRadialScreen(null));
+            ctx.waitTicks(10);
+            ctx.takeScreenshot("06-radial-search");
+
+            Object[][] pages = {
+                    {VexMenuScreen.Page.GUI, 0, "07-gui-settings"}, {VexMenuScreen.Page.CLIENT, 0, "08-client-modules"},
+                    {VexMenuScreen.Page.CLIENT, 1, "09-client-hud"}, {VexMenuScreen.Page.CLIENT, 2, "10-client-waypoints"},
+                    {VexMenuScreen.Page.CLIENT, 4, "11-client-controls"}, {VexMenuScreen.Page.CLIENT, 5, "12-client-performance"},
+                    {VexMenuScreen.Page.COMBAT, 0, "13-combat"}, {VexMenuScreen.Page.MISC, 0, "14-misc"},
+                    {VexMenuScreen.Page.MISC, 1, "15-shaders"}, {VexMenuScreen.Page.MODS, 0, "16-mod-menu"}};
+            for (Object[] p : pages) {
+                ctx.setScreen(() -> new VexMenuScreen(new VexRadialScreen(null), null, (VexMenuScreen.Page) p[0], (Integer) p[1]));
                 ctx.waitTicks(8);
-                ctx.takeScreenshot(p[2]);
+                ctx.takeScreenshot((String) p[2]);
             }
+
+            // other themes and GUI scale 3x
+            ctx.runOnClient(mc -> { VexConfig.get().theme = "Aurora"; Ui.apply("Aurora"); });
+            ctx.setScreen(() -> new VexRadialScreen(null));
+            ctx.waitTicks(10);
+            ctx.takeScreenshot("17-radial-aurora");
+            ctx.runOnClient(mc -> { VexConfig.get().theme = "Sakura"; Ui.apply("Sakura"); VexConfig.get().guiScale = 3; });
+            ctx.setScreen(() -> new VexMenuScreen(null, null, VexMenuScreen.Page.GUI, 0));
+            ctx.waitTicks(8);
+            ctx.takeScreenshot("18-gui-settings-scale3");
+            ctx.runOnClient(mc -> VexConfig.get().guiScale = 0);
 
             ctx.setScreen(() -> new HudEditorScreen(null));
             ctx.waitTicks(8);
-            ctx.takeScreenshot("16-hud-editor");
+            ctx.takeScreenshot("19-hud-editor");
             ctx.setScreen(() -> null);
         }
     }

@@ -20,6 +20,8 @@ public abstract class HudElement {
     public float scale = 1f;
     public int color = 0xFFFFFFFF;
     public boolean background = true;
+    /** Shown on the Combat page instead of the HUD page. */
+    public boolean combat;
     public final List<Setting<?>> settings = new ArrayList<>();
     // size of the last frame (unscaled), used by the editor
     public int lastW = 40, lastH = 10;

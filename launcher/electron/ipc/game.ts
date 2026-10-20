@@ -15,6 +15,7 @@ export interface GameHooks {
   updateInstance(id: string, patch: Partial<Instance>): void;
   afterLaunch(): "keep" | "minimize" | "close";
   onLaunched(id: string): void;
+  beforeLaunch?(inst: Instance, status: (s: string) => void): Promise<void>;
 }
 let hooks: GameHooks;
 
@@ -141,6 +142,7 @@ export async function launchInstance(id: string, join?: { host: string; port: nu
       }
     },
     join,
+    beforeLaunch: hooks.beforeLaunch ? (status: (s: string) => void) => hooks.beforeLaunch!(inst, status) : undefined,
     perf: { ram: Math.max(1, Math.round(inst.memoryMb / 1024)), jvmArgs: inst.jvmArgs ? inst.jvmArgs.split(/\s+/).filter((a) => /^-[\w:.+=-]+$/.test(a)) : [] },
   });
 }

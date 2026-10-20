@@ -10,8 +10,9 @@ import { getVersions } from "./ipc/versions";
 import { listSkins, addSkin, removeSkin } from "./ipc/skinLibrary";
 import { shortcutStatus, setShortcut } from "./ipc/shortcuts";
 import initSqlJs from "sql.js";
+import { prepareVexMod } from "./ipc/vexmod";
 import { defaultRoots, findModrinth, findNoRisk, findCurseForge, findPrismLike, findVanilla, findInFolder, copyParts, copyModJars, modJars, measure, type FoundInstance, type ImportPart } from "./ipc/importers";
-import { initAccount, setServiceUrl, accountState, login, cancelLogin, logout, friends, setMinecraftTokenSource, linkMinecraft, ensureSignedIn, publicHome, serviceVersion, online, adminApi } from "./ipc/account";
+import { initAccount, setServiceUrl, accountState, login, cancelLogin, logout, friends, setMinecraftTokenSource, linkMinecraft, ensureSignedIn, publicHome, serviceVersion, online, adminApi, modCredentials } from "./ipc/account";
 import { listMods, setModEnabled, removeMod, addMods, modInfo, installedLoaderVersions } from "./ipc/mods";
 import { buildRecipe, installRecipeMods, serverStatus, type Recipe } from "./ipc/collab";
 import { connectGithub, disconnectGithub, publishStatus, publishUpdate } from "./ipc/publish";
@@ -234,6 +235,7 @@ function registerIpc() {
       BrowserWindow.getAllWindows().forEach((w) => w.webContents.send("instances:changed"));
     },
     afterLaunch: () => settings.afterLaunch,
+    beforeLaunch: (inst, status) => prepareVexMod(inst, { enabled: settings.vexMod, online: modCredentials(), status }),
     onLaunched: (id) => {
       settings = validateSettings({ ...settings, recentInstanceIds: [id, ...settings.recentInstanceIds.filter((x) => x !== id)].slice(0, 8) });
       writeJson("settings.json", settings);
