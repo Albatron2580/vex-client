@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2.6.1 — 2026-10-21
+- Fixed importing from NoRisk Client (EPERM symlink error): VEX now copies the real files behind linked folders. If one part can't be copied, the rest still imports and VEX says what was skipped.
+
+## 2.6.1 — 2026-10-21
 - **Fix: importing from NoRisk Client failed with "EPERM: operation not permitted, symlink".** NoRisk shares folders like resourcepacks with .minecraft through links, and Windows only lets admins make links. VEX now copies the real files those links point to.
 - If one part of an import can't be copied, the rest still imports and VEX tells you what was skipped, instead of cancelling everything.
 
