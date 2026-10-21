@@ -46,7 +46,9 @@ export function ImportDialog({ onClose }: { onClose(): void }) {
       const inst = await vex().importer.run(sel, chosen, name.trim(), version.trim());
       await refreshInstances();
       if (!settings.selectedInstanceId) await update({ selectedInstanceId: inst.id });
-      toast("success", `Imported “${inst.name}”`, `Copied ${chosen.length} item type(s). Your ${sel.sourceLabel} files weren't changed.`);
+      const skipped: { item: string; reason: string }[] = (inst as any).skipped ?? [];
+      if (skipped.length) toast("info", `Imported “${inst.name}”, but some parts were skipped`, skipped.map((x) => `${x.item}: ${x.reason}`).join("; "));
+      else toast("success", `Imported “${inst.name}”`, `Your ${sel.sourceLabel} files weren't changed.`);
       onClose();
     } catch (e) { setProgress(null); setError(errMsg(e)); }
   };

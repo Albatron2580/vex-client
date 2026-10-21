@@ -198,8 +198,8 @@ function registerIpc() {
       const saved = validateInstance({ id, name, version, loader: inst.loader, gameDir: dest, memoryMb: 4096, jvmArgs: "", createdAt: Date.now(), lastPlayed: null, installed: false });
       if (!saved) throw new Error("The imported instance needs a name and version.");
       const list = loadInstances(); list.push(saved); saveInstances(list);
-      log("info", `Import done: ${res.copied.join(", ")} (${res.bytes} bytes)`);
-      return saved;
+      log("info", `Import done: ${res.copied.join(", ")} (${res.bytes} bytes)${res.skipped.length ? `; skipped ${res.skipped.map((x) => `${x.item}: ${x.reason}`).join(", ")}` : ""}`);
+      return { ...saved, skipped: res.skipped };
     } catch (err) {
       fs.rmSync(dest, { recursive: true, force: true }); // undo a half-finished import; the source is never touched
       throw err;

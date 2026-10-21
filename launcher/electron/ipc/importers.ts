@@ -27,7 +27,7 @@ export const PART_PATHS: Record<ImportPart, string[]> = {
 const exists = (p: string) => { try { fs.accessSync(p); return true; } catch { return false; } };
 const isDir = (p: string) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
 const readJson = (p: string): any => { try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return null; } };
-const subdirs = (p: string) => { try { return fs.readdirSync(p, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => path.join(p, d.name)); } catch { return []; } };
+const subdirs = (p: string) => { try { return fs.readdirSync(p).map((n) => path.join(p, n)).filter(isDir); } catch { return []; } };
 
 export function partsIn(gameDir: string): Record<ImportPart, boolean> {
   const out = {} as Record<ImportPart, boolean>;
@@ -176,19 +176,49 @@ export function findInFolder(dir: string): FoundInstance[] {
 
 // ---------- Copy ----------
 export function dirSize(p: string, cap = 50_000): number {
+  // Follows links (NoRisk Client links resourcepacks/, saves/… to .minecraft), counting each real folder once.
   let total = 0, seen = 0;
+  const visited = new Set<string>();
   const walk = (q: string) => {
-    let st: fs.Stats; try { st = fs.lstatSync(q); } catch { return; }
-    if (st.isSymbolicLink()) return;
+    let st: fs.Stats; try { st = fs.statSync(q); } catch { return; }
     if (st.isFile()) { total += st.size; return; }
-    if (st.isDirectory() && seen++ < cap) for (const e of fs.readdirSync(q)) walk(path.join(q, e));
+    if (!st.isDirectory() || seen++ >= cap) return;
+    let real: string; try { real = fs.realpathSync(q); } catch { return; }
+    if (visited.has(real)) return;
+    visited.add(real);
+    let entries: string[] = []; try { entries = fs.readdirSync(q); } catch { return; }
+    for (const e of entries) walk(path.join(q, e));
   };
   walk(p); return total;
 }
 
+/**
+ * Copies a file or folder. Links (symlinks and Windows junctions, which NoRisk Client and others use to share
+ * folders) are copied as the real files they point to: making links needs admin rights on Windows.
+ */
+export async function copyReal(from: string, to: string, visited = new Set<string>()): Promise<void> {
+  const st = await fs.promises.stat(from); // follows links
+  if (st.isFile()) {
+    if (fs.existsSync(to)) return; // never overwrite
+    await fs.promises.mkdir(path.dirname(to), { recursive: true });
+    await fs.promises.copyFile(from, to, fs.constants.COPYFILE_EXCL);
+    return;
+  }
+  if (!st.isDirectory()) return;
+  const real = await fs.promises.realpath(from);
+  if (visited.has(real)) return; // a link that points back up: don't loop
+  visited.add(real);
+  await fs.promises.mkdir(to, { recursive: true });
+  for (const e of await fs.promises.readdir(from)) {
+    try { await copyReal(path.join(from, e), path.join(to, e), visited); }
+    catch (err: any) { if (err?.code !== "ENOENT") throw err; } // a dead link: skip it
+  }
+  visited.delete(real);
+}
+
 /** The mod .jar files of an instance: mods/*.jar, plus subfolders made for its Minecraft version (other launchers keep some there). */
 export function modJars(inst: FoundInstance): string[] {
-  const jars = (d: string) => { try { return fs.readdirSync(d, { withFileTypes: true }).filter((e) => e.isFile() && /\.jar$/i.test(e.name)).map((e) => path.join(d, e.name)); } catch { return []; } };
+  const jars = (d: string) => { try { return fs.readdirSync(d).filter((n) => /\.jar$/i.test(n)).map((n) => path.join(d, n)).filter((f) => { try { return fs.statSync(f).isFile(); } catch { return false; } }); } catch { return []; } };
   if (inst.modsDir) return jars(inst.modsDir);
   const top = path.join(inst.gameDir, "mods");
   const extra = subdirs(top).filter((d) => !!inst.version && path.basename(d).includes(inst.version));
@@ -229,13 +259,17 @@ export async function copyParts(inst: FoundInstance, parts: ImportPart[], dest: 
     done += r.bytes;
     if (r.added) items.unshift("mods");
   }
+  const skipped: { item: string; reason: string }[] = [];
   for (const rel of items) {
     if (rel === "mods") continue;
     const from = path.join(inst.gameDir, rel), to = path.join(dest, rel);
     onProgress(done, total, rel);
-    await fs.promises.cp(from, to, { recursive: true, force: false, errorOnExist: false, dereference: false, preserveTimestamps: true });
+    try { await copyReal(from, to); }
+    catch (e: any) { skipped.push({ item: rel, reason: e?.code === "EPERM" || e?.code === "EACCES" ? "Windows didn't allow reading it" : String(e?.message ?? e) }); }
     done += dirSize(from);
     onProgress(Math.min(done, total), total, rel);
   }
-  return { copied: items, bytes: done };
+  const copied = items.filter((i) => !skipped.some((s) => s.item === i));
+  if (!copied.length && items.length) throw new Error(`Nothing could be copied: ${skipped.map((s) => `${s.item} (${s.reason})`).join(", ")}`);
+  return { copied, skipped, bytes: done };
 }
