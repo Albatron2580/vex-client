@@ -12,6 +12,7 @@ export interface FoundInstance {
   gameDir: string;                 // folder holding mods/, config/, options.txt…
   parts: Record<ImportPart, boolean>; // which parts exist
   modsDir?: string;                // where the mod jars really are, when not <gameDir>/mods (NoRisk Client)
+  extraJars?: string[];            // mod jars kept outside the instance (NoRisk Client's shared mod cache)
   modCount?: number;               // filled in by the scan
 }
 export type ImportPart = "mods" | "config" | "settings" | "resourcepacks" | "shaderpacks" | "worlds";
@@ -65,14 +66,9 @@ export async function findModrinth(root: string, loadSql: SqlFactory): Promise<F
   const dbFile = path.join(root, "app.db");
   if (exists(dbFile)) {
     try {
-      const SQL = await loadSql();
-      const db = new SQL.Database(new Uint8Array(fs.readFileSync(dbFile))); // in-memory copy; the real file is untouched
-      const [res] = db.exec("SELECT * FROM profiles");
-      if (res) for (const row of res.values) {
-        const r = Object.fromEntries(res.columns.map((c, i) => [c, row[i]])) as Record<string, any>;
-        if (r.path) meta.set(String(r.path), { name: r.name, version: r.game_version, loader: r.mod_loader });
-      }
-      db.close();
+      const q = await openDb(dbFile, loadSql); // includes changes still in the -wal file
+      try { for (const r of q.rows("SELECT * FROM profiles")) if (r.path) meta.set(String(r.path), { name: r.name, version: r.game_version, loader: r.mod_loader }); }
+      finally { q.close(); }
     } catch { /* unknown schema — fall back to profile.json / folder names */ }
   }
   return subdirs(profilesDir).map((dir) => {
@@ -83,6 +79,33 @@ export async function findModrinth(root: string, loadSql: SqlFactory): Promise<F
   });
 }
 
+/**
+ * Opens another launcher's SQLite database read-only. It's copied first (with its -wal/-shm files, which hold
+ * changes not yet written into the main file while that launcher runs), so the original is never touched.
+ * Uses Node's built-in SQLite (reads the WAL); falls back to sql.js (main file only).
+ */
+async function openDb(dbFile: string, loadSql: SqlFactory): Promise<{ rows(sql: string): Record<string, any>[]; close(): void }> {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "vex-db-"));
+  const copy = path.join(tmp, "app.db");
+  const cleanup = () => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* temp */ } };
+  try {
+    fs.copyFileSync(dbFile, copy);
+    for (const ext of ["-wal", "-shm"]) if (exists(dbFile + ext)) fs.copyFileSync(dbFile + ext, copy + ext);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { DatabaseSync } = require("node:sqlite");
+    const db = new DatabaseSync(copy);
+    return { rows: (sql) => db.prepare(sql).all(), close: () => { try { db.close(); } catch { /* closed */ } cleanup(); } };
+  } catch {
+    const SQL = await loadSql();
+    const db = new SQL.Database(new Uint8Array(fs.readFileSync(dbFile)));
+    cleanup();
+    return {
+      rows: (sql) => { const [r] = db.exec(sql); return r ? r.values.map((row) => Object.fromEntries(r.columns.map((c, i) => [c, row[i]]))) : []; },
+      close: () => db.close(),
+    };
+  }
+}
+
 // ---------- NoRisk Client launcher: data/profiles/<path>/, metadata in meta/app.db ----------
 // Its own mods live in mods/nrc-<mc>-<loader>[-<id>]/ (the NoRisk Client mods themselves are kept elsewhere).
 export async function findNoRisk(root: string, loadSql: SqlFactory): Promise<FoundInstance[]> {
@@ -91,28 +114,38 @@ export async function findNoRisk(root: string, loadSql: SqlFactory): Promise<Fou
   const out: FoundInstance[] = [];
   const dbFile = [path.join(root, "meta", "app.db"), path.join(root, "app.db")].find(exists);
   if (dbFile) {
+    const q = await openDb(dbFile, loadSql);
     try {
-      const SQL = await loadSql();
-      const db = new SQL.Database(new Uint8Array(fs.readFileSync(dbFile))); // in-memory copy; the real file is untouched
-      const [res] = db.exec("SELECT id, name, path, game_version, loader, group_name, use_shared_minecraft_folder FROM profiles");
-      db.close();
-      if (res) for (const row of res.values) {
-        const r = Object.fromEntries(res.columns.map((c, i) => [c, row[i]])) as Record<string, any>;
+      // NoRisk keeps the mods you add in one shared cache (meta/mod_cache) and hands them to the game at launch,
+      // so they're not in the instance folder. The list per profile is in profile_mods.
+      const cacheDir = path.join(path.dirname(dbFile), "mod_cache");
+      const modsOf = (profileId: string): string[] => {
+        if (!/^[0-9a-fA-F-]{36}$/.test(profileId)) return [];
+        try {
+          return q.rows(`SELECT file_name, file_name_override, enabled FROM profile_mods WHERE profile_id = '${profileId}'`)
+            .filter((r) => Number(r.enabled) !== 0)
+            .map((r) => String(r.file_name_override || r.file_name || ""))
+            .filter((f) => /^[^\\/:*?"<>|]+\.jar$/i.test(f))
+            .map((f) => path.join(cacheDir, f))
+            .filter((f) => { try { return fs.statSync(f).isFile(); } catch { return false; } });
+        } catch { return []; }
+      };
+      for (const r of q.rows("SELECT id, name, path, game_version, loader, group_name, use_shared_minecraft_folder FROM profiles")) {
         const ver = String(r.game_version ?? ""), loader = normalizeLoader(String(r.loader ?? ""));
         const rel = String(r.path ?? "").split("/").filter((x) => x && x !== "..");
         let dir = path.join(profilesDir, ...rel);
-        if (r.use_shared_minecraft_folder && r.group_name) {
+        if (Number(r.use_shared_minecraft_folder) && r.group_name) {
           const g = String(r.group_name);
           dir = /norisk/i.test(g) ? path.join(profilesDir, "noriskclient", /^1\.(\d|1[0-2])(\.|$)/.test(ver) ? "legacy" : "new") : path.join(profilesDir, "groups", g.replace(/[^\w.-]/g, "_"));
         }
-        const id = String(r.id ?? "").replace(/-/g, "");
-        const lt = loader === "vanilla" ? "" : loader;
-        const modsDir = [lt && path.join(dir, "mods", `nrc-${ver}-${lt}-${id.slice(0, 2)}${id.slice(-2)}`), lt && path.join(dir, "mods", `nrc-${ver}-${lt}`), path.join(dir, "mods")]
-          .find((d) => d && isDir(d)) || undefined;
-        if (!isDir(dir)) continue;
-        out.push({ source: "norisk", sourceLabel: "NoRisk Client", name: String(r.name || rel.join("/") || "NoRisk profile"), version: ver || null, loader, gameDir: dir, parts: partsIn(dir), modsDir });
+        const extraJars = modsOf(String(r.id ?? ""));
+        if (!isDir(dir) && !extraJars.length) continue;
+        const parts = partsIn(dir);
+        out.push({ source: "norisk", sourceLabel: "NoRisk Client", name: String(r.name || rel.join("/") || "NoRisk profile"), version: ver || null, loader, gameDir: dir,
+          parts: { ...parts, mods: parts.mods || extraJars.length > 0 }, extraJars });
       }
     } catch { /* unknown schema: fall back to the folders */ }
+    finally { q.close(); }
   }
   if (out.length) return out;
   // No database: one entry per mods/nrc-<mc>-<loader>* folder.
@@ -219,10 +252,13 @@ export async function copyReal(from: string, to: string, visited = new Set<strin
 /** The mod .jar files of an instance: mods/*.jar, plus subfolders made for its Minecraft version (other launchers keep some there). */
 export function modJars(inst: FoundInstance): string[] {
   const jars = (d: string) => { try { return fs.readdirSync(d).filter((n) => /\.jar$/i.test(n)).map((n) => path.join(d, n)).filter((f) => { try { return fs.statSync(f).isFile(); } catch { return false; } }); } catch { return []; } };
-  if (inst.modsDir) return jars(inst.modsDir);
+  const outside = (inst.extraJars ?? []).filter((f) => /\.jar$/i.test(f) && (() => { try { return fs.statSync(f).isFile(); } catch { return false; } })());
+  if (inst.modsDir) return [...jars(inst.modsDir), ...outside];
   const top = path.join(inst.gameDir, "mods");
   const extra = subdirs(top).filter((d) => !!inst.version && path.basename(d).includes(inst.version));
-  return [...jars(top), ...extra.flatMap(jars)];
+  // one file per name (the same mod can be both in the instance and in a cache)
+  const seen = new Set<string>();
+  return [...jars(top), ...extra.flatMap(jars), ...outside].filter((f) => { const k = path.basename(f).toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
 /** Copies an instance's mod jars into `destGameDir`/mods. Files that are already there are left alone. */
