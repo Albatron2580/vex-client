@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { isAdminName } from "../../electron/shared/settingsModel";
 import { McHead, SkinFace } from "./McHead";
@@ -7,8 +8,8 @@ import { Icon } from "./Icon";
 import { Logo } from "./Logo";
 
 const SECTIONS: { title: string; items: { id: PageId; icon: string; badge?: string; adminOnly?: boolean }[] }[] = [
-  { title: "Main", items: [{ id: "home", icon: "home" }, { id: "instances", icon: "cube" }, { id: "discover", icon: "discover" }] },
-  { title: "Social", items: [{ id: "friends", icon: "friends" }, { id: "collab", icon: "collab" }, { id: "shop", icon: "shop", badge: "Soon" }] },
+  { title: "Main", items: [{ id: "home", icon: "home" }, { id: "instances", icon: "cube" }, { id: "mods", icon: "puzzle" }] },
+  { title: "Social", items: [{ id: "friends", icon: "friends" }, { id: "collab", icon: "collab" }] },
   { title: "Customization", items: [{ id: "skins", icon: "skins" }, { id: "features", icon: "features" }] },
   { title: "Client", items: [{ id: "settings", icon: "settings" }, { id: "admin", icon: "shield", adminOnly: true }] },
 ];
@@ -17,7 +18,7 @@ export function TitleBar() {
   const { desktop } = useApp();
   return (
     <header className="titlebar">
-      <span>VEX CLIENT · PLAY DIFFERENT</span>
+      <span>VEX CLIENT</span>
       {desktop && (
         <div className="win-btns">
           <button onClick={() => window.vex!.win.minimize()} aria-label="Minimise"><Icon name="min" size={14} /></button>
@@ -75,9 +76,13 @@ function AccountBox({ collapsed }: { collapsed: boolean }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; bottom: number } | null>(null);
   useEffect(() => {
     if (!open) return;
-    const close = (e: MouseEvent | KeyboardEvent) => { if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.contains(e.target as Node)) setOpen(false); };
+    const r = ref.current?.getBoundingClientRect();
+    if (r) setPos({ left: r.left, bottom: window.innerHeight - r.top + 8 });
+    const close = (e: MouseEvent | KeyboardEvent) => { if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.contains(e.target as Node) && !menuRef.current?.contains(e.target as Node)) setOpen(false); };
     addEventListener("mousedown", close); addEventListener("keydown", close);
     return () => { removeEventListener("mousedown", close); removeEventListener("keydown", close); };
   }, [open]);
@@ -91,8 +96,8 @@ function AccountBox({ collapsed }: { collapsed: boolean }) {
   };
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      {open && (
-        <div className="account-menu" role="menu">
+      {open && pos && createPortal(
+        <div ref={menuRef} className="account-menu" role="menu" style={{ position: "fixed", left: pos.left, bottom: pos.bottom }}>
           <div className="label" style={{ padding: "4px 8px" }}>Minecraft accounts</div>
           {ms?.accounts.map((a) => (
             <button key={a.uuid} role="menuitemradio" aria-checked={a.active} className={`list-item ${a.active ? "selected" : ""}`}
@@ -105,14 +110,18 @@ function AccountBox({ collapsed }: { collapsed: boolean }) {
           <button className="list-item" disabled={busy} onClick={addMs}><span className="nav-tile">{busy ? <span className="spinner" /> : <Icon name="plus" size={15} />}</span><span className="small">{busy ? "Waiting for Microsoft…" : "Add Microsoft account"}</span></button>
           <hr className="divider" />
           <div className="label" style={{ padding: "4px 8px" }}>VEX online</div>
-          <button className="list-item" onClick={() => { go("friends"); setOpen(false); }}>
+          <button className="list-item" title={!modrinth && account?.loginError ? account.loginError : undefined}
+            onClick={() => { if (!modrinth && account?.configured) window.vex?.online.loginCheck().catch(() => {}); go("friends"); setOpen(false); }}>
             <span className="nav-tile"><Icon name="friends" size={15} /></span>
-            <span className="small" style={{ flex: 1, textAlign: "left" }}>{modrinth ? "Connected" : account?.configured ? "Not connected" : "Not set up"}</span>
+            <span style={{ flex: 1, textAlign: "left", minWidth: 0 }}>
+              <span className="small" style={{ display: "block" }}>{modrinth ? `Connected as ${modrinth.username}` : account?.configured ? "Not connected" : "Not set up"}</span>
+              {!modrinth && account?.configured && <span className="tiny faint" style={{ display: "block" }}>Click to connect</span>}
+            </span>
             <span className={`presence-dot ${modrinth ? "online" : ""}`} style={{ position: "static", border: 0 }} />
           </button>
           <hr className="divider" />
           <button className="list-item" onClick={() => { go("settings"); setOpen(false); }}><span className="nav-tile"><Icon name="settings" size={15} /></span><span className="small">Manage accounts</span></button>
-        </div>
+        </div>, document.body
       )}
       <button className="account-box" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} title={collapsed ? (active?.name ?? "Add account") : undefined} aria-label={active ? `Account: ${active.name}` : "Add account"}>
         {active ? <span style={{ position: "relative" }}><McHead uuid={active.uuid} name={active.name} /><span className={`presence-dot ${active.needsLogin ? "" : "online"}`} /></span> : <span className="nav-tile"><Icon name="plus" size={17} /></span>}

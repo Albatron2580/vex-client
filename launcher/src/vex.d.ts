@@ -1,8 +1,10 @@
 import type { LauncherSettings, Instance } from "../electron/shared/settingsModel";
 import type { FoundInstance, ImportPart } from "../electron/ipc/importers";
+import type { SearchHit, ProjectType } from "../electron/ipc/modrinth";
 import type { SetupState } from "../electron/ipc/onlineSetup";
 export type { SetupState };
 export type { FoundInstance, ImportPart };
+export type { SearchHit, ProjectType } from "../electron/ipc/modrinth";
 
 export interface AppInfo { version: string; platform: string; totalMemMb: number; defaultMinecraftDir: string; defaultMinecraftDirExists: boolean; downloadsDir: string }
 export type SkinLookupResult =
@@ -62,7 +64,7 @@ declare global {
         saveAs(name: string, ext: "png" | "zip" | "json", bytes: Uint8Array): Promise<{ ok: boolean; canceled?: boolean; path?: string }>;
         installPack(target: string, fileName: string, bytes: Uint8Array): Promise<{ ok: true; path: string }>;
         pickDir(title: string): Promise<string | null>;
-        open(what: "logs" | "userData" | "path", p?: string): Promise<string>;
+        open(what: "logs" | "userData" | "path" | "url", p?: string): Promise<string>;
       };
       shortcuts: { status(): Promise<ShortcutStatus>; set(kind: "desktop" | "startMenu", enabled: boolean): Promise<ShortcutStatus> };
       ms: {
@@ -86,6 +88,11 @@ declare global {
         copyFrom(id: string, inst: FoundInstance): Promise<{ added: number; skipped: number; mods: ModFile[] }>;
       };
       loaderVersions(): Promise<Record<string, string>>;
+      modrinth: {
+        search(o: { query: string; type: ProjectType; instanceId: string | null; sort: string; offset: number }): Promise<{ hits: SearchHit[]; total: number }>;
+        installed(instanceId: string, type: ProjectType): Promise<string[]>;
+        install(instanceId: string, projectId: string, type: ProjectType): Promise<{ added: string[] }>;
+      };
       online: {
         home(): Promise<PublicHome>; serviceVersion(): Promise<string | null>; bundledServerVersion(): Promise<string | null>;
         link(): Promise<AccountState>; loginCheck(): Promise<AccountState>; reportBug(title: string, body: string): Promise<unknown>;

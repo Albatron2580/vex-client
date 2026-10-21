@@ -7,7 +7,7 @@ import { translator } from "../lib/i18n";
 
 export type ToastKind = "success" | "error" | "info";
 export interface Toast { id: number; kind: ToastKind; title: string; body?: string }
-export type PageId = "home" | "instances" | "discover" | "skins" | "features" | "friends" | "collab" | "shop" | "settings" | "admin";
+export type PageId = "home" | "instances" | "mods" | "skins" | "features" | "friends" | "collab" | "shop" | "settings" | "admin";
 
 interface Ctx {
   ready: boolean; desktop: boolean;

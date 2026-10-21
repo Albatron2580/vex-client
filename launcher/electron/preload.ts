@@ -30,7 +30,7 @@ const api = {
     saveAs: (name: string, ext: "png" | "zip" | "json", bytes: Uint8Array) => ipcRenderer.invoke("files:saveAs", name, ext, bytes),
     installPack: (target: string, fileName: string, bytes: Uint8Array) => ipcRenderer.invoke("files:installPack", target, fileName, bytes),
     pickDir: (title: string) => ipcRenderer.invoke("files:pickDir", title),
-    open: (what: "logs" | "userData" | "path", p?: string) => ipcRenderer.invoke("files:open", what, p),
+    open: (what: "logs" | "userData" | "path" | "url", p?: string) => ipcRenderer.invoke("files:open", what, p),
   },
   shortcuts: {
     status: () => ipcRenderer.invoke("shortcuts:status"),
@@ -74,6 +74,11 @@ const api = {
     copyFrom: (id: string, inst: unknown) => ipcRenderer.invoke("mods:copyFrom", id, inst),
   },
   loaderVersions: () => ipcRenderer.invoke("instances:loaderVersions"),
+  modrinth: {
+    search: (o: unknown) => ipcRenderer.invoke("modrinth:search", o),
+    installed: (instanceId: string, type: string) => ipcRenderer.invoke("modrinth:installed", instanceId, type),
+    install: (instanceId: string, projectId: string, type: string) => ipcRenderer.invoke("modrinth:install", instanceId, projectId, type),
+  },
   online: {
     home: () => ipcRenderer.invoke("online:home"),
     serviceVersion: () => ipcRenderer.invoke("online:serviceVersion"),

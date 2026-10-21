@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.5.0 — 2026-10-21
+- **VEX online sign-in fixed for real.** The VEX server can't talk to Mojang from Cloudflare, so it no longer has to: VEX proves your account with Minecraft's own signed key (the one used for signed chat), and the server checks Mojang's signature itself. Your online service updates itself.
+- Admins are matched by Minecraft UUID, so renaming can't fake an admin.
+- **Mods** (replaces Discover): search Modrinth for mods, shaders and resource packs and add them to an instance in one click, with everything they need.
+- The account menu no longer gets cut off, and VEX online in it shows who you're connected as (click to connect).
+- Calmer look: less glow, flatter cards, fewer filler texts, no "Shop — Soon" placeholder. Home shows your instance, VEX online and update status.
+
 ## 2.4.2 — 2026-10-21
 - Fixed "Mojang didn't accept that Minecraft sign-in": VEX online now checks your account through Mojang's session server, like Minecraft servers do (your online service updates itself).
 - The big Connect button is gone: VEX connects by itself.

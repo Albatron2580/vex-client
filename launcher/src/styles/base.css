@@ -394,3 +394,33 @@ a { color: var(--accent); }
 .login-btn { height: 48px; width: 100%; font-size: 16px; }
 .login-points { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 8px; text-align: left; }
 .login-points li { display: flex; gap: 10px; align-items: flex-start; } .login-points svg { color: var(--accent); flex: none; margin-top: 2px; }
+
+/* ---------- Mods (Modrinth) ---------- */
+.mods-target { display: flex; flex-direction: column; gap: 4px; min-width: 240px; }
+.mods-bar { display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; }
+.mods-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--s3); }
+.mod-card { display: flex; gap: var(--s3); align-items: flex-start; padding: 14px; min-height: 112px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease); }
+.mod-card:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.mod-card > img, .mod-card .mod-icon { width: 52px; height: 52px; border-radius: 12px; flex: none; object-fit: cover; background: var(--surface-2); display: grid; place-items: center; color: var(--text-faint); }
+.mod-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.mod-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.mod-title b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mod-body p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
+.mod-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+.mod-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.mod-tag { padding: 1px 7px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--line); text-transform: capitalize; }
+.mod-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex: none; }
+.mod-card.skeleton { animation: shimmer 1.4s ease-in-out infinite; }
+@keyframes shimmer { 50% { opacity: .55; } }
+
+/* ---------- Calmer look (2.5): less glow, flatter surfaces, tighter type ---------- */
+:root { --glow-sm: 0 0 calc(6px * var(--glow)) color-mix(in oklab, var(--accent) 30%, transparent); --glow-md: 0 0 calc(12px * var(--glow)) color-mix(in oklab, var(--accent) 22%, transparent); }
+.nav-item[aria-current="page"] { border-color: transparent; background: color-mix(in oklab, var(--accent) 12%, transparent); box-shadow: none; }
+.nav-item[aria-current="page"] .nav-tile { background: var(--accent); box-shadow: none; }
+.nav-item[aria-current="page"]::before { box-shadow: none; background: var(--accent); }
+.card { border-radius: var(--r-lg); box-shadow: 0 10px 30px -18px rgb(0 0 0 / 0.6); }
+.card::after { display: none; }
+.card.glow { box-shadow: 0 10px 30px -18px rgb(0 0 0 / 0.6); }
+.eyebrow { letter-spacing: 0.18em; }
+.page-head h1 { letter-spacing: -0.01em; }
+.titlebar span { letter-spacing: 0.2em; opacity: 0.7; }

@@ -156,7 +156,7 @@ export function InstancesPage() {
   return (
     <div className="page">
       <div className="page-head">
-        <div><span className="eyebrow">Library</span><h1>Instances</h1><p>Separate Minecraft setups, each with its own version, mods and folder.</p></div>
+        <div><span className="eyebrow">Library</span><h1>Instances</h1><p>{instances.length} {instances.length === 1 ? "instance" : "instances"}</p></div>
         <div className="row">
           <button className="btn" disabled={!desktop} onClick={() => setImporting(true)}><Icon name="upload" size={16} />Import</button>
           <button className="btn primary" disabled={!desktop} onClick={() => setEditing("new")}><Icon name="plus" size={16} />New instance</button>

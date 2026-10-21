@@ -10,13 +10,16 @@ export interface Env {
   MODRINTH_API?: string;
   MC_API?: string;
   MC_SESSION?: string;     // override for local testing only
-  ADMINS?: string;        // comma-separated Minecraft names; defaults to DEFAULT_ADMINS
+  MOJANG_KEY_SPKI?: string; // override for local testing only
+  ADMINS?: string;        // comma-separated Minecraft UUIDs or names; defaults to DEFAULT_ADMINS
 }
 
-const SERVER_VERSION = "2.3.0";
+const SERVER_VERSION = "2.4.0";
 // Admins are checked against the Minecraft account the player linked — the server verifies that
 // account with Mojang itself, so nobody can make themselves an admin by renaming anything.
-const DEFAULT_ADMINS = "HAckerbest11,RaxMc,UNCdel";
+// HAckerbest11 and RaxMc by UUID (can't be faked by renaming); UNCdel by name until its UUID is added.
+const DEFAULT_ADMINS = "20c0e7bfca2743b39a86e0a84dea3fb6,58e2d5f6a1184f21a2da4107de66f632,UNCdel";
+const DEFAULT_ADMIN_NAMES: Record<string, string> = { "20c0e7bfca2743b39a86e0a84dea3fb6": "HAckerbest11", "58e2d5f6a1184f21a2da4107de66f632": "RaxMc" };
 
 const SESSION_DAYS = 60;
 const ONLINE_MS = 120_000;   // a heartbeat every 60 s keeps you online
@@ -37,9 +40,15 @@ async function sha256(s: string) {
 }
 const loopback = (port: number, params: Record<string, string>) => `http://127.0.0.1:${port}/callback?${new URLSearchParams(params)}`;
 
-interface UserRow { id: string; username: string; avatar_url: string | null; last_seen: number; status: string; detail: string | null; mc_name: string | null; mc_uuid: string | null; banned: number; created_at: number }
+interface UserRow { id: string; username: string; avatar_url: string | null; last_seen: number; status: string; detail: string | null; mc_name: string | null; mc_uuid: string | null; banned: number; created_at: number; name_verified?: number }
 const adminList = (env: Env) => (env.ADMINS || DEFAULT_ADMINS).split(",").map((n) => n.trim().toLowerCase()).filter(Boolean);
-const isAdmin = (env: Env, u: UserRow) => !!u.mc_name && adminList(env).includes(u.mc_name.toLowerCase());
+const isAdmin = (env: Env, u: UserRow) => {
+  const list = adminList(env);
+  const uuid = (u.mc_uuid ?? "").replace(/-/g, "").toLowerCase();
+  if (uuid && list.includes(uuid)) return true;
+  // by name only when Mojang confirmed the name (otherwise anyone could claim it)
+  return !!u.mc_name && !!u.name_verified && list.includes(u.mc_name.toLowerCase());
+};
 const publicUser = (u: UserRow, withPresence: boolean) => ({
   id: u.id, username: u.username, avatar: u.avatar_url,
   ...(withPresence ? { online: now() - u.last_seen < ONLINE_MS, status: now() - u.last_seen < ONLINE_MS ? u.status : "offline", detail: now() - u.last_seen < ONLINE_MS ? u.detail : null, lastSeen: u.last_seen || null } : {}),
@@ -106,7 +115,7 @@ async function authVerify(req: Request, env: Env) {
       else if (r.status === 204) { await new Promise((res) => setTimeout(res, 700)); }
       else throw new Error(String(r.status));
     }
-  } catch { return fail(502, "Couldn't reach Mojang. Try again in a minute."); }
+  } catch (e: any) { return fail(502, `Couldn't reach Mojang from the VEX server (${String(e?.message ?? e).slice(0, 40)}).`); }
   if (!prof?.id || !prof.name) return fail(401, "Mojang couldn't confirm your Minecraft account. Sign in with Microsoft again.");
   let skin: string | null = null;
   try {
@@ -116,18 +125,68 @@ async function authVerify(req: Request, env: Env) {
   return createMinecraftSession(env, String(prof.id), String(prof.name), skin);
 }
 
-async function createMinecraftSession(env: Env, rawUuid: string, name: string, skin: string | null) {
+// ---------- Sign-in with Minecraft's chat-signing certificate ----------
+// Mojang gives every player a key pair whose public key Mojang signs (the same proof servers use for
+// signed chat). The launcher signs VEX's one-time code with the private key; VEX checks both signatures
+// with Mojang's public key, which is built in. No call from the VEX server to Mojang is needed.
+const MOJANG_KEY_SPKI = "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAylB4B6m5lz7jwrcFz6Fd/fnfUhcvlxsTSn5kIK/2aGG1C3kMy4VjhwlxF6BFUSnfxhNswPjh3ZitkBxEAFY25uzkJFRwHwVA9mdwjashXILtR6OqdLXXFVyUPIURLOSWqGNBtb08EN5fMnG8iFLgEJIBMxs9BvF3s3/FhuHyPKiVTZmXY0WY4ZyYqvoKR+XjaTRPPvBsDa4WI2u1zxXMeHlodT3lnCzVvyOYBLXL6CJgByuOxccJ8hnXfF9yY4F0aeL080Jz/3+EBNG8RO4ByhtBf4Ny8NQ6stWsjfeUIvH7bU/4zCYcYOq4WrInXHqS8qruDmIl7P5XXGcabuzQstPf/h2CRAUpP/PlHXcMlvewjmGU6MfDK+lifScNYwjPxRo4nKTGFZf/0aqHCh/EAsQyLKrOIYRE0lDG3bzBh8ogIMLAugsAfBb6M3mqCqKaTMAf/VAjh5FFJnjS+7bE+bZEV0qwax1CEoPPJL1fIQjOS8zj086gjpGRCtSy9+bTPTfTR/SJ+VUB5G2IeCItkNHpJX2ygojFZ9n5Fnj7R9ZnOM+L8nyIjPu3aePvtcrXlyLhH/hvOfIOjPxOlqW+O5QwSFP4OEcyLAUgDdUgyW36Z5mB285uKW/ighzZsOTevVUG2QwDItObIV6i8RCxFbN2oDHyPaO5j1tTaBNyVt8CAwEAAQ==";
+const b64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+let mojangKey: CryptoKey | null = null;
+
+async function authCert(req: Request, env: Env) {
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const uuid = String(body.uuid ?? "").replace(/-/g, "").toLowerCase(), name = String(body.name ?? ""), serverId = String(body.serverId ?? "");
+  const expiresAt = Number(body.expiresAt);
+  if (!/^[0-9a-f]{32}$/.test(uuid) || !/^[A-Za-z0-9_]{1,16}$/.test(name) || !/^[0-9a-f]{40}$/.test(serverId) || !Number.isSafeInteger(expiresAt)) return fail(400, "Bad sign-in request.");
+  if (expiresAt < now()) return fail(401, "Your Minecraft key expired. Sign in with Microsoft again.");
+  const ch = await env.DB.prepare("DELETE FROM mc_challenges WHERE id = ? AND created_at > ? RETURNING id").bind(serverId, now() - 5 * 60_000).first<{ id: string }>();
+  if (!ch) return fail(400, "That sign-in expired. Try again.");
+  try {
+    const pub = b64(String(body.publicKey ?? "")), keySig = b64(String(body.keySignature ?? "")), sig = b64(String(body.signature ?? ""));
+    if (pub.length < 100 || pub.length > 1000 || keySig.length < 100 || sig.length < 100) return fail(400, "Bad sign-in request.");
+    // 1. Mojang signed: uuid (16 bytes) + expiresAt (8 bytes, big-endian) + the player's public key
+    const signed = new Uint8Array(24 + pub.length);
+    for (let i = 0; i < 16; i++) signed[i] = parseInt(uuid.slice(i * 2, i * 2 + 2), 16);
+    new DataView(signed.buffer).setBigInt64(16, BigInt(expiresAt));
+    signed.set(pub, 24);
+    mojangKey ??= await crypto.subtle.importKey("spki", b64(env.MOJANG_KEY_SPKI || MOJANG_KEY_SPKI), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-1" }, false, ["verify"]);
+    if (!(await crypto.subtle.verify("RSASSA-PKCS1-v1_5", mojangKey, keySig, signed))) return fail(401, "Mojang's signature on your key didn't check out. Sign in with Microsoft again.");
+    // 2. the player signed our one-time code with the matching private key
+    const playerKey = await crypto.subtle.importKey("spki", pub, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+    if (!(await crypto.subtle.verify("RSASSA-PKCS1-v1_5", playerKey, sig, new TextEncoder().encode(serverId)))) return fail(401, "Couldn't confirm your Minecraft account. Try again.");
+  } catch { return fail(400, "Bad sign-in request."); }
+  // The UUID is proven. Confirm the name with Mojang when the VEX server can reach it (best effort).
+  let verifiedName: string | null = null, skin: string | null = null;
+  try {
+    const r = await fetch(`${env.MC_SESSION ?? "https://sessionserver.mojang.com"}/session/minecraft/profile/${uuid}`, { headers: UA, signal: AbortSignal.timeout(6000) });
+    if (r.ok) {
+      const p = (await r.json()) as { name?: string; properties?: { name: string; value: string }[] };
+      if (p.name && /^[A-Za-z0-9_]{1,16}$/.test(p.name)) verifiedName = p.name;
+      const tex = p.properties?.find((x) => x.name === "textures")?.value;
+      if (tex) skin = (JSON.parse(atob(tex)) as any)?.textures?.SKIN?.url ?? null;
+    }
+  } catch { /* Mojang not reachable from Cloudflare: use the name the launcher sent */ }
+  if (!skin && typeof body.skin === "string") skin = body.skin; // only a picture; checked to be a Mojang texture URL below
+  return createMinecraftSession(env, uuid, verifiedName ?? name, skin, !!verifiedName);
+}
+
+async function createMinecraftSession(env: Env, rawUuid: string, name: string, skin: string | null, verified = true) {
   const uuid = rawUuid.replace(/-/g, "");
   if (!/^[0-9a-fA-F]{32}$/.test(uuid)) return fail(400, "That account has no Minecraft profile.");
   if (!/^[A-Za-z0-9_]{1,16}$/.test(name)) return fail(400, "That account has no Minecraft name yet.");
   const avatar = skin && /^https?:\/\/textures\.minecraft\.net\/texture\/[0-9a-f]+$/.test(skin) ? skin.replace(/^http:/, "https:") : null;
   const existing = await env.DB.prepare("SELECT banned FROM users WHERE id = ?").bind(uuid).first<{ banned: number }>();
   if (existing?.banned) return fail(403, "This account is banned from VEX online.");
+  if (!verified) {
+    // the name wasn't confirmed by Mojang: don't let it take a name another account already uses
+    const taken = await env.DB.prepare("SELECT id FROM users WHERE username_lower = ? AND id != ?").bind(name.toLowerCase(), uuid).first();
+    if (taken) return fail(409, "Another account already uses that name on VEX online.");
+  }
   const token = randomToken();
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO users (id, username, username_lower, avatar_url, created_at, mc_name, mc_uuid) VALUES (?1, ?2, ?3, ?4, ?5, ?2, ?1)
-      ON CONFLICT (id) DO UPDATE SET username = excluded.username, username_lower = excluded.username_lower, avatar_url = COALESCE(excluded.avatar_url, users.avatar_url), mc_name = excluded.mc_name, mc_uuid = excluded.mc_uuid`)
-      .bind(uuid, name, name.toLowerCase(), avatar, now()),
+    env.DB.prepare(`INSERT INTO users (id, username, username_lower, avatar_url, created_at, mc_name, mc_uuid, name_verified) VALUES (?1, ?2, ?3, ?4, ?5, ?2, ?1, ?6)
+      ON CONFLICT (id) DO UPDATE SET username = excluded.username, username_lower = excluded.username_lower, avatar_url = COALESCE(excluded.avatar_url, users.avatar_url), mc_name = excluded.mc_name, mc_uuid = excluded.mc_uuid, name_verified = excluded.name_verified`)
+      .bind(uuid, name, name.toLowerCase(), avatar, now(), verified ? 1 : 0),
     env.DB.prepare("INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)").bind(await sha256(token), uuid, now(), now() + SESSION_DAYS * 86_400_000),
     env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now()),
   ]);
@@ -155,8 +214,8 @@ async function authMinecraft(req: Request, env: Env) {
   if (existing?.banned) return fail(403, "This account is banned from VEX online.");
   const token = randomToken();
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO users (id, username, username_lower, avatar_url, created_at, mc_name, mc_uuid) VALUES (?1, ?2, ?3, ?4, ?5, ?2, ?1)
-      ON CONFLICT (id) DO UPDATE SET username = excluded.username, username_lower = excluded.username_lower, avatar_url = excluded.avatar_url, mc_name = excluded.mc_name, mc_uuid = excluded.mc_uuid`)
+    env.DB.prepare(`INSERT INTO users (id, username, username_lower, avatar_url, created_at, mc_name, mc_uuid, name_verified) VALUES (?1, ?2, ?3, ?4, ?5, ?2, ?1, 1)
+      ON CONFLICT (id) DO UPDATE SET username = excluded.username, username_lower = excluded.username_lower, avatar_url = excluded.avatar_url, mc_name = excluded.mc_name, mc_uuid = excluded.mc_uuid, name_verified = 1`)
       .bind(uuid, name, name.toLowerCase(), avatar, now()),
     env.DB.prepare("INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)").bind(await sha256(token), uuid, now(), now() + SESSION_DAYS * 86_400_000),
     env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now()),
@@ -375,7 +434,7 @@ async function admin(req: Request, url: URL, env: Env, me: UserRow) {
       (SELECT COUNT(*) FROM users WHERE created_at > ?2) AS newWeek, (SELECT COUNT(*) FROM bug_reports WHERE status = 'open') AS openBugs,
       (SELECT COUNT(*) FROM users WHERE banned = 1) AS banned, (SELECT COUNT(*) FROM friendships WHERE status = 'accepted') AS friendships`)
       .bind(now() - ONLINE_MS, now() - 7 * 86_400_000).first();
-    return json({ ...c, serverVersion: SERVER_VERSION, admins: (env.ADMINS || DEFAULT_ADMINS).split(",").map((n) => n.trim()).filter(Boolean) });
+    return json({ ...c, serverVersion: SERVER_VERSION, admins: (env.ADMINS || DEFAULT_ADMINS).split(",").map((n) => n.trim()).filter(Boolean).map((n) => DEFAULT_ADMIN_NAMES[n.toLowerCase()] ?? n) });
   }
   if (p === "/v1/admin/users" && req.method === "GET") {
     const q = (url.searchParams.get("q") ?? "").trim().toLowerCase().slice(0, 40);
@@ -449,6 +508,7 @@ export default {
       if (url.pathname === "/auth/minecraft" && req.method === "POST") return await authMinecraft(req, env);
       if (url.pathname === "/auth/minecraft/challenge" && req.method === "POST") return await authChallenge(env);
       if (url.pathname === "/auth/minecraft/verify" && req.method === "POST") return await authVerify(req, env);
+      if (url.pathname === "/auth/minecraft/cert" && req.method === "POST") return await authCert(req, env);
       if (url.pathname === "/auth/start") return await authStart(url, env);
       if (url.pathname === "/auth/callback") return await authCallback(url, env);
       if (url.pathname.startsWith("/v1/")) {

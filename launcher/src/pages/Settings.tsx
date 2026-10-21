@@ -270,7 +270,7 @@ export function SettingsPage() {
 
   return (
     <div className="page">
-      <div className="page-head"><div><span className="eyebrow">Preferences</span><h1>Settings</h1><p>Saved instantly to this PC.</p></div></div>
+      <div className="page-head"><div><span className="eyebrow">Preferences</span><h1>Settings</h1></div></div>
       <div className="grid grid-2" style={{ alignItems: "start" }}>
         <div className="stack" style={{ gap: "var(--s4)" }}>
           <Card title="Theme" icon="sparkle">

@@ -11,6 +11,7 @@ import { listSkins, addSkin, removeSkin } from "./ipc/skinLibrary";
 import { shortcutStatus, setShortcut } from "./ipc/shortcuts";
 import initSqlJs from "sql.js";
 import { prepareVexMod } from "./ipc/vexmod";
+import * as modrinth from "./ipc/modrinth";
 import { defaultRoots, findModrinth, findNoRisk, findCurseForge, findPrismLike, findVanilla, findInFolder, copyParts, copyModJars, modJars, measure, type FoundInstance, type ImportPart } from "./ipc/importers";
 import { initAccount, setServiceUrl, accountState, login, cancelLogin, logout, friends, setMinecraftTokenSource, linkMinecraft, ensureSignedIn, publicHome, serviceVersion, online, adminApi, modCredentials } from "./ipc/account";
 import { DEFAULT_ONLINE_URL } from "./config";
@@ -155,7 +156,8 @@ function registerIpc() {
     const r = await dialog.showOpenDialog(win!, { title, properties: ["openDirectory", "createDirectory"] });
     return r.canceled ? null : r.filePaths[0];
   });
-  ipcMain.handle("files:open", async (_e, what: "logs" | "userData" | "path", p?: string) => {
+  ipcMain.handle("files:open", async (_e, what: "logs" | "userData" | "path" | "url", p?: string) => {
+    if (what === "url") { if (typeof p === "string" && /^https:\/\/modrinth\.com\/[\w/-]+$/.test(p)) await shell.openExternal(p); return ""; }
     const target = what === "logs" ? logsDir() : what === "userData" ? app.getPath("userData") : p;
     if (!target || !fs.existsSync(target)) return "That folder doesn't exist yet.";
     return shell.openPath(target);
@@ -287,6 +289,15 @@ function registerIpc() {
     log("info", `Copied ${r.added} mod(s) from ${inst.sourceLabel} “${inst.name}” (${r.skipped} already there)`);
     return { added: r.added, skipped: r.skipped, mods: listMods(dir) };
   });
+  // Mods page: the Modrinth catalogue
+  const instById = (id: unknown) => { const i = loadInstances().find((x) => x.id === String(id)); if (!i) throw new Error("That instance no longer exists."); return i; };
+  const pType = (t: unknown): modrinth.ProjectType => (t === "shader" || t === "resourcepack" ? t : "mod");
+  ipcMain.handle("modrinth:search", (_e, o: { query?: string; type?: string; instanceId?: string | null; sort?: string; offset?: number }) =>
+    modrinth.search({ query: String(o?.query ?? ""), type: pType(o?.type), inst: o?.instanceId ? loadInstances().find((x) => x.id === o.instanceId) ?? null : null,
+      sort: (["relevance", "downloads", "newest", "updated"] as const).find((x) => x === o?.sort) ?? "relevance", offset: Number(o?.offset) || 0 }));
+  ipcMain.handle("modrinth:installed", (_e, instanceId: string, type: string) => modrinth.installedIds(instById(instanceId), pType(type)));
+  ipcMain.handle("modrinth:install", (e, instanceId: string, projectId: string, type: string) =>
+    modrinth.install(instById(instanceId), String(projectId), pType(type), (s) => e.sender.send("modrinth:status", s)));
   ipcMain.handle("mods:add", async (_e, id: string) => {
     const dir = instDir(String(id));
     const r = await dialog.showOpenDialog(win!, { title: "Add mods (.jar)", properties: ["openFile", "multiSelections"], filters: [{ name: "Minecraft mods", extensions: ["jar"] }] });

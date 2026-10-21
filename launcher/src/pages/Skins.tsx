@@ -34,7 +34,7 @@ export function SkinsPage() {
   return (
     <div className="page">
       <div className="page-head">
-        <div><span className="eyebrow">Wardrobe</span><h1>Skins</h1><p>Keep a library of skins and look up any player's.</p></div>
+        <div><span className="eyebrow">Wardrobe</span><h1>Skins</h1></div>
         <button className="btn primary" disabled={!desktop} onClick={() => fileRef.current?.click()}><Icon name="upload" size={16} />Import PNG</button>
         <input ref={fileRef} type="file" accept="image/png" hidden onChange={(e) => importFile(e.target.files?.[0])} />
       </div>

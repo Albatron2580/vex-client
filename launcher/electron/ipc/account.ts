@@ -3,10 +3,9 @@
 // loopback URL (http://127.0.0.1:<random port>/callback). The token is encrypted with
 // Windows' DPAPI via Electron safeStorage — never stored in plain text.
 import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import crypto from "node:crypto";
-import { app, BrowserWindow, safeStorage, shell } from "electron";
+import { app, BrowserWindow, safeStorage } from "electron";
 import { log } from "./logger";
 import { DEFAULT_ONLINE_URL } from "../config";
 
@@ -18,7 +17,6 @@ let token: string | null = null;
 let loginError: string | null = null;  // why the last automatic sign-in failed (shown on the Friends page)
 let profile: Profile | null = null;
 let heartbeat: NodeJS.Timeout | null = null;
-let pendingLogin: { server: http.Server; reject: (e: Error) => void } | null = null;
 
 const tokenFile = () => path.join(app.getPath("userData"), "account.bin");
 const canEncrypt = () => { try { return safeStorage.isEncryptionAvailable(); } catch { return false; } };
@@ -127,11 +125,6 @@ function startHeartbeat() {
   beat(); heartbeat = setInterval(beat, 60_000);
 }
 
-const PAGE = (title: string, msg: string) => `<!doctype html><meta charset="utf-8"><title>VEX CLIENT</title>
-<body style="margin:0;height:100vh;display:grid;place-items:center;background:#170b16;color:#fbeaf4;font:16px system-ui">
-<div style="text-align:center;padding:32px 40px;border:1px solid #ff8cc655;border-radius:20px;background:#2a1328;box-shadow:0 0 40px #ff6fb533">
-<div style="font:700 28px system-ui;letter-spacing:.12em;background:linear-gradient(135deg,#ff6fb5,#b77dff);-webkit-background-clip:text;color:transparent">VEX CLIENT</div>
-<h2 style="margin:12px 0 6px">${title}</h2><p style="opacity:.7;margin:0">${msg}</p></div></body>`;
 
 // Sign in to VEX online with the Minecraft account used to play. The server checks the
 // Minecraft token with Mojang, then the token is dropped — nothing to register anywhere.
@@ -152,13 +145,41 @@ export function login(): Promise<AccountState> {
     if (ch.status === 404) throw new Error("Your online service is older than this VEX, so it can't sign you in yet. Update it: Settings → VEX online → Update online service (on the PC that set it up).");
     const chData: any = await ch.json().catch(() => ({}));
     if (!ch.ok || !/^[0-9a-f]{40}$/.test(chData.serverId ?? "")) throw new Error(chData.error ?? `VEX server error (${ch.status})`);
-    // 2. tell Mojang this account joins that code (like joining a server); the token only goes to Mojang
     const uuid = (mc.uuid ?? "").replace(/-/g, "");
-    const join = await post("https://sessionserver.mojang.com/session/minecraft/join", { accessToken: mc.token, selectedProfile: uuid, serverId: chData.serverId }, "Mojang");
-    if (join.status === 403 || join.status === 401) throw new Error("Mojang says your Minecraft sign-in expired. Click your account at the bottom left and sign in with Microsoft again.");
-    if (!join.ok) throw new Error(`Mojang answered ${join.status}. Try again in a minute.`);
-    // 3. VEX online asks Mojang whether you joined, then signs you in
-    const res = await post(`${serviceUrl}/auth/minecraft/verify`, { name: mc.name, serverId: chData.serverId }, "the VEX server");
+    const mcHeaders = { ...ua, authorization: `Bearer ${mc.token}` };
+    // 2. Minecraft's own key pair for this account (the one used for signed chat); Mojang signs its public key.
+    //    The private key signs VEX's one-time code, so VEX can check the account without asking Mojang itself.
+    let cert: any;
+    try {
+      const r = await fetch("https://api.minecraftservices.com/player/certificates", { method: "POST", headers: mcHeaders, signal: AbortSignal.timeout(20_000) });
+      if (r.status === 401 || r.status === 403) throw new Error("Mojang says your Minecraft sign-in expired. Click your account at the bottom left and sign in with Microsoft again.");
+      if (!r.ok) throw new Error(`Mojang answered ${r.status}. Try again in a minute.`);
+      cert = await r.json();
+    } catch (e: any) { throw new Error(/Mojang/.test(e?.message) ? e.message : "Couldn't reach Mojang. Check your internet connection."); }
+    const pem = (k: string) => String(k ?? "").replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
+    // Mojang labels its keys "RSA PRIVATE/PUBLIC KEY" but they're really PKCS#8 / SPKI, so read the bytes ourselves.
+    const der = Buffer.from(pem(cert?.keyPair?.privateKey), "base64");
+    let priv: crypto.KeyObject;
+    try { priv = crypto.createPrivateKey({ key: der, format: "der", type: "pkcs8" }); }
+    catch { priv = crypto.createPrivateKey({ key: der, format: "der", type: "pkcs1" }); }
+    const signature = crypto.sign("RSA-SHA256", Buffer.from(chData.serverId), priv).toString("base64");
+    const spki = (b: string) => {
+      const d = Buffer.from(b, "base64");
+      let k: crypto.KeyObject;
+      try { k = crypto.createPublicKey({ key: d, format: "der", type: "spki" }); } catch { k = crypto.createPublicKey({ key: d, format: "der", type: "pkcs1" }); }
+      return (k.export({ type: "spki", format: "der" }) as Buffer).toString("base64");
+    };
+    let skin: string | undefined;
+    try {
+      const p: any = await (await fetch("https://api.minecraftservices.com/minecraft/profile", { headers: mcHeaders, signal: AbortSignal.timeout(10_000) })).json();
+      skin = (p?.skins ?? []).find((x: any) => x.state === "ACTIVE")?.url;
+    } catch { /* just no face picture */ }
+    // 3. VEX online checks Mojang's signature (built in) and ours, then signs you in
+    const res = await post(`${serviceUrl}/auth/minecraft/cert`, {
+      uuid, name: mc.name, serverId: chData.serverId, expiresAt: Date.parse(cert.expiresAt),
+      publicKey: spki(pem(cert.keyPair.publicKey)), keySignature: cert.publicKeySignatureV2, signature, skin,
+    }, "the VEX server");
+    if (res.status === 404) throw new Error("Your online service is older than this VEX, so it can't sign you in yet. Update it: Settings → VEX online → Update online service (on the PC that set it up).");
     const data: any = await res.json().catch(() => ({}));
     if (!res.ok || !data.token) throw new Error(data.error ?? `VEX server error (${res.status})`);
     token = data.token;
@@ -184,7 +205,6 @@ export async function ensureSignedIn(activeName: string | null) {
   catch (e: any) { loginError = e?.message || "Couldn't connect to VEX online."; log("warn", `Automatic VEX online sign-in failed: ${loginError}`); broadcast(); return accountState(); }
 }
 
-const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 export function cancelLogin() { /* Minecraft sign-in has no browser step to cancel */ }
 

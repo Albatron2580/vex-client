@@ -9,7 +9,7 @@ import { LoginScreen } from "./components/LoginScreen";
 import { useState } from "react";
 import { HomePage } from "./pages/Home";
 import { InstancesPage } from "./pages/Instances";
-import { DiscoverPage } from "./pages/Discover";
+import { ModsPage } from "./pages/Mods";
 import { SkinsPage } from "./pages/Skins";
 import { FeaturesPage } from "./pages/Features";
 import { ShopPage } from "./pages/Placeholder";
@@ -18,7 +18,7 @@ import { CollabPage } from "./pages/Collab";
 import { AdminPage } from "./pages/Admin";
 import { SettingsPage } from "./pages/Settings";
 
-const PAGES = { home: HomePage, instances: InstancesPage, discover: DiscoverPage, skins: SkinsPage, features: FeaturesPage, friends: FriendsPage, collab: CollabPage, admin: AdminPage, shop: ShopPage, settings: SettingsPage };
+const PAGES = { home: HomePage, instances: InstancesPage, mods: ModsPage, skins: SkinsPage, features: FeaturesPage, friends: FriendsPage, collab: CollabPage, admin: AdminPage, shop: ShopPage, settings: SettingsPage };
 
 export function App() {
   const { page, settings, ready, desktop, ms } = useApp();

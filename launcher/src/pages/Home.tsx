@@ -1,4 +1,5 @@
-import { Card, Notice, Progress, ToggleRow, Select } from "../components/ui";
+import { Card, Notice, ToggleRow, Select } from "../components/ui";
+import { useUpdateState } from "../components/UpdateBanner";
 import { Icon } from "../components/Icon";
 import { Logo } from "../components/Logo";
 import { useEffect, useState } from "react";
@@ -9,11 +10,11 @@ import { vex, errMsg } from "../lib/bridge";
 import type { ShortcutStatus } from "../vex";
 
 export function HomePage() {
-  const { t, instances, settings, update, go, info, desktop, toast, ms } = useApp();
+  const { instances, settings, update, go, info, desktop, toast, ms, account } = useApp();
+  const upd = useUpdateState();
   const activeMs = ms?.accounts.find((a) => a.active);
   const selected = instances.find((i) => i.id === settings.selectedInstanceId) ?? instances[0] ?? null;
   const recent = settings.recentInstanceIds.map((id) => instances.find((i) => i.id === id)).filter(Boolean);
-  const mcDir = settings.minecraftDir || info?.defaultMinecraftDir || "—";
   const [sc, setSc] = useState<ShortcutStatus | null>(null);
   useEffect(() => { if (desktop) vex().shortcuts.status().then(setSc).catch(() => {}); }, [desktop]);
   const addDesktop = async () => {
@@ -27,9 +28,9 @@ export function HomePage() {
         <div aria-hidden style={{ position: "absolute", right: -60, top: -80, opacity: 0.12, transform: "rotate(-8deg)" }}><Logo size={360} glow={false} /></div>
         <div className="row" style={{ gap: 32, alignItems: "flex-end", flexWrap: "wrap", position: "relative" }}>
           <div className="stack" style={{ flex: 1, minWidth: 280, gap: 6 }}>
-            <span className="eyebrow">{t("home.welcome")}</span>
-            <h1 style={{ fontSize: "var(--fs-hero)", lineHeight: 1.05, fontWeight: 700 }}>VEX <span style={{ background: "var(--gradient)", WebkitBackgroundClip: "text", color: "transparent" }}>CLIENT</span></h1>
-            <p className="muted" style={{ maxWidth: 460 }}>Play different. Your instances, cosmetics and tools in one place.</p>
+            <span className="eyebrow">{activeMs ? `Hey ${activeMs.name}` : "VEX CLIENT"}</span>
+            <h1 style={{ fontSize: "var(--fs-hero)", lineHeight: 1.05, fontWeight: 700 }}>{selected ? selected.name : "Ready when you are"}</h1>
+            <p className="muted">{selected ? `Minecraft ${selected.version}${selected.loader === "vanilla" ? "" : ` · ${selected.loader[0].toUpperCase()}${selected.loader.slice(1)}`}` : "Make an instance to start playing."}</p>
             <div className="row wrap" style={{ marginTop: 14 }}>
               <div style={{ width: 280 }}>
                 <Select label="Instance" value={selected?.id ?? ""} onChange={(id) => update({ selectedInstanceId: id })}
@@ -64,16 +65,14 @@ export function HomePage() {
           <div className="stack">
             <div className="row small"><span className="muted" style={{ flex: 1 }}>Minecraft account</span>
               {activeMs ? <span className={`chip ${activeMs.needsLogin ? "warn" : "ok"}`}><span className="dot" />{activeMs.name}</span> : <span className="chip warn"><span className="dot" />Not signed in</span>}</div>
-            <div className="row small"><span className="muted" style={{ flex: 1 }}>Minecraft folder</span>
-              {info?.defaultMinecraftDirExists || settings.minecraftDir ? <span className="chip ok"><span className="dot" />Found</span> : <span className="chip">Not found</span>}</div>
-            <div className="mono faint" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={mcDir}>{mcDir}</div>
+            <div className="row small"><span className="muted" style={{ flex: 1 }}>VEX online</span>
+              {account?.signedIn ? <span className="chip ok"><span className="dot" />Connected</span> : account?.configured ? <button className="btn sm ghost" onClick={() => go("friends")}>Not connected</button> : <span className="chip">Not set up</span>}</div>
+            <div className="row small"><span className="muted" style={{ flex: 1 }}>VEX CLIENT {info?.version ?? ""}</span>
+              <span className={`chip ${upd.status === "ready" ? "warn" : ""}`}>{upd.status === "ready" ? `${upd.version} ready` : upd.status === "downloading" ? `Downloading ${upd.pct}%` : upd.status === "checking" ? "Checking…" : "Up to date"}</span></div>
             {sc?.supported && sc.packaged && (
               <div className="row small"><span className="muted" style={{ flex: 1 }}>Desktop shortcut</span>
                 {sc.desktop ? <span className="chip ok"><span className="dot" />On desktop</span> : <button className="btn sm" onClick={addDesktop}><Icon name="plus" size={14} />Add to desktop</button>}</div>
             )}
-            <div className="row small"><span className="muted" style={{ flex: 1 }}>Client updates</span><span className="chip">Not set up yet</span></div>
-            <div className="row small"><span className="muted" style={{ flex: 1 }}>Downloads</span><span className="chip">Idle</span></div>
-            <Progress value={0} label="No download running" />
             {!desktop && <Notice kind="warn">You're viewing the UI in a browser. Open the desktop app for real data.</Notice>}
           </div>
         </Card>
