@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2.6.0 — 2026-10-21
+- New look for the whole launcher: calm solid surfaces, a new headline font and no more all-caps labels.
+- The Play button has pixel corners and presses down like a key; icons sit in inventory-style slots.
+- New Home with your instance front and centre, Jump back in and a clear status list.
+- In game, the VEX menu pages get the same inventory look.
+
+## 2.6.0 — 2026-10-21
 - **New look for the whole launcher.** Solid, calm surfaces instead of glass and glow; new headline font (Bricolage Grotesque); no more shouty all-caps labels.
 - A Minecraft touch where it counts: the **Play** button has pixel corners and presses down like a key, and instance icons, heads and mod icons sit in inventory-style slots.
 - **New Home:** your instance big and front, Play next to it, then "Jump back in" and a clear status list.
