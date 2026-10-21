@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2.5.0 — 2026-10-21
+- VEX online sign-in fixed: VEX proves your account with Minecraft's own signed key, so the VEX server never needs to reach Mojang. Your online service updates itself.
+- New Mods page (replaces Discover): add mods, shaders and resource packs from Modrinth to any instance in one click.
+- Account menu no longer cut off; calmer, cleaner look.
+
+## 2.5.0 — 2026-10-21
 - **VEX online sign-in fixed for real.** The VEX server can't talk to Mojang from Cloudflare, so it no longer has to: VEX proves your account with Minecraft's own signed key (the one used for signed chat), and the server checks Mojang's signature itself. Your online service updates itself.
 - Admins are matched by Minecraft UUID, so renaming can't fake an admin.
 - **Mods** (replaces Discover): search Modrinth for mods, shaders and resource packs and add them to an instance in one click, with everything they need.
