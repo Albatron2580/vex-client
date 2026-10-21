@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.6.0 — 2026-10-21
+- **New look for the whole launcher.** Solid, calm surfaces instead of glass and glow; new headline font (Bricolage Grotesque); no more shouty all-caps labels.
+- A Minecraft touch where it counts: the **Play** button has pixel corners and presses down like a key, and instance icons, heads and mod icons sit in inventory-style slots.
+- **New Home:** your instance big and front, Play next to it, then "Jump back in" and a clear status list.
+- Cleaner sidebar, buttons, switches, sliders, menus and the Minecraft Logs window.
+- In game, the VEX menu pages get the same inventory bevel (mod 1.6.0, downloaded automatically).
+
 ## 2.5.0 — 2026-10-21
 - VEX online sign-in fixed: VEX proves your account with Minecraft's own signed key, so the VEX server never needs to reach Mojang. Your online service updates itself.
 - New Mods page (replaces Discover): add mods, shaders and resource packs from Modrinth to any instance in one click.
