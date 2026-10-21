@@ -125,7 +125,7 @@ public final class VexRadialScreen extends VexScreen {
         pose.pushMatrix();
         pose.translate(cx, ny + 11);
         pose.scale(0.75f, 0.75f);
-        String tag = "VEX CLIENT";
+        String tag = "VEX";
         int tw = this.font.width(tag) + 12;
         Ui.card(g, -tw / 2, 0, tw / 2, 12, Ui.alpha(Ui.ORANGE, 0.55f), Ui.alpha(0xFFFFFFFF, 0.85f));
         g.drawString(this.font, tag, -this.font.width(tag) / 2, 2, 0xFFFFFFFF, false);
