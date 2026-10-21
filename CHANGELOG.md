@@ -1,6 +1,10 @@
 # Changelog
 
 ## 2.6.2 — 2026-10-21
+- Fixed: mods from NoRisk Client weren't imported. VEX now reads NoRisk's mod list and copies the mods from its shared cache.
+- Already imported an empty NoRisk instance? Instances → Mods → Copy from launcher → pick the NoRisk profile.
+
+## 2.6.2 — 2026-10-21
 - **Fix: mods from NoRisk Client weren't imported.** NoRisk doesn't keep your mods in the instance folder: it keeps them in one shared cache and loads them when the game starts. VEX now reads NoRisk's own mod list for each profile and copies those mods from its cache.
 - VEX also reads changes the NoRisk Client and Modrinth apps haven't saved to their main database file yet, so recent mods and profiles show up even while those apps are open.
 - Already imported an empty NoRisk instance? Open it in Instances → **Mods** → **Copy from launcher** and pick the NoRisk profile.
