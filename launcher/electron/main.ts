@@ -19,7 +19,7 @@ import { buildRecipe, installRecipeMods, serverStatus, type Recipe } from "./ipc
 import { connectGithub, disconnectGithub, publishStatus, publishUpdate } from "./ipc/publish";
 import { setupState, startSetup, openHelper, setConnectHandler, setupProgress } from "./ipc/onlineSetup";
 import { logSessions, onGameStarting, activeMinecraftToken, initGame, accountsStatus, addMicrosoftAccount, setActiveAccount, signOutAccount, accountSkin, accountCapes, setAccountCape, gameSettings, setGameSettings, gameState, launchInstance, stopGame, gameLogPath } from "./ipc/game";
-import { checkForUpdates, getUpdateState, installAndRestart, startAutoCheck } from "./ipc/updater";
+import { checkForUpdates, getUpdateState, installAndRestart, startAutoCheck, justUpdated, announceUpdate } from "./ipc/updater";
 import { defaultMinecraftDir, instancesRoot, safeFileName, isInside } from "./ipc/paths";
 import { validateSettings, validateInstance, type LauncherSettings, type Instance } from "./shared/settingsModel";
 
@@ -340,6 +340,7 @@ function registerIpc() {
   // Updates
   ipcMain.handle("updater:state", () => getUpdateState());
   ipcMain.handle("updater:check", () => checkForUpdates(true));
+  ipcMain.handle("updater:justUpdated", () => justUpdated());
   ipcMain.handle("updater:install", () => installAndRestart());
 
   // Notifications + renderer logging
@@ -382,6 +383,7 @@ app.whenReady().then(() => {
     .catch(() => {});
   createWindow();
   startAutoCheck();
+  announceUpdate();
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });

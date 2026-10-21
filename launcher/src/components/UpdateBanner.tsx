@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./Icon";
-import { Progress } from "./ui";
+import { Modal, Progress } from "./ui";
 import type { UpdateState } from "../vex";
 import { errMsg } from "../lib/bridge";
 
@@ -33,10 +33,31 @@ export function UpdateBanner() {
       <Icon name="sparkle" size={18} />
       <div style={{ minWidth: 0 }}>
         <b>VEX {s.version} is ready</b>
-        <div className="tiny muted">{error ?? "Restart to finish updating. It takes a few seconds."}</div>
+        <div className="tiny muted">{error ?? (firstLine(s.notes) || "Restart to finish updating. It takes a few seconds.")}</div>
       </div>
       <button className="btn ghost sm" onClick={() => setLater(s.version)}>Later</button>
       <button className="btn primary sm" onClick={async () => { try { await window.vex!.updater.install(); } catch (e) { setError(errMsg(e)); } }}><Icon name="refresh" size={14} />Restart now</button>
     </div>
+  );
+}
+
+const clean = (l: string) => l.replace(/^[\s>#*-]+/, "").replace(/[*_`]/g, "").trim();
+export const firstLine = (notes: string) => (notes || "").split(/\r?\n/).map(clean).find(Boolean) ?? "";
+
+/** After VEX updated itself: what's new, once. */
+export function WhatsNew() {
+  const [u, setU] = useState<{ version: string; notes: string } | null>(null);
+  useEffect(() => { window.vex?.updater.justUpdated().then(setU).catch(() => {}); }, []);
+  if (!u) return null;
+  const lines = u.notes.split(/\r?\n/).map(clean).filter(Boolean).slice(0, 12);
+  return (
+    <Modal title={`VEX updated to ${u.version}`} onClose={() => setU(null)}>
+      <div className="stack">
+        <span className="small muted">Here's what's new:</span>
+        {lines.length ? <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 6 }}>{lines.map((l, i) => <li key={i} className="small">{l}</li>)}</ul>
+          : <span className="small">Fixes and improvements.</span>}
+        <div className="row" style={{ justifyContent: "flex-end" }}><button className="btn primary" onClick={() => setU(null)}>Nice!</button></div>
+      </div>
+    </Modal>
   );
 }

@@ -122,7 +122,7 @@ declare global {
         run(inst: FoundInstance, parts: ImportPart[], name: string, version: string): Promise<Instance>;
         onProgress(cb: (p: { pct: number; item: string }) => void): () => void;
       };
-      updater: { state(): Promise<UpdateState>; check(): Promise<UpdateState>; install(): Promise<void>; onState(cb: (s: UpdateState) => void): () => void };
+      updater: { state(): Promise<UpdateState>; check(): Promise<UpdateState>; install(): Promise<void>; justUpdated(): Promise<{ version: string; notes: string } | null>; onState(cb: (s: UpdateState) => void): () => void };
       notify(title: string, body: string): Promise<void>;
       log(level: "info" | "warn" | "error", msg: string): Promise<void>;
     };

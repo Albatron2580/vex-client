@@ -60,12 +60,12 @@ export function SignInCard({ compact }: { compact?: boolean }) {
   );
   return (
     <div className="stack" style={align}>
-      {busy ? <div className="row small muted"><span className="spinner" />Connecting as {active.name}…</div>
+      {busy || !error ? <div className="row small muted"><span className="spinner" />Connecting as {active.name}…</div>
         : <>
-            {error && <span className="small" style={{ color: "var(--danger)", maxWidth: 440 }}>{error}</span>}
-            {error && <div style={{ maxWidth: 480, width: "100%" }}><ServiceUpdate /></div>}
-            <button className="btn primary" onClick={async () => { setBusy(true); setError(null); try { const st = await window.vex!.online.loginCheck(); if (!st.signedIn) setError(st.loginError || "Couldn't connect to VEX online."); } catch (e) { setError(errMsg(e)); } finally { setBusy(false); } }}>
-              <Icon name="refresh" size={16} />Connect as {active.name}</button>
+            <span className="small muted" style={{ maxWidth: 440 }}>{error}</span>
+            <div style={{ maxWidth: 480, width: "100%" }}><ServiceUpdate /></div>
+            <button className="btn ghost sm" onClick={async () => { setBusy(true); setError(null); try { const st = await window.vex!.online.loginCheck(); if (!st.signedIn) setError(st.loginError || "Couldn't connect to VEX online."); } catch (e) { setError(errMsg(e)); } finally { setBusy(false); } }}>
+              <Icon name="refresh" size={14} />Try again</button>
           </>}
       {wiz}
     </div>

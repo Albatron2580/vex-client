@@ -157,6 +157,7 @@ const api = {
     state: () => ipcRenderer.invoke("updater:state"),
     check: () => ipcRenderer.invoke("updater:check"),
     install: () => ipcRenderer.invoke("updater:install"),
+    justUpdated: () => ipcRenderer.invoke("updater:justUpdated"),
     onState: (cb: (s: unknown) => void) => {
       const h = (_e: unknown, s: unknown) => cb(s);
       ipcRenderer.on("updater:state", h);

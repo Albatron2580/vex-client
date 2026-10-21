@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { spawn } from "node:child_process";
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, Notification } from "electron";
 import { log } from "./logger";
 import { pickUpdate, parseChecksum, type UpdateInfo, type GithubRelease } from "../shared/updateLogic";
 
@@ -78,6 +78,37 @@ async function download(info: UpdateInfo) {
   readyFile = target;
   log("info", `Update ${info.version} downloaded and verified (${got} bytes)`);
   setState({ status: "ready", version: info.version, notes: info.notes });
+  try { fs.writeFileSync(notesFile(), JSON.stringify({ version: info.version, notes: info.notes })); } catch { /* only for the "what's new" pop-up */ }
+  notify(`VEX ${info.version} is ready`, `${firstLine(info.notes)}\nRestart VEX to update — it takes a few seconds.`);
+}
+
+const notesFile = () => path.join(app.getPath("userData"), "update-notes.json");
+const firstLine = (notes: string) => (notes || "A new version of VEX CLIENT.").replace(/[#*_`>]/g, "").split(/\r?\n/).map((l) => l.trim()).find(Boolean)?.slice(0, 160) ?? "";
+
+/** A Windows notification; clicking it brings VEX to the front. */
+function notify(title: string, body: string) {
+  try {
+    if (!Notification.isSupported()) return;
+    const n = new Notification({ title, body });
+    n.on("click", () => { const w = BrowserWindow.getAllWindows()[0]; if (w) { if (w.isMinimized()) w.restore(); w.show(); w.focus(); } });
+    n.show();
+  } catch { /* notifications are a bonus */ }
+}
+
+/** After an update: the version and notes once, for the "VEX was updated" announcement. */
+export function justUpdated(): { version: string; notes: string } | null {
+  try {
+    const d = JSON.parse(fs.readFileSync(notesFile(), "utf8"));
+    if (d?.version !== app.getVersion()) return null;
+    fs.rmSync(notesFile(), { force: true });
+    return { version: String(d.version), notes: String(d.notes ?? "") };
+  } catch { return null; }
+}
+
+/** Shown once after starting a new version. */
+export function announceUpdate() {
+  const u = (() => { try { const d = JSON.parse(fs.readFileSync(notesFile(), "utf8")); return d?.version === app.getVersion() ? d : null; } catch { return null; } })();
+  if (u) notify(`VEX updated to ${u.version}`, firstLine(u.notes));
 }
 
 /** Runs the verified installer silently; it closes VEX, installs, then starts the new version. */
@@ -91,5 +122,5 @@ export function installAndRestart() {
 export function startAutoCheck() {
   if (!updatesSupported()) return;
   setTimeout(() => checkForUpdates(false), 8_000);
-  setInterval(() => checkForUpdates(false), 4 * 60 * 60_000);
+  setInterval(() => checkForUpdates(false), 30 * 60_000);
 }

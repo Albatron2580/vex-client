@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.2 — 2026-10-21
+- **Fix: "Mojang didn't accept that Minecraft sign-in".** VEX online now signs you in the way Minecraft servers check players: your PC tells Mojang, and the VEX server asks Mojang. Your Minecraft token never goes to the VEX server. Your online service updates itself for this.
+- The big "Connect as…" button is gone: VEX connects by itself and only shows a small message with **Try again** if something's wrong.
+- **Update alerts:** when an update is downloaded you get a Windows notification and a banner in VEX with what's new; after restarting, VEX shows **"VEX updated to …"** with the changes. VEX now checks for updates every 30 minutes.
+
 ## 2.4.1 — 2026-10-20
 - Glass-circle Right Shift menu. VEX online: updates your online service by itself when it's too old and connects when done; always says why sign-in failed.
 

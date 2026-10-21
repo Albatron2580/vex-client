@@ -9,10 +9,11 @@ export interface Env {
   MODRINTH_WEB?: string;  // overrides for local testing only
   MODRINTH_API?: string;
   MC_API?: string;
+  MC_SESSION?: string;     // override for local testing only
   ADMINS?: string;        // comma-separated Minecraft names; defaults to DEFAULT_ADMINS
 }
 
-const SERVER_VERSION = "2.2.0";
+const SERVER_VERSION = "2.3.0";
 // Admins are checked against the Minecraft account the player linked — the server verifies that
 // account with Mojang itself, so nobody can make themselves an admin by renaming anything.
 const DEFAULT_ADMINS = "HAckerbest11,RaxMc,UNCdel";
@@ -76,12 +77,69 @@ async function authStart(url: URL, env: Env) {
 // Sign in with the Minecraft account the player already uses in VEX. The launcher sends a fresh
 // Minecraft access token once; the server asks Mojang whose it is, then drops the token.
 // No Modrinth app or other registration is needed for this.
+// ---------- Sign-in through Mojang's session server ----------
+// The same check every Minecraft server does: VEX hands out a one-time serverId, the launcher tells
+// Mojang "this account joins <serverId>" (from the player's own PC), then VEX asks Mojang hasJoined.
+// The Minecraft token never reaches VEX.
+const UA = { "user-agent": "VEX-online (github.com/Albatron2580/vex-client)" };
+async function authChallenge(env: Env) {
+  const id = [...crypto.getRandomValues(new Uint8Array(20))].map((x) => x.toString(16).padStart(2, "0")).join("");
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM mc_challenges WHERE created_at < ?").bind(now() - LOGIN_TTL_MS),
+    env.DB.prepare("INSERT INTO mc_challenges (id, created_at) VALUES (?, ?)").bind(id, now()),
+  ]);
+  return json({ serverId: id });
+}
+
+async function authVerify(req: Request, env: Env) {
+  const body = (await req.json().catch(() => ({}))) as { name?: string; serverId?: string };
+  const name = String(body.name ?? ""), serverId = String(body.serverId ?? "");
+  if (!/^[A-Za-z0-9_]{1,16}$/.test(name) || !/^[0-9a-f]{40}$/.test(serverId)) return fail(400, "Bad sign-in request.");
+  const ch = await env.DB.prepare("DELETE FROM mc_challenges WHERE id = ? AND created_at > ? RETURNING id").bind(serverId, now() - 5 * 60_000).first<{ id: string }>();
+  if (!ch) return fail(400, "That sign-in expired. Try again.");
+  let prof: { id?: string; name?: string; properties?: { name: string; value: string }[] } | null = null;
+  try {
+    const u = `${env.MC_SESSION ?? "https://sessionserver.mojang.com"}/session/minecraft/hasJoined?username=${encodeURIComponent(name)}&serverId=${serverId}`;
+    for (let i = 0; i < 3 && !prof; i++) {
+      const r = await fetch(u, { headers: UA });
+      if (r.status === 200) prof = await r.json();
+      else if (r.status === 204) { await new Promise((res) => setTimeout(res, 700)); }
+      else throw new Error(String(r.status));
+    }
+  } catch { return fail(502, "Couldn't reach Mojang. Try again in a minute."); }
+  if (!prof?.id || !prof.name) return fail(401, "Mojang couldn't confirm your Minecraft account. Sign in with Microsoft again.");
+  let skin: string | null = null;
+  try {
+    const tex = prof.properties?.find((p) => p.name === "textures")?.value;
+    if (tex) skin = (JSON.parse(atob(tex)) as any)?.textures?.SKIN?.url ?? null;
+  } catch { /* no skin */ }
+  return createMinecraftSession(env, String(prof.id), String(prof.name), skin);
+}
+
+async function createMinecraftSession(env: Env, rawUuid: string, name: string, skin: string | null) {
+  const uuid = rawUuid.replace(/-/g, "");
+  if (!/^[0-9a-fA-F]{32}$/.test(uuid)) return fail(400, "That account has no Minecraft profile.");
+  if (!/^[A-Za-z0-9_]{1,16}$/.test(name)) return fail(400, "That account has no Minecraft name yet.");
+  const avatar = skin && /^https?:\/\/textures\.minecraft\.net\/texture\/[0-9a-f]+$/.test(skin) ? skin.replace(/^http:/, "https:") : null;
+  const existing = await env.DB.prepare("SELECT banned FROM users WHERE id = ?").bind(uuid).first<{ banned: number }>();
+  if (existing?.banned) return fail(403, "This account is banned from VEX online.");
+  const token = randomToken();
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO users (id, username, username_lower, avatar_url, created_at, mc_name, mc_uuid) VALUES (?1, ?2, ?3, ?4, ?5, ?2, ?1)
+      ON CONFLICT (id) DO UPDATE SET username = excluded.username, username_lower = excluded.username_lower, avatar_url = COALESCE(excluded.avatar_url, users.avatar_url), mc_name = excluded.mc_name, mc_uuid = excluded.mc_uuid`)
+      .bind(uuid, name, name.toLowerCase(), avatar, now()),
+    env.DB.prepare("INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)").bind(await sha256(token), uuid, now(), now() + SESSION_DAYS * 86_400_000),
+    env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now()),
+  ]);
+  return json({ token });
+}
+
 async function authMinecraft(req: Request, env: Env) {
   const body = (await req.json().catch(() => ({}))) as { token?: string };
   if (typeof body.token !== "string" || body.token.length < 20 || body.token.length > 4000) return fail(400, "Missing Minecraft sign-in.");
   let prof: { id?: string; name?: string; skins?: { state?: string; url?: string }[] };
   try {
-    const r = await fetch(`${env.MC_API ?? "https://api.minecraftservices.com"}/minecraft/profile`, { headers: { authorization: `Bearer ${body.token}` } });
+    const r = await fetch(`${env.MC_API ?? "https://api.minecraftservices.com"}/minecraft/profile`, { headers: { ...UA, authorization: `Bearer ${body.token}` } });
     if (r.status === 401 || r.status === 403) return fail(401, "Mojang didn't accept that Minecraft sign-in. Sign in with Microsoft again.");
     if (r.status === 404) return fail(400, "That Microsoft account doesn't own Minecraft: Java Edition.");
     if (!r.ok) throw new Error(String(r.status));
@@ -161,7 +219,7 @@ async function api(req: Request, url: URL, env: Env, me: UserRow) {
   if (p === "/v1/link-minecraft" && req.method === "POST") {
     const body = (await req.json().catch(() => ({}))) as { token?: string };
     if (typeof body.token !== "string" || body.token.length < 20 || body.token.length > 4000) return fail(400, "Missing Minecraft token.");
-    const r = await fetch(`${env.MC_API ?? "https://api.minecraftservices.com"}/minecraft/profile`, { headers: { authorization: `Bearer ${body.token}` } });
+    const r = await fetch(`${env.MC_API ?? "https://api.minecraftservices.com"}/minecraft/profile`, { headers: { ...UA, authorization: `Bearer ${body.token}` } });
     if (!r.ok) return fail(400, "Mojang didn't accept that Minecraft sign-in.");
     const prof = (await r.json()) as { id?: string; name?: string };
     if (!prof.id || !prof.name) return fail(400, "That account has no Minecraft profile.");
@@ -389,6 +447,8 @@ export default {
       if (url.pathname === "/v1/public/home" && req.method === "GET") return await publicHome(env);
       if (url.pathname === "/v1/public/vex-players" && req.method === "GET") return await vexPlayers(env);
       if (url.pathname === "/auth/minecraft" && req.method === "POST") return await authMinecraft(req, env);
+      if (url.pathname === "/auth/minecraft/challenge" && req.method === "POST") return await authChallenge(env);
+      if (url.pathname === "/auth/minecraft/verify" && req.method === "POST") return await authVerify(req, env);
       if (url.pathname === "/auth/start") return await authStart(url, env);
       if (url.pathname === "/auth/callback") return await authCallback(url, env);
       if (url.pathname.startsWith("/v1/")) {

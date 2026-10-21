@@ -66,7 +66,7 @@ async function refreshProfile() {
 
 // Proves which Minecraft account this player uses (the server checks it with Mojang).
 // That's what unlocks the admin panel for the admin accounts.
-let mcTokenSource: () => Promise<{ token: string; name: string } | null> = async () => null;
+let mcTokenSource: () => Promise<{ token: string; name: string; uuid?: string } | null> = async () => null;
 export function setMinecraftTokenSource(fn: typeof mcTokenSource) { mcTokenSource = fn; }
 export async function linkMinecraft() {
   if (!token || !profile) return accountState();
@@ -142,13 +142,24 @@ export function login(): Promise<AccountState> {
   loginBusy = (async () => {
     const mc = await mcTokenSource().catch((e: Error) => { throw new Error(e.message || "Sign in with Microsoft again."); });
     if (!mc) throw new Error("Sign in with a Microsoft account first.");
-    let res: Response;
-    try {
-      res = await fetch(`${serviceUrl}/auth/minecraft`, { method: "POST", headers: { "content-type": "application/json", "user-agent": `VEX-CLIENT/${app.getVersion()}` },
-        body: JSON.stringify({ token: mc.token }), signal: AbortSignal.timeout(20_000) });
-    } catch { throw new Error("Couldn't reach the VEX server. Check your internet connection."); }
+    const ua = { "user-agent": `VEX-CLIENT/${app.getVersion()}` };
+    const post = async (url: string, body: unknown, what: string) => {
+      try { return await fetch(url, { method: "POST", headers: { ...ua, "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20_000) }); }
+      catch { throw new Error(`Couldn't reach ${what}. Check your internet connection.`); }
+    };
+    // 1. a one-time code from VEX online
+    const ch = await post(`${serviceUrl}/auth/minecraft/challenge`, {}, "the VEX server");
+    if (ch.status === 404) throw new Error("Your online service is older than this VEX, so it can't sign you in yet. Update it: Settings → VEX online → Update online service (on the PC that set it up).");
+    const chData: any = await ch.json().catch(() => ({}));
+    if (!ch.ok || !/^[0-9a-f]{40}$/.test(chData.serverId ?? "")) throw new Error(chData.error ?? `VEX server error (${ch.status})`);
+    // 2. tell Mojang this account joins that code (like joining a server); the token only goes to Mojang
+    const uuid = (mc.uuid ?? "").replace(/-/g, "");
+    const join = await post("https://sessionserver.mojang.com/session/minecraft/join", { accessToken: mc.token, selectedProfile: uuid, serverId: chData.serverId }, "Mojang");
+    if (join.status === 403 || join.status === 401) throw new Error("Mojang says your Minecraft sign-in expired. Click your account at the bottom left and sign in with Microsoft again.");
+    if (!join.ok) throw new Error(`Mojang answered ${join.status}. Try again in a minute.`);
+    // 3. VEX online asks Mojang whether you joined, then signs you in
+    const res = await post(`${serviceUrl}/auth/minecraft/verify`, { name: mc.name, serverId: chData.serverId }, "the VEX server");
     const data: any = await res.json().catch(() => ({}));
-    if (res.status === 404) throw new Error("Your online service is older than this VEX, so it can't sign you in yet. Update it below (on the PC that set it up).");
     if (!res.ok || !data.token) throw new Error(data.error ?? `VEX server error (${res.status})`);
     token = data.token;
     if (canEncrypt()) fs.writeFileSync(tokenFile(), safeStorage.encryptString(data.token));

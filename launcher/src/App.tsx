@@ -2,7 +2,7 @@ import { useApp } from "./state/AppState";
 import { Sidebar, TitleBar } from "./components/Shell";
 import { Toasts } from "./components/Toasts";
 import { Particles } from "./components/Particles";
-import { UpdateBanner } from "./components/UpdateBanner";
+import { UpdateBanner, WhatsNew } from "./components/UpdateBanner";
 import { PlayBar } from "./components/PlayBar";
 import { CursorTrail } from "./components/CursorTrail";
 import { LoginScreen } from "./components/LoginScreen";
@@ -37,6 +37,7 @@ export function App() {
       {ready && page !== "home" && <PlayBar />}
       {needsLogin && !skipLogin && <LoginScreen onSkip={() => setSkipLogin(true)} />}
       <UpdateBanner />
+      <WhatsNew />
       <Toasts />
     </div>
     {/* Outside .app so UI zoom doesn't shift it away from the real pointer position */}
