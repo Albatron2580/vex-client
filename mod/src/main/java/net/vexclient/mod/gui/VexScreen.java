@@ -118,12 +118,13 @@ public abstract class VexScreen extends Screen {
         tip = null;
         inputUsed = false;
 
-        if (c.backgroundDim) gr.fill(0, 0, this.width, this.height, 0x80060310);
+        boolean bare = bareBackground();
+        if (c.backgroundDim && !bare) gr.fill(0, 0, this.width, this.height, 0x80060310);
         var pose = gr.pose();
         pose.pushMatrix();
         pose.scale(S, S);
         try {
-            if (c.showParticles) petals();
+            if (c.showParticles && !bare) petals();
             draw();
             if (tip != null) Ui.tooltip(gr, this.font, tip, mx, my, W, H);
         } finally {
@@ -131,6 +132,9 @@ public abstract class VexScreen extends Screen {
         }
         if (!inputUsed) { input.setX(-1000); if (input.isFocused()) focusInput(false); }
     }
+
+    /** True for screens that only blur the game behind them (the Right Shift circles). */
+    protected boolean bareBackground() { return false; }
 
     /** Draw the screen (scaled units: W x H, mouse in mx/my). */
     protected abstract void draw();

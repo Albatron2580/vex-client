@@ -49,11 +49,11 @@ public final class VexScreenshots implements FabricClientGameTest {
             ctx.takeScreenshot("06-radial-search");
 
             Object[][] pages = {
-                    {VexMenuScreen.Page.GUI, 0, "07-gui-settings"}, {VexMenuScreen.Page.CLIENT, 0, "08-client-modules"},
-                    {VexMenuScreen.Page.CLIENT, 1, "09-client-hud"}, {VexMenuScreen.Page.CLIENT, 2, "10-client-waypoints"},
-                    {VexMenuScreen.Page.CLIENT, 4, "11-client-controls"}, {VexMenuScreen.Page.CLIENT, 5, "12-client-performance"},
-                    {VexMenuScreen.Page.COMBAT, 0, "13-combat"}, {VexMenuScreen.Page.MISC, 0, "14-misc"},
-                    {VexMenuScreen.Page.MISC, 1, "15-shaders"}, {VexMenuScreen.Page.MODS, 0, "16-mod-menu"}};
+                    {VexMenuScreen.Page.HUD, 0, "07-hud"}, {VexMenuScreen.Page.UTILITY, 0, "08-utility-modules"},
+                    {VexMenuScreen.Page.UTILITY, 1, "09-utility-combat"}, {VexMenuScreen.Page.UTILITY, 6, "10-utility-modmenu"},
+                    {VexMenuScreen.Page.VISUALS, 0, "11-visuals"}, {VexMenuScreen.Page.VISUALS, 1, "12-shaders"},
+                    {VexMenuScreen.Page.GUI, 0, "13-settings"}, {VexMenuScreen.Page.DESIGN, 0, "14-design"},
+                    {VexMenuScreen.Page.ALL, 0, "15-every-module"}, {VexMenuScreen.Page.UTILITY, 4, "16-controls"}};
             for (Object[] p : pages) {
                 ctx.setScreen(() -> new VexMenuScreen(new VexRadialScreen(null), null, (VexMenuScreen.Page) p[0], (Integer) p[1]));
                 ctx.waitTicks(8);

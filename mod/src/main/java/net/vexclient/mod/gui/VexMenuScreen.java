@@ -29,11 +29,17 @@ import java.util.function.IntConsumer;
  */
 public final class VexMenuScreen extends VexScreen {
     public enum Page {
+        // the five circles of the Right Shift menu
+        HUD("HUD", "HUD"),
+        UTILITY("Utility", "Modules", "Combat", "Waypoints", "Friends", "Controls", "Performance", "Mod Menu"),
+        VISUALS("Visuals", "Visuals", "Shaders"),
+        GUI("Settings", "GUI Settings"),
+        DESIGN("Design", "Design"),
+        // older pages, still reachable from search
         CLIENT("Client", "Modules", "HUD", "Waypoints", "Friends", "Controls", "Performance"),
         COMBAT("Combat", "Combat"),
         MISC("Misc", "Modules", "Shaders"),
         MODS("Mod Menu", "Mods"),
-        GUI("GUI Settings", "GUI Settings"),
         ALL("Every module", "All");
         public final String title;
         public final String[] sections;
@@ -162,6 +168,13 @@ public final class VexMenuScreen extends VexScreen {
                 case MISC -> { if (section == 0) moduleList(Module.Category.MISC, "Misc", "Handy extras. Click a card to switch it, click the key to rebind."); else shaderContent(); }
                 case MODS -> modsContent();
                 case GUI -> guiContent();
+                case HUD -> { clientContent("HUD"); heading("Combat HUD", null); for (HudElement e : Hud.ELEMENTS) if (e.combat) hudRow(e); }
+                case UTILITY -> {
+                    String sec = page.sections[section];
+                    if (sec.equals("Combat")) combatContent(); else if (sec.equals("Mod Menu")) modsContent(); else clientContent(sec);
+                }
+                case VISUALS -> { if (section == 0) moduleList(Module.Category.MISC, "Visuals", "Zoom, fullbright and more. Click a card to switch it, click the key to rebind."); else shaderContent(); }
+                case DESIGN -> designContent();
                 case ALL -> allContent();
             }
         } finally { g.disableScissor(); }
@@ -504,6 +517,27 @@ public final class VexMenuScreen extends VexScreen {
         heading("Combat HUD", "Shown on your screen while playing. Move them with Edit HUD.");
         for (HudElement e : Hud.ELEMENTS) if (e.combat) hudRow(e);
         if (buttons(new String[]{"Edit HUD layout…"}, new int[]{1}) == 0) mc.setScreen(new HudEditorScreen(this));
+    }
+
+    // ---------- Design ----------
+    private void designContent() {
+        VexConfig c = VexConfig.get();
+        heading("Design", "How VEX looks in game.");
+        int r = cycleRow(GUI_SETTINGS[6][0], GUI_SETTINGS[6][1], Ui.theme());
+        if (r != 0) {
+            List<String> names = new ArrayList<>(Ui.THEMES.keySet());
+            int i = Math.max(0, names.indexOf(Ui.theme()));
+            c.theme = names.get((i + (r > 0 ? 1 : names.size() - 1)) % names.size());
+            Ui.apply(c.theme);
+            input.setTextColor(Ui.TEXT);
+            VexConfig.save();
+        }
+        int pick = segmentRow(GUI_SETTINGS[7][0], GUI_SETTINGS[7][1], new String[]{"Auto", "1x", "2x", "3x"}, c.guiScale);
+        if (pick >= 0) { c.guiScale = pick; VexConfig.save(); }
+        if (toggleRow("d.particles", GUI_SETTINGS[0][0], GUI_SETTINGS[0][1], c.showParticles)) { c.showParticles = !c.showParticles; VexConfig.save(); }
+        if (toggleRow("d.dim", GUI_SETTINGS[1][0], GUI_SETTINGS[1][1], c.backgroundDim)) { c.backgroundDim = !c.backgroundDim; VexConfig.save(); }
+        if (toggleRow("d.badges", GUI_SETTINGS[9][0], GUI_SETTINGS[9][1], c.vexBadges)) { c.vexBadges = !c.vexBadges; VexConfig.save(); }
+        if (toggleRow("d.leaves", "Falling leaves in menus", "Leaves behind the title screen", c.menuLeaves)) { c.menuLeaves = !c.menuLeaves; VexConfig.save(); }
     }
 
     // ---------- Every module (click your face in the Right Shift menu) ----------

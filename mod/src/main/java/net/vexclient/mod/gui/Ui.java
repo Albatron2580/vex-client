@@ -86,11 +86,75 @@ public final class Ui {
         }
     }
 
+    /** Ellipse outline (rows of the ring only). */
+    public static void ellipseRing(GuiGraphics g, float cx, float cy, float rx, float ry, float thick, int c) {
+        float irx = rx - thick, iry = ry - thick;
+        int n = (int) Math.ceil(ry);
+        for (int dy = -n; dy < n; dy++) {
+            double yy = dy + 0.5;
+            if (Math.abs(yy) > ry) continue;
+            int wo = (int) Math.round(rx * Math.sqrt(1 - (yy * yy) / (ry * ry)));
+            int x = Math.round(cx), y = Math.round(cy) + dy;
+            if (iry <= 0 || Math.abs(yy) >= iry) { g.fill(x - wo, y, x + wo, y + 1, c); continue; }
+            int wi = (int) Math.round(irx * Math.sqrt(1 - (yy * yy) / (iry * iry)));
+            if (wo > wi) { g.fill(x - wo, y, x - wi, y + 1, c); g.fill(x + wi, y, x + wo, y + 1, c); }
+        }
+    }
+
+    /** A straight line made of small squares. */
+    public static void line(GuiGraphics g, float x0, float y0, float x1, float y1, float w, int c) {
+        float len = (float) Math.hypot(x1 - x0, y1 - y0);
+        int steps = Math.max(1, Math.round(len * 2));
+        float h = w / 2f;
+        for (int i = 0; i <= steps; i++) {
+            float t = i / (float) steps, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t;
+            g.fill(Math.round(x - h), Math.round(y - h), Math.round(x + h), Math.round(y + h), c);
+        }
+    }
+
+    /** Line icons for the Right Shift menu, about 18 units wide, centred on (x, y). */
+    public enum Icon { HUD, UTILITY, VISUALS, SETTINGS, DESIGN }
+
+    public static void icon(GuiGraphics g, Icon icon, float x, float y, int c) {
+        switch (icon) {
+            case HUD -> {
+                int x0 = Math.round(x - 9), y0 = Math.round(y - 7), x1 = Math.round(x + 9), y1 = Math.round(y + 7);
+                g.fill(x0 + 1, y0, x1 - 1, y0 + 1, c); g.fill(x0 + 1, y1 - 1, x1 - 1, y1, c);
+                g.fill(x0, y0 + 1, x0 + 1, y1 - 1, c); g.fill(x1 - 1, y0 + 1, x1, y1 - 1, c);
+                g.fill(x0 + 4, y0 + 4, x0 + 9, y0 + 6, c);
+                g.fill(x0 + 4, y0 + 8, x1 - 4, y0 + 9, c);
+            }
+            case UTILITY -> { // wrench
+                // open jaw: a ring with a gap towards the top-right
+                for (int dy = -5; dy <= 5; dy++) for (int dx = -5; dx <= 5; dx++) {
+                    double d = Math.hypot(dx + 0.5, dy + 0.5), ang = Math.toDegrees(Math.atan2(dy + 0.5, dx + 0.5));
+                    if (d <= 4.8 && d >= 3.0 && !(ang > -80 && ang < 0)) g.fill(Math.round(x + 4 + dx), Math.round(y - 4 + dy), Math.round(x + 5 + dx), Math.round(y - 3 + dy), c);
+                }
+                line(g, x + 1, y - 1, x - 7, y + 7, 2.2f, c);
+            }
+            case VISUALS -> { // eye
+                ellipseRing(g, x, y, 9.5f, 5.5f, 1.4f, c);
+                ellipse(g, x, y, 2.6f, 2.6f, c);
+            }
+            case SETTINGS -> { // sliders
+                for (int i = -1; i <= 1; i++) g.fill(Math.round(x - 9), Math.round(y + i * 5), Math.round(x + 9), Math.round(y + i * 5 + 1), c);
+                float[] k = {-4, 4, -1};
+                for (int i = -1; i <= 1; i++) ellipse(g, x + k[i + 1], y + i * 5 + 0.5f, 2.3f, 2.3f, c);
+            }
+            case DESIGN -> { // palette
+                ring(g, x, y, 9f, 1.5f, c);
+                ellipse(g, x - 3.5f, y - 3.5f, 1.6f, 1.6f, c);
+                ellipse(g, x + 3f, y - 4f, 1.6f, 1.6f, c);
+                ellipse(g, x + 4.5f, y + 2f, 1.6f, 1.6f, c);
+                ellipse(g, x - 1.5f, y + 4f, 2.2f, 2.2f, c);
+            }
+        }
+    }
+
     /** See-through glass disc with a light outline (the Right Shift menu). */
     public static void glassCircle(GuiGraphics g, float cx, float cy, float r, float hover) {
-        ellipse(g, cx, cy, r, r, alpha(mix(0xFFFFFFFF, ORANGE, 0.25f + 0.25f * hover), 0.08f + 0.10f * hover));
-        ellipse(g, cx - r * 0.18f, cy - r * 0.30f, r * 0.62f, r * 0.42f, alpha(0xFFFFFFFF, 0.03f + 0.03f * hover)); // soft shine
-        ring(g, cx, cy, r, 1f + hover, alpha(mix(0xFFFFFFFF, ORANGE_HI, hover), 0.70f + 0.25f * hover));
+        ellipse(g, cx, cy, r, r, alpha(mix(0xFFFFFFFF, ORANGE, 0.15f * hover), 0.10f + 0.10f * hover));
+        ring(g, cx, cy, r, 1.5f, alpha(0xFFFFFFFF, 0.80f + 0.20f * hover));
     }
 
     /** The big window: border, body, and an accent line along the top. */
