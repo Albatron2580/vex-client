@@ -9,7 +9,7 @@ export function FeaturesPage() {
   const [forTotem, setForTotem] = useState<FoundSkin | null>(null);
   return (
     <div className="page">
-      <div className="page-head"><div><span className="eyebrow">Tools</span><h1>Features</h1></div></div>
+      <div className="page-head"><div><h1>Features</h1></div></div>
       <div className="features-grid">
         <TotemPanel incoming={forTotem} />
         <SkinLookupPanel onUseForTotem={(s) => setForTotem({ ...s })} />

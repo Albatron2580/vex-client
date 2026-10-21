@@ -161,8 +161,16 @@ public final class Ui {
     public static void panel(GuiGraphics g, int x0, int y0, int x1, int y1) {
         g.fill(x0 + 3, y0 + 3, x1 + 3, y1 + 3, 0x60000000); // drop shadow
         card(g, x0, y0, x1, y1, PANEL, EDGE);
-        g.fill(x0 + 2, y0 + 1, x1 - 2, y0 + 2, ORANGE);
-        g.fillGradient(x0 + 1, y0 + 2, x1 - 1, y0 + 30, (ORANGE & 0x00FFFFFF) | 0x30000000, ORANGE & 0x00FFFFFF);
+        bevel(g, x0 + 1, y0 + 1, x1 - 1, y1 - 1, false);
+        g.fill(x0 + 2, y0 + 1, x1 - 2, y0 + 3, ORANGE);
+    }
+
+    /** Minecraft's inventory bevel: raised (light top-left) or sunk like a slot (dark top-left). */
+    public static void bevel(GuiGraphics g, int x0, int y0, int x1, int y1, boolean sunk) {
+        int hi = 0x14FFFFFF, lo = 0x55000000;
+        int tl = sunk ? lo : hi, br = sunk ? hi : lo;
+        g.fill(x0 + 1, y0, x1 - 1, y0 + 1, tl); g.fill(x0, y0 + 1, x0 + 1, y1 - 1, tl);
+        g.fill(x0 + 1, y1 - 1, x1 - 1, y1, br); g.fill(x1 - 1, y0 + 1, x1, y1 - 1, br);
     }
 
     /** The grey V logo, h pixels high (drawn with fills so it needs no texture). */
@@ -199,6 +207,7 @@ public final class Ui {
         int track = mix(OFF, ORANGE, t);
         if (hover) track = mix(track, 0xFFFFFFFF, 0.12f);
         round(g, x, y, x + 22, y + 11, track);
+        bevel(g, x, y, x + 22, y + 11, true);
         int kx = x + 1 + Math.round(t * 11);
         round(g, kx, y + 1, kx + 10, y + 10, 0xFFFFFFFF);
         g.fill(kx + 1, y + 9, kx + 9, y + 10, 0x40000000);

@@ -36,9 +36,9 @@ function InstanceRow({ inst, selected, loaderVersion, onSelect, onMods, onEdit, 
       {thisOne && game.state === "running"
         ? <button className="btn play-row" onClick={() => vex().game.stop()}><Icon name="close" size={13} />STOP</button>
         : <Tooltip text={canPlay ? (busy ? "Minecraft is already starting or running." : "Play this instance") : "Add a Microsoft account first (bottom left)."}>
-            <button className="btn play-row" disabled={busy || !canPlay} onClick={() => { onSelect(); play(inst.id); }}>{thisOne ? <span className="spinner" /> : <Icon name="play" size={13} />}{thisOne ? "STARTING" : "PLAY"}</button>
+            <button className="btn play-row" disabled={busy || !canPlay} onClick={() => { onSelect(); play(inst.id); }}>{thisOne ? <span className="spinner" /> : <Icon name="play" size={13} />}{thisOne ? "Starting" : "Play"}</button>
           </Tooltip>}
-      <button className="btn mods-row" onClick={onMods}><Icon name="cube" size={14} />MODS</button>
+      <button className="btn mods-row" onClick={onMods}><Icon name="puzzle" size={14} />Mods</button>
       <InstanceMenu inst={inst} onEdit={onEdit} onDelete={onDelete} />
     </div>
   );
@@ -156,7 +156,7 @@ export function InstancesPage() {
   return (
     <div className="page">
       <div className="page-head">
-        <div><span className="eyebrow">Library</span><h1>Instances</h1><p>{instances.length} {instances.length === 1 ? "instance" : "instances"}</p></div>
+        <div><h1>Instances</h1><p>{instances.length} {instances.length === 1 ? "instance" : "instances"}</p></div>
         <div className="row">
           <button className="btn" disabled={!desktop} onClick={() => setImporting(true)}><Icon name="upload" size={16} />Import</button>
           <button className="btn primary" disabled={!desktop} onClick={() => setEditing("new")}><Icon name="plus" size={16} />New instance</button>

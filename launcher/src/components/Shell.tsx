@@ -37,7 +37,7 @@ export function Sidebar() {
   const isAdmin = !!account?.profile?.admin || isAdminName(ms?.accounts.find((a) => a.active)?.name);
   return (
     <nav className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Main">
-      <div className="brand"><Logo size={collapsed ? 34 : 40} />{!collapsed && <div className="brand-name">VEX<small>CLIENT</small></div>}</div>
+      <div className="brand"><Logo size={collapsed ? 34 : 40} />{!collapsed && <div className="brand-name">VEX<small>client</small></div>}</div>
       <div className="nav">
         {SECTIONS.map((sec) => (
           <div key={sec.title} className="nav-section">

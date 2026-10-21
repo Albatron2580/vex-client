@@ -85,6 +85,7 @@
     "wait-on": "^9.5.1"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "minecraft-launcher-core": "^3.18.2",
     "msmc": "^5.0.5",
     "sql.js": "^1.15.1"

@@ -34,7 +34,7 @@ export function CollabPage() {
 
   if (!signedIn) return (
     <div className="page">
-      <div className="page-head"><div><span className="eyebrow">Social</span><h1>Collab</h1><p>Share instances with friends and play together.</p></div></div>
+      <div className="page-head"><div><h1>Collab</h1><p>Share instances with friends and play together.</p></div></div>
       <Card><div style={{ padding: "24px 0" }}><SignInCard /></div></Card>
     </div>
   );
@@ -65,7 +65,7 @@ export function CollabPage() {
   return (
     <div className="page">
       <div className="page-head">
-        <div><span className="eyebrow">Social</span><h1>Collab</h1><p>Send your instance to a friend — same version, loader and mods — so you can play together.</p></div>
+        <div><h1>Collab</h1><p>Send your instance to a friend — same version, loader and mods — so you can play together.</p></div>
         <button className="btn sm" onClick={load}><Icon name="refresh" size={14} />Refresh</button>
       </div>
       {error && <Notice kind="danger">{error}</Notice>}

@@ -20,7 +20,7 @@ export function LoginScreen({ onSkip }: { onSkip(): void }) {
     <div className="login-screen" role="dialog" aria-modal="true" aria-label="Sign in">
       <div className="login-card card glow">
         <Logo size={72} />
-        <h1>VEX <span>CLIENT</span></h1>
+        <h1>VEX CLIENT</h1>
         <p className="muted">{expired ? `Your sign-in for ${expired.name} expired. Sign in again to play.` : "Sign in with the Microsoft account you play Minecraft with."}</p>
         <button className="btn primary login-btn" disabled={busy} onClick={signIn}>
           {busy ? <span className="spinner" style={{ borderTopColor: "#fff" }} /> : <Icon name="user" size={18} />}{busy ? "Waiting for Microsoft…" : "Sign in with Microsoft"}

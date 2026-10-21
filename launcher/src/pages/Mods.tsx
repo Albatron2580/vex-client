@@ -56,7 +56,7 @@ export function ModsPage() {
   return (
     <div className="page">
       <div className="page-head">
-        <div><span className="eyebrow">Modrinth</span><h1>Mods</h1></div>
+        <div><h1>Mods</h1></div>
         {inst && <div className="mods-target">
           <span className="tiny faint">Install into</span>
           <Select<string> label="Instance" value={inst.id} onChange={(v) => update({ selectedInstanceId: v })}

@@ -128,7 +128,7 @@ export function FriendsPage() {
 
   if (!signedIn) return (
     <div className="page">
-      <div className="page-head"><div><span className="eyebrow">Social</span><h1>Friends</h1><p>See who's online and join them.</p></div></div>
+      <div className="page-head"><div><h1>Friends</h1><p>See who's online and join them.</p></div></div>
       <Card><div style={{ padding: "24px 0" }}><SignInCard /></div></Card>
     </div>
   );
@@ -138,7 +138,7 @@ export function FriendsPage() {
   return (
     <div className="page">
       <div className="page-head">
-        <div><span className="eyebrow">Social</span><h1>Friends</h1><p>{lists ? `${online} of ${lists.friends.length} online` : "Loading…"}</p></div>
+        <div><h1>Friends</h1><p>{lists ? `${online} of ${lists.friends.length} online` : "Loading…"}</p></div>
         <button className="btn sm" onClick={load}><Icon name="refresh" size={14} />Refresh</button>
       </div>
       <Card title="Add friends" icon="search" sub="Search by Minecraft name. Only players who use VEX show up.">

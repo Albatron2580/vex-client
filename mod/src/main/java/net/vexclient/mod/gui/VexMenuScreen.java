@@ -226,7 +226,10 @@ public final class VexMenuScreen extends VexScreen {
 
     private int cardStart(int h, boolean hoverable) {
         int y = rowY();
-        if (visible(y, h)) Ui.card(g, vx0, y, vx1, y + h, hoverable && hot(vx0, y, vx1, y + h) ? Ui.CARD_HOVER : Ui.CARD, Ui.EDGE_SOFT);
+        if (visible(y, h)) {
+            Ui.card(g, vx0, y, vx1, y + h, hoverable && hot(vx0, y, vx1, y + h) ? Ui.CARD_HOVER : Ui.CARD, Ui.EDGE_SOFT);
+            Ui.bevel(g, vx0 + 1, y + 1, vx1 - 1, y + h - 1, false);
+        }
         return y;
     }
     private void cardEnd(int h) { cursor += h + 4; }

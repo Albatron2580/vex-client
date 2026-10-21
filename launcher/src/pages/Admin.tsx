@@ -28,7 +28,7 @@ export function AdminPage() {
   const needsOnline = !onlineAdmin && tab !== "publish" && tab !== "overview";
   return (
     <div className="page">
-      <div className="page-head"><div><span className="eyebrow">VEX online</span><h1>Admin</h1><p>Signed in as <b>{mcName}</b></p></div></div>
+      <div className="page-head"><div><h1>Admin</h1><p>Signed in as <b>{mcName}</b></p></div></div>
       <div className="tabs" role="tablist">
         {TABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}><Icon name={t.icon} size={14} />{t.label}</button>)}
       </div>
