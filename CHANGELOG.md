@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2.7.0 — 2026-10-23
+- New look: dark graphite window, your theme colour only on Play, the current page, switches, buttons and the Home banner.
+- Animations everywhere: sliding sidebar highlight, pages that build up, lifting cards, a living Home banner, a pixel shine on Play, springy menus and pop-ups.
+- In game, the Right Shift circles pop out one after another. Nothing removed.
+
+## 2.7.0 — 2026-10-23
 - **New base colour:** the window is now dark graphite whatever theme you pick. Your theme colour shows only where it means something: Play, the page you're on, switches, main buttons, selections, and the moving banner on Home.
 - **Animations:**
   - The sidebar highlight slides to the page you pick, and its icon pops in.
