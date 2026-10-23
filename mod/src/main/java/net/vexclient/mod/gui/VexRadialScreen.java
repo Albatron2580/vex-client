@@ -82,8 +82,8 @@ public final class VexRadialScreen extends VexScreen {
 
     @Override
     protected void draw() {
-        open = Math.min(1f, open + dt * 5f);
-        float ease = 1f - (1f - open) * (1f - open);
+        open = Math.min(1.6f, open + dt * 3.2f);
+        float o1 = Math.min(1f, open), ease = 1f - (1f - o1) * (1f - o1);
         boolean typing = !input.getValue().isBlank();
 
         // five glass circles around a smaller one with your face
@@ -95,10 +95,13 @@ public final class VexRadialScreen extends VexScreen {
 
         for (int i = 0; i < PETALS.length; i++) {
             double a = Math.toRadians(-90 + i * 72);
-            float px = cx + (float) Math.cos(a) * D * k, py = cy + (float) Math.sin(a) * D * k;
+            // each circle pops out of the middle a moment after the one before it (springy overshoot)
+            float pi = Math.max(0f, Math.min(1f, (open - 0.12f * i) / 0.7f));
+            float spring = pi >= 1f ? 1f : (float) (1 - Math.pow(1 - pi, 3) + Math.sin(pi * Math.PI) * 0.12);
+            float px = cx + (float) Math.cos(a) * D * k * spring, py = cy + (float) Math.sin(a) * D * k * spring;
             boolean hv = (mx - px) * (mx - px) + (my - py) * (my - py) <= r * r;
             float t = animate("petal" + i, hv);
-            float rr = r * k * (1f + 0.04f * t);
+            float rr = r * k * (1f + 0.04f * t) * Math.max(0.2f, spring);
             Ui.glassCircle(g, px, py, rr, t);
             Petal p = PETALS[i];
             Ui.icon(g, p.icon, px, py - 7, 0xFFFFFFFF);

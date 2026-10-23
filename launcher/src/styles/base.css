@@ -580,3 +580,124 @@ h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.015em; fon
 .status-list { display: grid; grid-template-columns: 1fr auto; margin: 0; border-top: 1px solid var(--line); }
 .status-list dt, .status-list dd { margin: 0; padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; align-items: center; font-size: var(--fs-sm); }
 .status-list dt { color: var(--text-dim); } .status-list dd { justify-content: flex-end; }
+
+/* =====================================================================
+   VEX 2.7 — neutral base, colour only where it means something, motion
+   The window is near-black graphite whatever the theme; the theme colour shows up on
+   the things you act on (Play, active page, switches, primary buttons, selections) and
+   in one living place: the Home banner.
+   ===================================================================== */
+:root {
+  --ink: color-mix(in oklab, var(--bg) 14%, #0c0c0f);
+  --deep: color-mix(in oklab, var(--bg) 12%, #111115);
+  --surface: color-mix(in oklab, var(--panel) 10%, #17171c);
+  --surface-2: color-mix(in oklab, var(--panel) 10%, #1e1e24);
+  --surface-raised: color-mix(in oklab, var(--panel) 12%, #26262d);
+  --text-dim: color-mix(in oklab, var(--text) 30%, #a7a7b2);
+  --text-faint: color-mix(in oklab, var(--text) 20%, #6f6f7b);
+  --line: rgb(255 255 255 / 0.07);
+  --line-strong: rgb(255 255 255 / 0.14);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+}
+body, .login-screen, .logs-app { background: var(--ink); }
+.ambient { background: radial-gradient(900px 380px at 70% -160px, color-mix(in oklab, var(--accent) 7%, transparent), transparent 70%) !important; }
+
+/* sidebar: a sliding highlight follows the page you pick */
+.nav { position: relative; }
+.nav-indicator { position: absolute; top: 0; z-index: 0; border-radius: var(--r-md); pointer-events: none;
+  background: linear-gradient(90deg, color-mix(in oklab, var(--accent) 16%, transparent), rgb(255 255 255 / 0.03));
+  box-shadow: inset 2px 0 0 var(--accent); transition: transform 420ms var(--spring), height 300ms var(--ease), width 300ms var(--ease); }
+.nav-item { position: relative; z-index: 1; }
+.nav-item[aria-current="page"] { background: transparent; }
+.nav-item .nav-tile { transition: transform 260ms var(--spring), background var(--dur), color var(--dur); }
+.nav-item:hover .nav-tile { transform: translateX(2px); }
+.nav-item[aria-current="page"] .nav-tile { animation: tilePop 380ms var(--spring); }
+@keyframes tilePop { 0% { transform: scale(0.7) rotate(-8deg); } 100% { transform: none; } }
+
+/* page enter: the parts of a page arrive one after another */
+.page > * { animation: rise 460ms var(--ease) both; }
+.page > *:nth-child(2) { animation-delay: 50ms; } .page > *:nth-child(3) { animation-delay: 100ms; }
+.page > *:nth-child(4) { animation-delay: 150ms; } .page > *:nth-child(n+5) { animation-delay: 200ms; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+.grid > *, .mods-grid > *, .inst-list > *, .recent-list > * { animation: rise 420ms var(--ease) both; }
+.grid > *:nth-child(2), .mods-grid > *:nth-child(2), .inst-list > *:nth-child(2) { animation-delay: 60ms; }
+.grid > *:nth-child(3), .mods-grid > *:nth-child(3), .inst-list > *:nth-child(3) { animation-delay: 120ms; }
+.grid > *:nth-child(n+4), .mods-grid > *:nth-child(n+4), .inst-list > *:nth-child(n+4) { animation-delay: 170ms; }
+
+/* surfaces: graphite, with a thin colour edge that wakes up on hover */
+.card, .inst-row, .mod-card, .recent-item, .account-box { background: var(--surface); border-color: var(--line); }
+.card, .inst-row, .mod-card, .recent-item { position: relative; transition: border-color 220ms, transform 220ms var(--ease), box-shadow 220ms; }
+.inst-row::before, .mod-card::before, .recent-item::before { content: ""; position: absolute; left: -1px; top: 18%; bottom: 18%; width: 2px; border-radius: 2px; background: var(--accent);
+  transform: scaleY(0); transition: transform 260ms var(--spring); }
+.inst-row:hover::before, .mod-card:hover::before, .recent-item:hover::before, .inst-row.selected::before, .recent-item[aria-pressed="true"]::before { transform: scaleY(1); }
+.inst-row:hover, .mod-card:hover, .recent-item:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -20px rgb(0 0 0 / 0.9); border-color: var(--line-strong); }
+.inst-row .inst-tile, .recent-item .inst-tile { transition: transform 300ms var(--spring); }
+.inst-row:hover .inst-tile, .recent-item:hover .inst-tile { transform: rotate(-6deg) scale(1.06); }
+
+/* Home banner: the one place the theme colour lives on the background */
+.home-hero { background: var(--surface); border-color: var(--line); isolation: isolate; }
+.home-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(90deg, var(--surface) 30%, transparent 75%),
+    conic-gradient(from 180deg at 85% 120%, color-mix(in oklab, var(--accent) 40%, transparent), color-mix(in oklab, var(--accent-2) 30%, transparent), color-mix(in oklab, var(--accent) 40%, transparent));
+  animation: heroGlow 9s ease-in-out infinite alternate; }
+.home-hero::after { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 55%; z-index: -1; pointer-events: none; opacity: .5;
+  background-image: linear-gradient(rgb(255 255 255 / .09) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .09) 1px, transparent 1px);
+  background-size: 22px 22px; mask-image: linear-gradient(90deg, transparent, #000 60%); -webkit-mask-image: linear-gradient(90deg, transparent, #000 60%);
+  animation: gridDrift 14s linear infinite; }
+@keyframes heroGlow { from { filter: hue-rotate(-12deg) saturate(1); } to { filter: hue-rotate(14deg) saturate(1.25); } }
+@keyframes gridDrift { to { background-position: 22px 22px, 22px 22px; } }
+.home-hero .hero-v { opacity: .14; animation: float 7s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-10px) rotate(-2deg); } }
+.home-hero h1 { animation: titleIn 700ms var(--ease) both; }
+@keyframes titleIn { from { opacity: 0; transform: translateY(18px); letter-spacing: 0.02em; } }
+
+/* Play: pixel shine on hover, press like a key, moving stripes while it starts */
+.play-btn, .playbar-play { position: relative; overflow: hidden; }
+.play-btn::after, .playbar-play::after { content: ""; position: absolute; top: 0; bottom: 0; left: -40%; width: 24%; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .45), transparent); transform: skewX(-20deg); opacity: 0; }
+.play-btn:hover:not(:disabled)::after, .playbar-play:hover:not(:disabled)::after { opacity: 1; animation: shine 900ms steps(9) 1; }
+@keyframes shine { to { left: 120%; } }
+.play-btn:hover:not(:disabled) { transform: translateY(-2px); }
+.play-btn svg, .playbar-play svg { transition: transform 260ms var(--spring); }
+.play-btn:hover:not(:disabled) svg, .playbar-play:hover:not(:disabled) svg { transform: translateX(3px) scale(1.15); }
+.play-btn.busy, .playbar-play.busy { background-image: repeating-linear-gradient(-45deg, rgb(0 0 0 / .14) 0 10px, transparent 10px 20px); background-size: 28px 28px; animation: stripes 700ms linear infinite; }
+@keyframes stripes { to { background-position: 28px 0; } }
+.home-hero .play-btn { animation: playIn 600ms 150ms var(--spring) both; }
+@keyframes playIn { from { opacity: 0; transform: scale(.85); } }
+
+/* controls */
+.btn { transition: transform 160ms var(--spring), background 180ms, border-color 180ms, filter 180ms; }
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn svg { transition: transform 240ms var(--spring); }
+.btn:hover:not(:disabled) svg { transform: scale(1.12); }
+.toggle::after { transition: transform 320ms var(--spring), background 200ms; }
+.toggle:active::after { width: 18px; }
+.seg button { transition: background 200ms, color 200ms, transform 160ms var(--spring); }
+.seg button:active { transform: scale(.95); }
+.input, .select { background: var(--ink); }
+.tabs button { position: relative; transition: color 200ms; }
+.tabs button[aria-selected="true"] { animation: tabIn 300ms var(--ease); }
+@keyframes tabIn { from { border-bottom-color: transparent; } }
+.chip.ok .dot, .presence-dot.online { animation: pulse 2.4s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 4px color-mix(in oklab, var(--ok) 0%, transparent), 0 0 0 0 transparent; opacity: .55; } }
+
+/* overlays spring in */
+.modal { animation: modalIn 360ms var(--spring); }
+@keyframes modalIn { from { opacity: 0; transform: translateY(16px) scale(.96); } }
+.account-menu, .playbar-menu { animation: menuIn 260ms var(--spring); transform-origin: bottom left; }
+@keyframes menuIn { from { opacity: 0; transform: translateY(8px) scale(.96); } }
+.toast { animation: toastIn2 420ms var(--spring); }
+@keyframes toastIn2 { from { opacity: 0; transform: translateX(30px) scale(.96); } }
+.playbar { animation: barIn2 500ms var(--spring) both; }
+@keyframes barIn2 { from { opacity: 0; transform: translate(-50%, 24px); } }
+.empty svg { animation: float 4s ease-in-out infinite; }
+.mod-card.skeleton { background: linear-gradient(90deg, var(--surface) 30%, var(--surface-raised) 50%, var(--surface) 70%); background-size: 300% 100%; animation: sheen2 1.3s linear infinite; }
+@keyframes sheen2 { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+/* motion off / reduced (Settings → Appearance → Animations, or Windows' setting) */
+:root[data-anim="off"] .nav-indicator { transition: none; }
+:root[data-anim="reduced"] .page > *, :root[data-anim="reduced"] .grid > *, :root[data-anim="reduced"] .mods-grid > *, :root[data-anim="reduced"] .inst-list > * { animation-duration: 1ms; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+}

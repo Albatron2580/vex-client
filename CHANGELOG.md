@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.7.0 — 2026-10-23
+- **New base colour:** the window is now dark graphite whatever theme you pick. Your theme colour shows only where it means something: Play, the page you're on, switches, main buttons, selections, and the moving banner on Home.
+- **Animations:**
+  - The sidebar highlight slides to the page you pick, and its icon pops in.
+  - Pages build up piece by piece when you open them.
+  - Instances, mods and cards lift on hover with a coloured edge; icons tilt.
+  - Home banner: slowly shifting colour, a drifting pixel grid and a floating V.
+  - Play shines like a pixel sweep on hover, presses down like a key, and shows moving stripes while the game starts.
+  - Buttons, switches, menus, pop-ups and notifications spring in.
+  - Turn animations down or off in Settings, or with Windows' reduced-motion setting.
+- In game, the Right Shift circles pop out of the middle one after another (mod 1.6.1).
+- Nothing was removed: every feature and setting is still there.
+
 ## 2.6.2 — 2026-10-21
 - Fixed: mods from NoRisk Client weren't imported. VEX now reads NoRisk's mod list and copies the mods from its shared cache.
 - Already imported an empty NoRisk instance? Instances → Mods → Copy from launcher → pick the NoRisk profile.

@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { isAdminName } from "../../electron/shared/settingsModel";
 import { McHead, SkinFace } from "./McHead";
 import { errMsg } from "../lib/bridge";
@@ -35,10 +35,23 @@ export function Sidebar() {
   const collapsed = settings.sidebarCollapsed;
   // Shown for admin Minecraft accounts; every admin action is still checked by the server.
   const isAdmin = !!account?.profile?.admin || isAdminName(ms?.accounts.find((a) => a.active)?.name);
+  // the highlight that slides to the page you pick
+  const navRef = useRef<HTMLDivElement>(null);
+  const [ind, setInd] = useState<{ top: number; height: number; left: number; width: number } | null>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = navRef.current?.querySelector<HTMLElement>('.nav-item[aria-current="page"]');
+      setInd(el ? { top: el.offsetTop, height: el.offsetHeight, left: el.offsetLeft, width: el.offsetWidth } : null);
+    };
+    measure();
+    const t = setTimeout(measure, 450); // after the collapse animation
+    return () => clearTimeout(t);
+  }, [page, collapsed, isAdmin]);
   return (
     <nav className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Main">
       <div className="brand"><Logo size={collapsed ? 34 : 40} />{!collapsed && <div className="brand-name">VEX<small>client</small></div>}</div>
-      <div className="nav">
+      <div className="nav" ref={navRef}>
+        {ind && <span className="nav-indicator" aria-hidden style={{ transform: `translateY(${ind.top}px)`, height: ind.height, left: ind.left, width: ind.width }} />}
         {SECTIONS.map((sec) => (
           <div key={sec.title} className="nav-section">
             {collapsed ? <hr className="nav-rule" /> : <div className="nav-title">{sec.title}</div>}
