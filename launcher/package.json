@@ -86,8 +86,10 @@
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@types/qrcode": "^1.5.5",
     "minecraft-launcher-core": "^3.18.2",
     "msmc": "^5.0.5",
+    "qrcode": "^1.5.4",
     "sql.js": "^1.15.1"
   }
 }

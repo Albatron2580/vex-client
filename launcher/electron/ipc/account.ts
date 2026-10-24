@@ -97,6 +97,11 @@ const id = (v: unknown) => { const s = String(v ?? ""); if (!/^[A-Za-z0-9]{1,40}
 const num = (v: unknown) => { const n = Number(v); if (!Number.isInteger(n) || n < 1) throw new Error("Bad id."); return n; };
 export const online = {
   reportBug: (title: string, body: string, version: string) => call("POST", "/v1/bugs", { title, body, version }),
+  /** A one-time code for the phone app, and the link its QR code opens. */
+  pairPhone: async () => {
+    const r = await call<{ code: string; expiresAt: number }>("POST", "/v1/pair");
+    return { ...r, url: `${serviceUrl}/app#code=${r.code}`, appUrl: `${serviceUrl}/app` };
+  },
   shares: () => call("GET", "/v1/shares"),
   share: (to: string, instance: unknown) => call("POST", "/v1/shares", { to: id(to), instance }),
   dismissShare: (shareId: number) => call("DELETE", `/v1/shares/${num(shareId)}`),

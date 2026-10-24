@@ -310,6 +310,7 @@ function registerIpc() {
   ipcMain.handle("online:serviceVersion", () => serviceVersion());
   ipcMain.handle("online:bundledServerVersion", () => bundledServerVersion());
   ipcMain.handle("online:link", () => linkMinecraft());
+  ipcMain.handle("online:pairPhone", () => online.pairPhone());
   ipcMain.handle("online:reportBug", (_e, title: string, body: string) => online.reportBug(String(title ?? ""), String(body ?? ""), app.getVersion()));
   ipcMain.handle("online:serverStatus", (_e, address: string) => serverStatus(String(address ?? "")));
   ipcMain.handle("collab:shares", () => online.shares());

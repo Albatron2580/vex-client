@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.9.0 — 2026-10-24
+- **VEX on your phone.** A phone app for iPhone and Android, nothing to install from a store. It has:
+  - **Home:** who's online, the featured server (copy its address) and VEX news.
+  - **Friends:** see who's online and what they play, search and add friends, accept or decline requests.
+  - **Collab:** instances friends sent you and ones you sent.
+  - **Admin** (admins only): numbers, post or delete news, set the featured server, mark bug reports fixed, ban or unban players.
+- **Connect a phone:** Settings → Phone app → **Connect a phone** shows a QR code. Scan it with your phone's camera and you're in; or open the app link and type the 8-letter code. Codes work once and last 5 minutes. Then use "Add to Home Screen" to keep it as an app icon.
+- The phone app is part of your VEX online service; it updates itself on the PC that set it up.
+
 ## 2.8.0 — 2026-10-24
 - Every instance now has its own pixel Minecraft block icon that shows its loader.
 - Bigger Home banner with quick buttons for mods, folder and logs, and when you last played.

@@ -85,6 +85,7 @@ const api = {
     bundledServerVersion: () => ipcRenderer.invoke("online:bundledServerVersion"),
     link: () => ipcRenderer.invoke("online:link"),
     loginCheck: () => ipcRenderer.invoke("online:loginCheck"),
+    pairPhone: () => ipcRenderer.invoke("online:pairPhone"),
     reportBug: (title: string, body: string) => ipcRenderer.invoke("online:reportBug", title, body),
     serverStatus: (address: string) => ipcRenderer.invoke("online:serverStatus", address),
   },

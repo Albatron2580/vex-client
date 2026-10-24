@@ -11,6 +11,7 @@ import { McHead } from "../components/McHead";
 import { useUpdateState } from "../components/UpdateBanner";
 import { SignInCard } from "./Friends";
 import { ServiceUpdate } from "../components/ServiceUpdate";
+import { PhoneCard } from "../features/PhoneCard";
 import { Avatar } from "../components/Shell";
 import { isServiceUrl } from "../../electron/shared/settingsModel";
 
@@ -304,6 +305,7 @@ export function SettingsPage() {
         <div className="stack" style={{ gap: "var(--s4)" }}>
           <MicrosoftCard />
           <AccountCard />
+          <PhoneCard />
           <GameCard />
           <Card title="Startup & launching" icon="play">
             <ShortcutRows />

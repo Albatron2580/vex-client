@@ -2,6 +2,8 @@
 // Sign-in uses Modrinth OAuth on the server (the client secret never leaves Cloudflare);
 // the launcher only ever receives a VEX session token, never a Modrinth token.
 
+import { PHONE_APP } from "./phoneApp.gen";
+
 export interface Env {
   DB: D1Database;
   MODRINTH_CLIENT_ID: string;
@@ -14,7 +16,7 @@ export interface Env {
   ADMINS?: string;        // comma-separated Minecraft UUIDs or names; defaults to DEFAULT_ADMINS
 }
 
-const SERVER_VERSION = "2.4.0";
+const SERVER_VERSION = "2.5.0";
 // Admins are checked against the Minecraft account the player linked — the server verifies that
 // account with Mojang itself, so nobody can make themselves an admin by renaming anything.
 // HAckerbest11 and RaxMc by UUID (can't be faked by renaming); UNCdel by name until its UUID is added.
@@ -123,6 +125,32 @@ async function authVerify(req: Request, env: Env) {
     if (tex) skin = (JSON.parse(atob(tex)) as any)?.textures?.SKIN?.url ?? null;
   } catch { /* no skin */ }
   return createMinecraftSession(env, String(prof.id), String(prof.name), skin);
+}
+
+// ---------- Phone app ----------
+const PAIR_TTL_MS = 5 * 60_000;
+async function authPair(req: Request, env: Env) {
+  const code = String(((await req.json().catch(() => ({}))) as { code?: string }).code ?? "").toUpperCase();
+  if (!/^[A-Z0-9]{8}$/.test(code)) return fail(400, "The code has 8 letters and numbers.");
+  const row = await env.DB.prepare("DELETE FROM pair_codes WHERE code = ? AND created_at > ? RETURNING user_id").bind(code, now() - PAIR_TTL_MS).first<{ user_id: string }>();
+  if (!row) return fail(400, "That code is wrong or expired. Make a new one in VEX on your PC.");
+  const user = await env.DB.prepare("SELECT banned FROM users WHERE id = ?").bind(row.user_id).first<{ banned: number }>();
+  if (!user || user.banned) return fail(403, "This account can't use VEX online.");
+  const token = randomToken();
+  await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)").bind(await sha256(token), row.user_id, now(), now() + SESSION_DAYS * 86_400_000).run();
+  return json({ token });
+}
+
+function phoneApp(path: string) {
+  const f = PHONE_APP[path === "/app/" || path === "/app/index.html" ? "/app" : path];
+  if (!f) return null;
+  const body = f.b64 ? Uint8Array.from(atob(f.b64), (c) => c.charCodeAt(0)) : f.body!;
+  return new Response(body, { headers: {
+    "content-type": f.type,
+    "cache-control": path.endsWith(".png") ? "public, max-age=86400" : "no-cache",
+    "x-content-type-options": "nosniff",
+    ...(f.type.startsWith("text/html") ? { "content-security-policy": "default-src 'self'; img-src 'self' https://textures.minecraft.net data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'", "referrer-policy": "no-referrer" } : {}),
+  } });
 }
 
 // ---------- Sign-in with Minecraft's chat-signing certificate ----------
@@ -291,6 +319,18 @@ async function api(req: Request, url: URL, env: Env, me: UserRow) {
   if (p === "/v1/mod/presence" && req.method === "POST") {
     await env.DB.prepare("UPDATE users SET mod_seen = ? WHERE id = ?").bind(now(), me.id).run();
     return json({ ok: true, uuid: me.mc_uuid });
+  }
+
+  // Phone app: a one-time code (8 characters, 5 minutes) that signs a phone in as you.
+  if (p === "/v1/pair" && req.method === "POST") {
+    const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const bytes = crypto.getRandomValues(new Uint8Array(8));
+    const code = [...bytes].map((b) => A[b % A.length]).join("");
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM pair_codes WHERE created_at < ? OR user_id = ?").bind(now() - PAIR_TTL_MS, me.id),
+      env.DB.prepare("INSERT INTO pair_codes (code, user_id, created_at) VALUES (?, ?, ?)").bind(code, me.id, now()),
+    ]);
+    return json({ code, expiresAt: now() + PAIR_TTL_MS });
   }
 
   // Bug reports from players.
@@ -509,6 +549,8 @@ export default {
       if (url.pathname === "/auth/minecraft/challenge" && req.method === "POST") return await authChallenge(env);
       if (url.pathname === "/auth/minecraft/verify" && req.method === "POST") return await authVerify(req, env);
       if (url.pathname === "/auth/minecraft/cert" && req.method === "POST") return await authCert(req, env);
+      if (url.pathname === "/auth/pair" && req.method === "POST") return await authPair(req, env);
+      if (url.pathname === "/app" || url.pathname.startsWith("/app/")) { const r = phoneApp(url.pathname); if (r) return r; }
       if (url.pathname === "/auth/start") return await authStart(url, env);
       if (url.pathname === "/auth/callback") return await authCallback(url, env);
       if (url.pathname.startsWith("/v1/")) {

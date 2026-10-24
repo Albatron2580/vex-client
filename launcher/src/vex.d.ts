@@ -95,7 +95,7 @@ declare global {
       };
       online: {
         home(): Promise<PublicHome>; serviceVersion(): Promise<string | null>; bundledServerVersion(): Promise<string | null>;
-        link(): Promise<AccountState>; loginCheck(): Promise<AccountState>; reportBug(title: string, body: string): Promise<unknown>;
+        link(): Promise<AccountState>; loginCheck(): Promise<AccountState>; pairPhone(): Promise<{ code: string; expiresAt: number; url: string; appUrl: string }>; reportBug(title: string, body: string): Promise<unknown>;
         serverStatus(address: string): Promise<ServerStatus>;
       };
       collab: {
