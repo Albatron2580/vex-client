@@ -701,3 +701,30 @@ body, .login-screen, .logs-app { background: var(--ink); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }
+
+/* =====================================================================
+   VEX 2.8 — pixel block icons, a richer Home banner, a light that follows the mouse
+   ===================================================================== */
+.inst-icon { display: grid; place-items: center; background: #101014 !important; box-shadow: var(--bevel) !important; border-radius: var(--r-sm) !important; overflow: hidden; }
+.inst-icon svg { image-rendering: pixelated; display: block; }
+
+.hero-main { display: flex; gap: 22px; align-items: center; min-width: 0; position: relative; }
+.hero-icon { flex: none; animation: bob 4.5s ease-in-out infinite; filter: drop-shadow(0 18px 18px rgb(0 0 0 / .45)); }
+.hero-icon .inst-tile { transform: rotate(-4deg); transition: transform 400ms var(--spring); }
+.home-hero:hover .hero-icon .inst-tile { transform: rotate(3deg) scale(1.05); }
+@keyframes bob { 50% { transform: translateY(-7px); } }
+.hero-actions { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-left: -8px; }
+.hero-actions .btn.ghost { color: var(--text-dim); }
+.hero-actions .btn.ghost:hover:not(:disabled) { color: var(--text); background: rgb(255 255 255 / .06); }
+.hero-actions .tiny { margin-left: 8px; }
+@media (max-width: 1050px) { .hero-icon { display: none; } }
+
+/* a soft light that follows the mouse across cards and rows (set by App) */
+.card::after, .inst-row::after, .mod-card::after, .recent-item::after {
+  content: ""; display: block !important; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 300ms;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--accent) 9%, transparent), transparent 70%); }
+.card:hover::after, .inst-row:hover::after, .mod-card:hover::after, .recent-item:hover::after { opacity: 1; }
+
+/* section titles get a small pixel mark in the theme colour */
+.section-title { display: flex; align-items: center; gap: 10px; }
+.section-title::before { content: ""; width: 8px; height: 8px; background: var(--accent); box-shadow: 3px 3px 0 color-mix(in oklab, var(--accent) 40%, transparent); }

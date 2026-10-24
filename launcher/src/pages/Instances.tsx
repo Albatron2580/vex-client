@@ -7,7 +7,7 @@ import type { Instance, Loader } from "../../electron/shared/settingsModel";
 import type { VersionList } from "../vex";
 import { ImportDialog } from "../features/ImportDialog";
 import { ModsDialog } from "../features/ModsDialog";
-import { tileColor } from "../components/PlayBar";
+import { InstanceIcon } from "../components/InstanceIcon";
 
 const LOADER_NAME: Record<string, string> = { vanilla: "Vanilla", fabric: "Fabric", forge: "Forge", neoforge: "NeoForge", quilt: "Quilt" };
 const played = (t: number | null) => {
@@ -23,7 +23,7 @@ function InstanceRow({ inst, selected, loaderVersion, onSelect, onMods, onEdit, 
   const canPlay = !!ms?.accounts.some((a) => a.active && !a.needsLogin);
   return (
     <div className={`inst-row ${selected ? "selected" : ""}`}>
-      <span className="inst-tile" style={{ background: tileColor(inst.id) }}>{inst.name[0]?.toUpperCase()}</span>
+      <InstanceIcon id={inst.id} loader={inst.loader} />
       <div className="meta" onClick={onSelect} title="Select this instance">
         <b>{inst.name}</b>
         <div className="sub">

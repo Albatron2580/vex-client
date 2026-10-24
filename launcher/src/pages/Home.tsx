@@ -8,6 +8,8 @@ import { PlayButton, GameProgress } from "../components/PlayButton";
 import { HomeOnline } from "../features/HomeOnline";
 import { vex, errMsg } from "../lib/bridge";
 import type { ShortcutStatus } from "../vex";
+import { InstanceIcon } from "../components/InstanceIcon";
+import { ModsDialog } from "../features/ModsDialog";
 
 export function HomePage() {
   const { instances, settings, update, go, info, desktop, toast, ms, account } = useApp();
@@ -16,6 +18,18 @@ export function HomePage() {
   const selected = instances.find((i) => i.id === settings.selectedInstanceId) ?? instances[0] ?? null;
   const recent = settings.recentInstanceIds.map((id) => instances.find((i) => i.id === id)).filter(Boolean);
   const [sc, setSc] = useState<ShortcutStatus | null>(null);
+  const [modsOpen, setModsOpen] = useState(false);
+  const [modCount, setModCount] = useState<number | null>(null);
+  useEffect(() => {
+    setModCount(null);
+    if (desktop && selected && selected.loader !== "vanilla") vex().mods.list(selected.id).then((m) => setModCount(m.filter((x) => x.enabled).length)).catch(() => {});
+  }, [desktop, selected?.id, modsOpen]);
+  const ago = (t: number | null) => {
+    if (!t) return "Never played";
+    const m = Math.round((Date.now() - t) / 60000);
+    return m < 1 ? "Played just now" : m < 60 ? `Played ${m} min ago` : m < 1440 ? `Played ${Math.round(m / 60)} h ago` : `Played ${Math.round(m / 1440)} d ago`;
+  };
+  const shelf = (recent.length ? recent : instances).slice(0, 6);
   useEffect(() => { if (desktop) vex().shortcuts.status().then(setSc).catch(() => {}); }, [desktop]);
   const addDesktop = async () => {
     try { setSc(await vex().shortcuts.set("desktop", true)); toast("success", "Desktop shortcut added", "Look for the VEX CLIENT icon on your desktop."); }
@@ -26,7 +40,9 @@ export function HomePage() {
     <div className="page">
       <section className="home-hero">
         <div className="hero-v" aria-hidden><Logo size={380} glow={false} /></div>
-        <div style={{ minWidth: 0, position: "relative" }}>
+        <div className="hero-main">
+          {selected && <div className="hero-icon"><InstanceIcon id={selected.id} loader={selected.loader} size={96} /></div>}
+          <div style={{ minWidth: 0 }}>
           <span className="greeting">{activeMs ? `Hey ${activeMs.name}` : "Welcome to VEX"}</span>
           <h1>{selected ? selected.name : "No instance yet"}</h1>
           <p className="sub">{selected ? `Minecraft ${selected.version}${selected.loader === "vanilla" ? "" : `, ${selected.loader[0].toUpperCase()}${selected.loader.slice(1)}`}` : "Make an instance to start playing."}</p>
@@ -35,6 +51,13 @@ export function HomePage() {
               <Select label="Instance" value={selected?.id ?? ""} onChange={(id) => update({ selectedInstanceId: id })} options={instances.map((i) => ({ value: i.id, label: `${i.name} (${i.version})` }))} />
             </div>}
             {!instances.length && <button className="btn" onClick={() => go("instances")}><Icon name="plus" size={16} />New instance</button>}
+            {selected && <div className="hero-actions">
+              {selected.loader !== "vanilla" && <button className="btn sm ghost" onClick={() => setModsOpen(true)}><Icon name="puzzle" size={14} />{modCount === null ? "Mods" : `${modCount} mods`}</button>}
+              <button className="btn sm ghost" onClick={() => vex().files.open("path", selected.gameDir)}><Icon name="folder" size={14} />Folder</button>
+              <button className="btn sm ghost" onClick={() => window.vex?.game.openLogsWindow()}><Icon name="server" size={14} />Logs</button>
+              <span className="tiny faint">{ago(selected.lastPlayed)}</span>
+            </div>}
+          </div>
           </div>
         </div>
         <div className="stack" style={{ alignItems: "flex-end", gap: 10, position: "relative" }}>
@@ -47,15 +70,15 @@ export function HomePage() {
 
       <div className="home-cols">
         <section>
-          <h2 className="section-title">Jump back in</h2>
-          {recent.length ? (
-            <div className="recent-list">{recent.slice(0, 6).map((i) => (
+          <h2 className="section-title">{recent.length ? "Jump back in" : "Your instances"}</h2>
+          {shelf.length ? (
+            <div className="recent-list">{shelf.map((i) => (
               <button key={i!.id} className="recent-item" onClick={() => update({ selectedInstanceId: i!.id })} aria-pressed={i!.id === selected?.id}>
-                <span className="inst-tile" style={{ background: "var(--accent)" }}>{i!.name[0]?.toUpperCase()}</span>
+                <InstanceIcon id={i!.id} loader={i!.loader} size={40} />
                 <span style={{ minWidth: 0, flex: 1, textAlign: "left" }}><b>{i!.name}</b><span className="tiny faint">Minecraft {i!.version}{i!.loader === "vanilla" ? "" : `, ${i!.loader}`}</span></span>
               </button>
             ))}</div>
-          ) : <p className="small faint">The instances you play show up here.</p>}
+          ) : <button className="recent-item" onClick={() => go("instances")}><span className="inst-tile ghost" style={{ width: 40, height: 40 }}><Icon name="plus" size={16} /></span><b>Make your first instance</b></button>}
         </section>
         <section>
           <h2 className="section-title">Status</h2>
@@ -72,6 +95,7 @@ export function HomePage() {
           {!desktop && <Notice kind="warn">This is the browser preview. Open the desktop app to play.</Notice>}
         </section>
       </div>
+      {modsOpen && selected && <ModsDialog inst={selected} onClose={() => setModsOpen(false)} />}
     </div>
   );
 }

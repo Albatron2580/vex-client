@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.0 — 2026-10-24
+- **Pixel block icons for instances:** every instance gets its own little Minecraft block in a slot. The block shows the loader (grass for vanilla, your theme colour for Fabric, iron and copper for Forge, amethyst for Quilt) and its texture is unique to that instance. Shown on Home, Instances and the Play bar.
+- **Bigger Home banner:** a floating block for your instance, plus quick buttons for its mods (with the count), its folder and the Minecraft Logs window, and when you last played.
+- Home always shows your instances: recently played first, otherwise all of them.
+- A soft light now follows your mouse across cards and rows, and section titles get a small pixel mark.
+- Nothing was removed.
+
 ## 2.7.0 — 2026-10-23
 - New look: dark graphite window, your theme colour only on Play, the current page, switches, buttons and the Home banner.
 - Animations everywhere: sliding sidebar highlight, pages that build up, lifting cards, a living Home banner, a pixel shine on Play, springy menus and pop-ups.

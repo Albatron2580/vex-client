@@ -6,7 +6,7 @@ import { UpdateBanner, WhatsNew } from "./components/UpdateBanner";
 import { PlayBar } from "./components/PlayBar";
 import { CursorTrail } from "./components/CursorTrail";
 import { LoginScreen } from "./components/LoginScreen";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HomePage } from "./pages/Home";
 import { InstancesPage } from "./pages/Instances";
 import { ModsPage } from "./pages/Mods";
@@ -23,6 +23,18 @@ const PAGES = { home: HomePage, instances: InstancesPage, mods: ModsPage, skins:
 export function App() {
   const { page, settings, ready, desktop, ms } = useApp();
   const [skipLogin, setSkipLogin] = useState(false);
+  // the light under the mouse on cards and rows
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.(".card, .inst-row, .mod-card, .recent-item") as HTMLElement | null;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      el.style.setProperty("--my", `${e.clientY - r.top}px`);
+    };
+    addEventListener("pointermove", move, { passive: true });
+    return () => removeEventListener("pointermove", move);
+  }, []);
   // Login check: no usable Microsoft account → login screen (can be skipped for this session).
   const needsLogin = ready && desktop && ms !== null && !ms.accounts.some((a) => a.active && !a.needsLogin);
   const Page = PAGES[page];
