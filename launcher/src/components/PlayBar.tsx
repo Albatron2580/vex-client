@@ -1,3 +1,4 @@
+import { tr } from "../lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "../state/AppState";
 import { Icon } from "./Icon";
@@ -24,14 +25,14 @@ export function PlayBar() {
   return (
     <div className="playbar" ref={ref}>
       {open && (
-        <div className="playbar-menu" role="listbox" aria-label="Choose instance">
+        <div className="playbar-menu" role="listbox" aria-label={tr("Choose instance")}>
           {instances.map((i) => (
             <button key={i.id} role="option" aria-selected={i.id === sel?.id} className={`list-item ${i.id === sel?.id ? "selected" : ""}`} onClick={() => { update({ selectedInstanceId: i.id }); setOpen(false); }}>
               <InstanceIcon id={i.id} loader={i.loader} size={32} />
               <span style={{ textAlign: "left", minWidth: 0 }}><b className="small">{i.name}</b><span className="tiny faint" style={{ display: "block" }}>{i.version} · {LOADER[i.loader]}</span></span>
             </button>
           ))}
-          <button className="list-item" onClick={() => { setOpen(false); go("instances"); }}><span className="inst-tile ghost"><Icon name="plus" size={14} /></span><span className="small">Manage instances</span></button>
+          <button className="list-item" onClick={() => { setOpen(false); go("instances"); }}><span className="inst-tile ghost"><Icon name="plus" size={14} /></span><span className="small">{tr("Manage instances")}</span></button>
         </div>
       )}
       <button className="playbar-inst" onClick={() => (instances.length ? setOpen((o) => !o) : go("instances"))} aria-haspopup="listbox" aria-expanded={open}>
@@ -39,9 +40,9 @@ export function PlayBar() {
           <InstanceIcon id={sel.id} loader={sel.loader} size={34} />
           <span style={{ textAlign: "left", minWidth: 0 }}><b className="small" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>{sel.name}</b><span className="tiny faint">{sel.version} · {LOADER[sel.loader]}</span></span>
           <Icon name="chevron" size={14} />
-        </> : <><span className="inst-tile ghost"><Icon name="plus" size={14} /></span><span className="small">Create an instance</span></>}
+        </> : <><span className="inst-tile ghost"><Icon name="plus" size={14} /></span><span className="small">{tr("Create an instance")}</span></>}
       </button>
-      {game.state !== "idle" && <button className="btn icon sm" style={{ height: 40, width: 40 }} title="Minecraft Logs" aria-label="Open Minecraft Logs" onClick={() => window.vex?.game.openLogsWindow()}><Icon name="server" size={16} /></button>}
+      {game.state !== "idle" && <button className="btn icon sm" style={{ height: 40, width: 40 }} title={tr("Minecraft Logs")} aria-label={tr("Open Minecraft Logs")} onClick={() => window.vex?.game.openLogsWindow()}><Icon name="server" size={16} /></button>}
       <div className="stack" style={{ gap: 4 }}>
         <PlayButton />
       </div>

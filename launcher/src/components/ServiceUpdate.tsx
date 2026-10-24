@@ -1,3 +1,4 @@
+import { tr } from "../lib/i18n";
 import { useEffect, useState } from "react";
 import { Notice } from "./ui";
 import { Icon } from "./Icon";
@@ -16,8 +17,8 @@ export function ServiceUpdate() {
   if (!v?.deployed || !v.bundled || v.deployed === v.bundled) return wizard ? <OnlineSetupWizard onClose={() => setWizard(false)} /> : null;
   return (
     <>
-      <Notice kind="warn"><b>Your online service can be updated</b> ({v.deployed} → {v.bundled}) so sign-in, Collab, admin, news and the in-game V badge work. Do this on the PC that set it up.
-        <div style={{ marginTop: 8 }}><button className="btn primary sm" onClick={() => setWizard(true)}><Icon name="refresh" size={14} />Update online service</button></div></Notice>
+      <Notice kind="warn"><b>{tr("Your online service can be updated")}</b> ({v.deployed} → {v.bundled}{tr(") so sign-in, Collab, admin, news and the in-game V badge work. Do this on the PC that set it up.")}
+        <div style={{ marginTop: 8 }}><button className="btn primary sm" onClick={() => setWizard(true)}><Icon name="refresh" size={14} />{tr("Update online service")}</button></div></Notice>
       {wizard && <OnlineSetupWizard onClose={() => setWizard(false)} />}
     </>
   );

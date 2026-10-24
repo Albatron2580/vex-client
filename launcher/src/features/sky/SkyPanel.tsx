@@ -1,3 +1,4 @@
+import { tr } from "../../lib/i18n";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, Field, Notice, Progress, Select, Slider, ToggleRow } from "../../components/ui";
 import { Icon } from "../../components/Icon";
@@ -24,8 +25,8 @@ function Panorama({ side, top }: { side: Rgba | null; top: Rgba | null }) {
     const sideData = new ImageData(new Uint8ClampedArray(side.data), S, S);
     for (let i = 0; i < 4; i++) ctx.putImageData(sideData, i * S, 0);
   }, [side, top]);
-  return side ? <canvas ref={ref} role="img" aria-label="Sky preview, full 360° view" style={{ width: "100%", aspectRatio: "4 / 1", borderRadius: "var(--r-lg)", border: "1px solid var(--line)", display: "block" }} />
-    : <div className="empty" style={{ aspectRatio: "4 / 1" }}><Icon name="moon" size={28} /><span className="small">Pick an image or a preset</span></div>;
+  return side ? <canvas ref={ref} role="img" aria-label={tr("Sky preview, full 360° view")} style={{ width: "100%", aspectRatio: "4 / 1", borderRadius: "var(--r-lg)", border: "1px solid var(--line)", display: "block" }} />
+    : <div className="empty" style={{ aspectRatio: "4 / 1" }}><Icon name="moon" size={28} /><span className="small">{tr("Pick an image or a preset")}</span></div>;
 }
 
 export function SkyPanel() {
@@ -53,10 +54,10 @@ export function SkyPanel() {
     if (!f) return;
     setError(null);
     try {
-      if (!/^image\/(png|jpeg|webp)$/.test(f.type)) throw new Error("Choose a PNG, JPG or WebP image.");
-      if (f.size > 25 * 1024 * 1024) throw new Error("That image is over 25 MB. Try a smaller one.");
+      if (!/^image\/(png|jpeg|webp)$/.test(f.type)) throw new Error(tr("Choose a PNG, JPG or WebP image."));
+      if (f.size > 25 * 1024 * 1024) throw new Error(tr("That image is over 25 MB. Try a smaller one."));
       const img = await loadRgba(f);
-      if (img.width < 64 || img.height < 64) throw new Error("That image is too small — use one at least 64×64.");
+      if (img.width < 64 || img.height < 64) throw new Error(tr("That image is too small — use one at least 64×64."));
       setSource({ image: img, label: f.name.replace(/\.[a-z]+$/i, "") }); setPreset("");
     } catch (e) { setError(errMsg(e)); }
     if (fileRef.current) fileRef.current.value = "";
@@ -79,42 +80,42 @@ export function SkyPanel() {
   const fileName = `VEX Sky - ${source?.label ?? "custom"}`;
 
   return (
-    <Card title="Custom Sky" icon="moon" glow sub="Turn any picture into the overworld sky — seamless all the way round.">
+    <Card title={tr("Custom Sky")} icon="moon" glow sub={tr("Turn any picture into the overworld sky — seamless all the way round.")}>
       <div className="stack">
         <Panorama side={preview?.side ?? null} top={preview?.top ?? null} />
         <div className="row wrap">
-          <span className="label" style={{ marginRight: 4 }}>Presets</span>
+          <span className="label" style={{ marginRight: 4 }}>{tr("Presets")}</span>
           {PRESETS.map((p) => <button key={p.id} className={`btn sm ${preset === p.id ? "is-on" : ""}`} aria-pressed={preset === p.id} onClick={() => usePreset(p.id)}><Icon name="sparkle" size={14} />{p.name}</button>)}
-          <button className="btn sm" onClick={() => fileRef.current?.click()}><Icon name="folder" size={14} />Your image…</button>
+          <button className="btn sm" onClick={() => fileRef.current?.click()}><Icon name="folder" size={14} />{tr("Your image…")}</button>
           <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => onFile(e.target.files?.[0])} />
           {source && <span className="chip accent" style={{ marginLeft: "auto" }}>{source.label} · {source.image.width}×{source.image.height}</span>}
         </div>
         {error && <Notice kind="danger">{error}</Notice>}
-        {source && source.image.width < 1000 && <span className="hint">Small images look soft in-game. 2000px wide or more gives the sharpest sky.</span>}
+        {source && source.image.width < 1000 && <span className="hint">{tr("Small images look soft in-game. 2000px wide or more gives the sharpest sky.")}</span>}
 
         <div className="grid grid-2" style={{ gap: "6px 20px", alignItems: "start" }}>
           <div className="stack" style={{ gap: 6 }}>
-            <Field label="Horizon line" hint="Where land meets sky in your picture. Everything above it becomes sky.">
-              {() => <Slider label="Horizon line" value={horizon} min={0.3} max={1} step={0.01} onChange={setHorizon} format={(v) => `${Math.round(v * 100)}%`} />}
+            <Field label={tr("Horizon line")} hint={tr("Where land meets sky in your picture. Everything above it becomes sky.")}>
+              {() => <Slider label={tr("Horizon line")} value={horizon} min={0.3} max={1} step={0.01} onChange={setHorizon} format={(v) => `${Math.round(v * 100)}%`} />}
             </Field>
           </div>
           <div>
-            <ToggleRow title="Only at night" desc="Fades in at dusk, out at dawn" checked={nightOnly} onChange={setNightOnly} />
-            <ToggleRow title="Turn with the sun" desc="Off keeps it still" checked={rotate} onChange={setRotate} />
+            <ToggleRow title={tr("Only at night")} desc={tr("Fades in at dusk, out at dawn")} checked={nightOnly} onChange={setNightOnly} />
+            <ToggleRow title={tr("Turn with the sun")} desc={tr("Off keeps it still")} checked={rotate} onChange={setRotate} />
           </div>
         </div>
 
         <div className="grid grid-2" style={{ gap: 10 }}>
-          <Field label="Instance">{(id) => <InstanceTarget id={id} value={target} onChange={setTarget} />}</Field>
-          <Field label="Pack version">{(id) => <Select id={id} value={version} onChange={setVersion} options={PACK_TARGETS.map((p) => ({ value: p.label, label: p.label }))} />}</Field>
+          <Field label={tr("Instance")}>{(id) => <InstanceTarget id={id} value={target} onChange={setTarget} />}</Field>
+          <Field label={tr("Pack version")}>{(id) => <Select id={id} value={version} onChange={setVersion} options={PACK_TARGETS.map((p) => ({ value: p.label, label: p.label }))} />}</Field>
         </div>
         <Notice>
-          <b>Needs a sky mod.</b> Vanilla Minecraft can't show image skies. Add <a href="https://modrinth.com/mod/nuit" target="_blank" rel="noreferrer">Nuit</a> and <a href="https://modrinth.com/mod/nuit-interop" target="_blank" rel="noreferrer">Nuit Interop</a> (Fabric/NeoForge), or use OptiFine. Then enable the pack under Options → Resource Packs.
+          <b>{tr("Needs a sky mod.")}</b> {tr("Vanilla Minecraft can't show image skies. Add")}{" "}<a href="https://modrinth.com/mod/nuit" target="_blank" rel="noreferrer">{tr("Nuit")}</a> {tr("and")} <a href="https://modrinth.com/mod/nuit-interop" target="_blank" rel="noreferrer">{tr("Nuit Interop")}</a> {tr("(Fabric/NeoForge), or use OptiFine. Then enable the pack under Options → Resource Packs.")}
         </Notice>
         {job && <div className="stack" style={{ gap: 6 }}><div className="row tiny muted">{job.step}<span className="spacer" />{job.pct}%</div><Progress value={job.pct} label={job.step} /></div>}
         <div className="row">
-          <button className="btn primary" style={{ flex: 1 }} disabled={!source || !!job || !desktop} onClick={() => run("install", target, fileName, build)}><Icon name="download" size={16} />Install sky</button>
-          <button className="btn" style={{ flex: 1 }} disabled={!source || !!job || !desktop} onClick={() => run("zip", target, fileName, build)}><Icon name="zip" size={16} />Save as ZIP</button>
+          <button className="btn primary" style={{ flex: 1 }} disabled={!source || !!job || !desktop} onClick={() => run("install", target, fileName, build)}><Icon name="download" size={16} />{tr("Install sky")}</button>
+          <button className="btn" style={{ flex: 1 }} disabled={!source || !!job || !desktop} onClick={() => run("zip", target, fileName, build)}><Icon name="zip" size={16} />{tr("Save as ZIP")}</button>
         </div>
       </div>
     </Card>

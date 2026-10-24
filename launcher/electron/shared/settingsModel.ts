@@ -38,7 +38,7 @@ export interface LauncherSettings {
   particles: boolean;
   particleIntensity: number;    // 0..100
   animations: AnimationPref;
-  language: string;             // "en" | "nl"
+  language: string;             // "auto" (computer language) or a language id, see src/lib/i18n.ts
   openAtLogin: boolean;
   afterLaunch: AfterLaunch;
   downloadDir: string;          // "" = system Downloads
@@ -63,7 +63,7 @@ export const DEFAULT_SETTINGS: LauncherSettings = {
   particles: true,
   particleIntensity: 45,
   animations: "full",
-  language: "en",
+  language: "auto",
   openAtLogin: false,
   afterLaunch: "minimize",
   downloadDir: "",
@@ -158,7 +158,7 @@ export function validateSettings(input: unknown): LauncherSettings {
     particles: bool("particles"),
     particleIntensity: typeof r.particleIntensity === "number" ? Math.round(clamp(r.particleIntensity, 0, 100)) : d.particleIntensity,
     animations: pick("animations", ["full", "reduced", "off"] as const),
-    language: pick("language", ["en", "nl"] as const),
+    language: pick("language", ["auto", "en", "nl", "de", "fr", "es", "pt", "it", "pl", "tr", "ru", "uk", "cs", "sv", "ro", "ja", "ko", "zh"] as const),
     openAtLogin: bool("openAtLogin"),
     afterLaunch: pick("afterLaunch", ["keep", "minimize", "close"] as const),
     downloadDir: str("downloadDir"),

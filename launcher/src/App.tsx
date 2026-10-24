@@ -1,3 +1,4 @@
+import { tr } from "./lib/i18n";
 import { useApp } from "./state/AppState";
 import { Sidebar, TitleBar } from "./components/Shell";
 import { Toasts } from "./components/Toasts";
@@ -45,7 +46,7 @@ export function App() {
       <Particles enabled={settings.particles && settings.animations !== "off"} intensity={settings.particleIntensity} />
       <TitleBar />
       <Sidebar />
-      <main className={`main ${page !== "home" ? "with-playbar" : ""}`}>{ready ? <Page key={page} /> : <div className="row muted" style={{ padding: 40 }}><span className="spinner" />Loading…</div>}</main>
+      <main className={`main ${page !== "home" ? "with-playbar" : ""}`}>{ready ? <Page key={page} /> : <div className="row muted" style={{ padding: 40 }}><span className="spinner" />{tr("Loading…")}</div>}</main>
       {ready && page !== "home" && <PlayBar />}
       {needsLogin && !skipLogin && <LoginScreen onSkip={() => setSkipLogin(true)} />}
       <UpdateBanner />

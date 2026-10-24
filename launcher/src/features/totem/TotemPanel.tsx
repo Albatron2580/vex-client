@@ -1,3 +1,4 @@
+import { tr } from "../../lib/i18n";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, Field, Notice, PixelImage, Progress, Segmented, Select } from "../../components/ui";
 import { Icon } from "../../components/Icon";
@@ -43,7 +44,7 @@ export function TotemPanel({ incoming }: { incoming?: FoundSkin | null }) {
     if (!f) return;
     setFileError(null);
     try {
-      if (f.type && f.type !== "image/png") throw new Error("Choose a .png skin file.");
+      if (f.type && f.type !== "image/png") throw new Error(tr("Choose a .png skin file."));
       const img = await loadRgba(f);
       const err = validateSkin(img); if (err) throw new Error(err);
       setSkin({ image: img, slim: false, label: f.name.replace(/\.png$/i, "") });
@@ -57,43 +58,43 @@ export function TotemPanel({ incoming }: { incoming?: FoundSkin | null }) {
   const lookupBusy = state.status === "loading";
 
   return (
-    <Card title="Custom Totem" icon="totem" glow sub="Turn any skin into your Totem of Undying.">
+    <Card title={tr("Custom Totem")} icon="totem" glow sub={tr("Turn any skin into your Totem of Undying.")}>
       <div className="stack">
         <div className="row" style={{ gap: 16, alignItems: "stretch" }}>
           <div style={{ width: 172, height: 172, flex: "none", display: "grid", placeItems: "center", borderRadius: "var(--r-lg)", border: "1px solid var(--line)",
             background: "radial-gradient(circle at 50% 45%, color-mix(in oklab, var(--accent) 28%, transparent), color-mix(in oklab, var(--bg) 60%, transparent) 70%)" }}>
-            {totem ? <PixelImage image={totem} scale={9} label="Totem preview" /> : <div className="faint small" style={{ textAlign: "center", padding: 12 }}><Icon name="totem" size={30} /><br />Load a skin to preview</div>}
+            {totem ? <PixelImage image={totem} scale={9} label={tr("Totem preview")} /> : <div className="faint small" style={{ textAlign: "center", padding: 12 }}><Icon name="totem" size={30} /><br />{tr("Load a skin to preview")}</div>}
           </div>
           <div className="stack" style={{ flex: 1, minWidth: 0, justifyContent: "space-between" }}>
             {skin ? (
-              <div className="row"><PixelImage image={renderFrontView(skin.image, skin.slim)} scale={2.5} label="Skin preview" />
-                <div style={{ minWidth: 0 }}><b>{skin.label}</b><div className="tiny faint">{skin.slim ? "Slim" : "Classic"} skin</div>
-                  <button className="btn ghost sm" style={{ paddingLeft: 0 }} onClick={() => setSkin((s) => s && { ...s, slim: !s.slim })}>Switch to {skin.slim ? "classic" : "slim"} arms</button></div>
+              <div className="row"><PixelImage image={renderFrontView(skin.image, skin.slim)} scale={2.5} label={tr("Skin preview")} />
+                <div style={{ minWidth: 0 }}><b>{skin.label}</b><div className="tiny faint">{skin.slim ? tr("Slim") : tr("Classic")} skin</div>
+                  <button className="btn ghost sm" style={{ paddingLeft: 0 }} onClick={() => setSkin((s) => s && { ...s, slim: !s.slim })}>{skin.slim ? tr("Switch to classic arms") : tr("Switch to slim arms")}</button></div>
               </div>
-            ) : <span className="small faint">Use a player's name or pick a skin file.</span>}
-            <Segmented label="Totem style" value={style} onChange={setStyle} options={TOTEM_STYLES.map((s) => ({ value: s.id, label: s.label }))} />
+            ) : <span className="small faint">{tr("Use a player's name or pick a skin file.")}</span>}
+            <Segmented label={tr("Totem style")} value={style} onChange={setStyle} options={TOTEM_STYLES.map((s) => ({ value: s.id, label: s.label }))} />
           </div>
         </div>
 
         <div className="row">
-          <input className="input" placeholder="Player name" aria-label="Player name" value={player} maxLength={16}
+          <input className="input" placeholder={tr("Player name")} aria-label={tr("Player name")} value={player} maxLength={16}
             onChange={(e) => setPlayer(e.target.value.replace(/\s/g, ""))} onKeyDown={(e) => e.key === "Enter" && fetchPlayer()} />
-          <button className="btn" onClick={fetchPlayer} disabled={!desktop || lookupBusy || !/^[A-Za-z0-9_]{3,16}$/.test(player)}>{lookupBusy ? <span className="spinner" /> : <Icon name="download" size={16} />}Fetch</button>
-          <button className="btn" onClick={() => fileRef.current?.click()}><Icon name="folder" size={16} />File</button>
+          <button className="btn" onClick={fetchPlayer} disabled={!desktop || lookupBusy || !/^[A-Za-z0-9_]{3,16}$/.test(player)}>{lookupBusy ? <span className="spinner" /> : <Icon name="download" size={16} />}{tr("Fetch")}</button>
+          <button className="btn" onClick={() => fileRef.current?.click()}><Icon name="folder" size={16} />{tr("File")}</button>
           <input ref={fileRef} type="file" accept="image/png" hidden onChange={(e) => onFile(e.target.files?.[0])} />
         </div>
         {state.status === "error" && <Notice kind="warn">{state.message}</Notice>}
         {fileError && <Notice kind="danger">{fileError}</Notice>}
 
         <div className="grid grid-2" style={{ gap: 10 }}>
-          <Field label="Instance">{(id) => <InstanceTarget id={id} value={target} onChange={setTarget} />}</Field>
-          <Field label="Pack version">{(id) => <Select id={id} value={version} onChange={setVersion} options={PACK_TARGETS.map((p) => ({ value: p.label, label: p.label }))} />}</Field>
+          <Field label={tr("Instance")}>{(id) => <InstanceTarget id={id} value={target} onChange={setTarget} />}</Field>
+          <Field label={tr("Pack version")}>{(id) => <Select id={id} value={version} onChange={setVersion} options={PACK_TARGETS.map((p) => ({ value: p.label, label: p.label }))} />}</Field>
         </div>
 
         {job ? <div className="stack" style={{ gap: 6 }}><div className="row tiny muted">{job.step}<span className="spacer" />{job.pct}%</div><Progress value={job.pct} label={job.step} /></div> : null}
         <div className="row">
-          <button className="btn primary" style={{ flex: 1 }} disabled={!totem || !!job || !desktop} onClick={() => run("install", target, fileName, build)}><Icon name="download" size={16} />Install</button>
-          <button className="btn" style={{ flex: 1 }} disabled={!totem || !!job || !desktop} onClick={() => run("zip", target, fileName, build)}><Icon name="zip" size={16} />Save as ZIP</button>
+          <button className="btn primary" style={{ flex: 1 }} disabled={!totem || !!job || !desktop} onClick={() => run("install", target, fileName, build)}><Icon name="download" size={16} />{tr("Install")}</button>
+          <button className="btn" style={{ flex: 1 }} disabled={!totem || !!job || !desktop} onClick={() => run("zip", target, fileName, build)}><Icon name="zip" size={16} />{tr("Save as ZIP")}</button>
         </div>
       </div>
     </Card>

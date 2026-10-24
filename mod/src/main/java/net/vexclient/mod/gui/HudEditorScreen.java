@@ -21,7 +21,7 @@ public final class HudEditorScreen extends Screen {
     private boolean wasDown = true;
 
     public HudEditorScreen(Screen parent) {
-        super(Component.literal("Edit HUD"));
+        super(Component.literal(L.t("Edit HUD")));
         this.parent = parent;
     }
 
@@ -71,7 +71,7 @@ public final class HudEditorScreen extends Screen {
         // hint pill at the top
         int hidden = 0;
         for (HudElement e : Hud.ELEMENTS) if (!e.enabled) hidden++;
-        String hint = selected == null ? "Drag to move · click one to change it" : selected.name + " · " + Math.round(selected.scale * 100) + "%";
+        String hint = selected == null ? L.t("Drag to move · click one to change it") : L.t(selected.name) + " · " + Math.round(selected.scale * 100) + "%";
         int hw = this.font.width(hint) + 16;
         // just above the bottom bar, so it never covers elements placed at the top of the screen
         int hy = this.height - 50;
@@ -83,7 +83,7 @@ public final class HudEditorScreen extends Screen {
         }
 
         // bottom bar
-        String[] labels = {"Smaller", "Bigger", selected == null ? "Colour" : "Colour: " + colorName(selected.color), "Box: " + (selected != null && selected.background ? "on" : "off"), "Hide", "Done"};
+        String[] labels = {L.t("Smaller"), L.t("Bigger"), selected == null ? L.t("Colour") : L.t("Colour") + ": " + L.t(colorName(selected.color)), L.t(selected != null && selected.background ? "Box: on" : "Box: off"), L.t("Hide"), L.t("Done")};
         int[] widths = new int[labels.length];
         int total = 0;
         for (int i = 0; i < labels.length; i++) { widths[i] = this.font.width(labels[i]) + 16; total += widths[i] + 4; }

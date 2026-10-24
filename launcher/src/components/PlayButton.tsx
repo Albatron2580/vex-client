@@ -1,3 +1,4 @@
+import { tr } from "../lib/i18n";
 import { useApp } from "../state/AppState";
 import { Icon } from "./Icon";
 import { Tooltip } from "./ui";
@@ -12,15 +13,15 @@ export function PlayButton({ big }: { big?: boolean }) {
   const cls = big ? "play-btn" : "playbar-play";
 
   if (game.state === "running") return (
-    <button className={cls} onClick={() => vex().game.stop()} title="Close Minecraft"><Icon name="close" size={big ? 20 : 14} />{big ? "STOP" : "Stop"}</button>
+    <button className={cls} onClick={() => vex().game.stop()} title={tr("Close Minecraft")}><Icon name="close" size={big ? 20 : 14} />{big ? tr("STOP") : tr("Stop")}</button>
   );
   if (game.state === "starting") return (
-    <button className={`${cls} busy`} disabled aria-busy="true"><span className="spinner" style={{ borderTopColor: "#fff" }} />{big ? "STARTING" : "Starting"}</button>
+    <button className={`${cls} busy`} disabled aria-busy="true"><span className="spinner" style={{ borderTopColor: "#fff" }} />{big ? tr("STARTING") : tr("Starting")}</button>
   );
-  const reason = !sel ? "Create an instance first." : !active ? "Add a Microsoft account first (bottom left)." : active.needsLogin ? `Sign in to ${active.name} again (bottom left).` : null;
+  const reason = !sel ? tr("Create an instance first.") : !active ? tr("Add a Microsoft account first (bottom left).") : active.needsLogin ? tr("Sign in to {0} again (bottom left).", active.name) : null;
   const btn = (
     <button className={cls} disabled={!!reason || busyHere} onClick={() => (sel ? play(sel.id) : go("instances"))}>
-      <Icon name="play" size={big ? 22 : 14} />{big ? t("home.play") : "Play"}
+      <Icon name="play" size={big ? 22 : 14} />{big ? t("home.play") : tr("Play")}
     </button>
   );
   return reason ? <Tooltip text={reason}>{btn}</Tooltip> : btn;

@@ -16,7 +16,7 @@ export interface Env {
   ADMINS?: string;        // comma-separated Minecraft UUIDs or names; defaults to DEFAULT_ADMINS
 }
 
-const SERVER_VERSION = "2.6.0";
+const SERVER_VERSION = "2.7.0";
 // Admins are checked against the Minecraft account the player linked — the server verifies that
 // account with Mojang itself, so nobody can make themselves an admin by renaming anything.
 // HAckerbest11 and RaxMc by UUID (can't be faked by renaming); UNCdel by name until its UUID is added.

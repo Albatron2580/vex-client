@@ -1,3 +1,4 @@
+import { tr } from "../lib/i18n";
 import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { isAdminName } from "../../electron/shared/settingsModel";
@@ -8,10 +9,10 @@ import { Icon } from "./Icon";
 import { Logo } from "./Logo";
 
 const SECTIONS: { title: string; items: { id: PageId; icon: string; badge?: string; adminOnly?: boolean }[] }[] = [
-  { title: "Main", items: [{ id: "home", icon: "home" }, { id: "instances", icon: "cube" }, { id: "mods", icon: "puzzle" }] },
-  { title: "Social", items: [{ id: "friends", icon: "friends" }, { id: "collab", icon: "collab" }] },
-  { title: "Customization", items: [{ id: "skins", icon: "skins" }, { id: "features", icon: "features" }] },
-  { title: "Client", items: [{ id: "settings", icon: "settings" }, { id: "admin", icon: "shield", adminOnly: true }] },
+  { title: tr("Main"), items: [{ id: "home", icon: "home" }, { id: "instances", icon: "cube" }, { id: "mods", icon: "puzzle" }] },
+  { title: tr("Social"), items: [{ id: "friends", icon: "friends" }, { id: "collab", icon: "collab" }] },
+  { title: tr("Customization"), items: [{ id: "skins", icon: "skins" }, { id: "features", icon: "features" }] },
+  { title: tr("Client"), items: [{ id: "settings", icon: "settings" }, { id: "admin", icon: "shield", adminOnly: true }] },
 ];
 
 export function TitleBar() {
@@ -21,9 +22,9 @@ export function TitleBar() {
       <span>VEX CLIENT</span>
       {desktop && (
         <div className="win-btns">
-          <button onClick={() => window.vex!.win.minimize()} aria-label="Minimise"><Icon name="min" size={14} /></button>
-          <button onClick={() => window.vex!.win.maximize()} aria-label="Maximise"><Icon name="max" size={12} /></button>
-          <button className="close" onClick={() => window.vex!.win.close()} aria-label="Close"><Icon name="close" size={14} /></button>
+          <button onClick={() => window.vex!.win.minimize()} aria-label={tr("Minimise")}><Icon name="min" size={14} /></button>
+          <button onClick={() => window.vex!.win.maximize()} aria-label={tr("Maximise")}><Icon name="max" size={12} /></button>
+          <button className="close" onClick={() => window.vex!.win.close()} aria-label={tr("Close")}><Icon name="close" size={14} /></button>
         </div>
       )}
     </header>
@@ -48,7 +49,7 @@ export function Sidebar() {
     return () => clearTimeout(t);
   }, [page, collapsed, isAdmin]);
   return (
-    <nav className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Main">
+    <nav className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label={tr("Main")}>
       <div className="brand"><Logo size={collapsed ? 34 : 40} />{!collapsed && <div className="brand-name">VEX<small>client</small></div>}</div>
       <div className="nav" ref={navRef}>
         {ind && <span className="nav-indicator" aria-hidden style={{ transform: `translateY(${ind.top}px)`, height: ind.height, left: ind.left, width: ind.width }} />}
@@ -67,8 +68,8 @@ export function Sidebar() {
             })}
           </div>
         ))}
-        <button className="nav-item" onClick={() => update({ sidebarCollapsed: !collapsed })} title={collapsed ? "Expand" : undefined} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed}>
-          <span className="nav-tile"><Icon name={collapsed ? "panelOpen" : "panelClose"} size={17} /></span>{!collapsed && <span className="nav-label">Collapse</span>}
+        <button className="nav-item" onClick={() => update({ sidebarCollapsed: !collapsed })} title={collapsed ? tr("Expand") : undefined} aria-label={collapsed ? tr("Expand sidebar") : tr("Collapse sidebar")} aria-expanded={!collapsed}>
+          <span className="nav-tile"><Icon name={collapsed ? "panelOpen" : "panelClose"} size={17} /></span>{!collapsed && <span className="nav-label">{tr("Collapse")}</span>}
         </button>
       </div>
       <div className="sidebar-foot"><AccountBox collapsed={collapsed} /></div>
@@ -103,44 +104,44 @@ function AccountBox({ collapsed }: { collapsed: boolean }) {
   const modrinth = account?.signedIn ? account.profile : null;
   const addMs = async () => {
     setBusy(true);
-    try { const s = await window.vex!.ms.add(); toast("success", `Signed in as ${s.accounts.find((a) => a.active)?.name ?? "your account"}`); }
-    catch (e) { toast("error", "Microsoft sign-in didn't finish", errMsg(e)); }
+    try { const s = await window.vex!.ms.add(); toast("success", tr("Signed in as {0}", s.accounts.find((a) => a.active)?.name ?? "your account")); }
+    catch (e) { toast("error", tr("Microsoft sign-in didn't finish"), errMsg(e)); }
     finally { setBusy(false); refreshMs(); }
   };
   return (
     <div ref={ref} style={{ position: "relative" }}>
       {open && pos && createPortal(
         <div ref={menuRef} className="account-menu" role="menu" style={{ position: "fixed", left: pos.left, bottom: pos.bottom }}>
-          <div className="label" style={{ padding: "4px 8px" }}>Minecraft accounts</div>
+          <div className="label" style={{ padding: "4px 8px" }}>{tr("Minecraft accounts")}</div>
           {ms?.accounts.map((a) => (
             <button key={a.uuid} role="menuitemradio" aria-checked={a.active} className={`list-item ${a.active ? "selected" : ""}`}
               onClick={async () => { await window.vex!.ms.setActive(a.uuid); refreshMs(); setOpen(false); }}>
               <McHead uuid={a.uuid} name={a.name} size={28} />
-              <span style={{ flex: 1, textAlign: "left" }}><b className="small">{a.name}</b>{a.needsLogin && <span className="tiny" style={{ display: "block", color: "var(--warn)" }}>Sign in again</span>}</span>
+              <span style={{ flex: 1, textAlign: "left" }}><b className="small">{a.name}</b>{a.needsLogin && <span className="tiny" style={{ display: "block", color: "var(--warn)" }}>{tr("Sign in again")}</span>}</span>
               {a.active && <Icon name="check" size={14} />}
             </button>
           ))}
-          <button className="list-item" disabled={busy} onClick={addMs}><span className="nav-tile">{busy ? <span className="spinner" /> : <Icon name="plus" size={15} />}</span><span className="small">{busy ? "Waiting for Microsoft…" : "Add Microsoft account"}</span></button>
+          <button className="list-item" disabled={busy} onClick={addMs}><span className="nav-tile">{busy ? <span className="spinner" /> : <Icon name="plus" size={15} />}</span><span className="small">{busy ? tr("Waiting for Microsoft…") : tr("Add Microsoft account")}</span></button>
           <hr className="divider" />
-          <div className="label" style={{ padding: "4px 8px" }}>VEX online</div>
+          <div className="label" style={{ padding: "4px 8px" }}>{tr("VEX online")}</div>
           <button className="list-item" title={!modrinth && account?.loginError ? account.loginError : undefined}
             onClick={() => { if (!modrinth && account?.configured) window.vex?.online.loginCheck().catch(() => {}); go("friends"); setOpen(false); }}>
             <span className="nav-tile"><Icon name="friends" size={15} /></span>
             <span style={{ flex: 1, textAlign: "left", minWidth: 0 }}>
-              <span className="small" style={{ display: "block" }}>{modrinth ? `Connected as ${modrinth.username}` : account?.configured ? "Not connected" : "Not set up"}</span>
-              {!modrinth && account?.configured && <span className="tiny faint" style={{ display: "block" }}>Click to connect</span>}
+              <span className="small" style={{ display: "block" }}>{modrinth ? tr("Connected as {0}", modrinth.username) : account?.configured ? tr("Not connected") : tr("Not set up")}</span>
+              {!modrinth && account?.configured && <span className="tiny faint" style={{ display: "block" }}>{tr("Click to connect")}</span>}
             </span>
             <span className={`presence-dot ${modrinth ? "online" : ""}`} style={{ position: "static", border: 0 }} />
           </button>
           <hr className="divider" />
-          <button className="list-item" onClick={() => { go("settings"); setOpen(false); }}><span className="nav-tile"><Icon name="settings" size={15} /></span><span className="small">Manage accounts</span></button>
+          <button className="list-item" onClick={() => { go("settings"); setOpen(false); }}><span className="nav-tile"><Icon name="settings" size={15} /></span><span className="small">{tr("Manage accounts")}</span></button>
         </div>, document.body
       )}
-      <button className="account-box" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} title={collapsed ? (active?.name ?? "Add account") : undefined} aria-label={active ? `Account: ${active.name}` : "Add account"}>
+      <button className="account-box" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} title={collapsed ? (active?.name ?? tr("Add account")) : undefined} aria-label={active ? tr("Account: {0}", active.name) : tr("Add account")}>
         {active ? <span style={{ position: "relative" }}><McHead uuid={active.uuid} name={active.name} /><span className={`presence-dot ${active.needsLogin ? "" : "online"}`} /></span> : <span className="nav-tile"><Icon name="plus" size={17} /></span>}
         {!collapsed && <span style={{ minWidth: 0, textAlign: "left", flex: 1 }}>
-          <b className="small" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{active ? active.name : "No account"}</b>
-          <span className="tiny faint">{active ? (active.needsLogin ? "Sign in again" : modrinth ? "Online" : "Microsoft") : "Sign in"}</span></span>}
+          <b className="small" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{active ? active.name : tr("No account")}</b>
+          <span className="tiny faint">{active ? (active.needsLogin ? tr("Sign in again") : modrinth ? tr("Online") : tr("Microsoft")) : tr("Sign in")}</span></span>}
         {!collapsed && <Icon name="chevron" size={14} />}
       </button>
     </div>

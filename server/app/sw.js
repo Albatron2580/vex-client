@@ -1,6 +1,6 @@
 // VEX phone app: keeps the app itself available offline; live data always comes from the network.
-const CACHE = "vex-app-v1";
-const SHELL = ["/app", "/app/manifest.webmanifest", "/app/icon-192.png", "/app/icon-512.png"];
+const CACHE = "vex-app-v2";
+const SHELL = ["/app", "/app/i18n.js", "/app/manifest.webmanifest", "/app/icon-192.png", "/app/icon-512.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", (e) => {

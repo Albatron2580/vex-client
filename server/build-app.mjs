@@ -3,6 +3,7 @@ import fs from "node:fs";
 const read = (f) => fs.readFileSync(new URL(`./app/${f}`, import.meta.url));
 const files = {
   "/app": { type: "text/html; charset=utf-8", body: read("index.html").toString("utf8") },
+  "/app/i18n.js": { type: "text/javascript; charset=utf-8", body: read("i18n.js").toString("utf8") },
   "/app/sw.js": { type: "text/javascript; charset=utf-8", body: read("sw.js").toString("utf8") },
   "/app/manifest.webmanifest": { type: "application/manifest+json", body: read("manifest.webmanifest").toString("utf8") },
   "/app/icon-192.png": { type: "image/png", b64: read("icon-192.png").toString("base64") },

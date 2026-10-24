@@ -112,9 +112,14 @@ label.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; 
 </head>
 <body>
 <div id="root"></div>
+<script src="/app/i18n.js"></script>
 <script>
 "use strict";
 const API = location.origin;
+// Language: the phone's own language when VEX has it (i18n.js), otherwise English. T("Hey {0}", name)
+const LANG = (() => { const all = window.VEX_LANG || {}; for (const l of navigator.languages || [navigator.language || "en"]) { const c = String(l).toLowerCase(); const b = c === "zh-tw" || c === "zh-hk" ? "" : c.split("-")[0]; if (all[b]) return { id: b, d: all[b] }; } return { id: "en", d: {} }; })();
+document.documentElement.lang = LANG.id;
+const T = (s, ...a) => (LANG.d[s] || s).replace(/\{(\d)\}/g, (m, i) => (i < a.length ? a[i] : m));
 const LOGO = '<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 10h14l10 30 10-30h14L38 56H26z" fill="#8f8f96"/><path d="M22 10l10 30 10-30" fill="none" stroke="var(--accent)" stroke-width="3" opacity=".9"/></svg>';
 const I = {
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>',
@@ -126,7 +131,7 @@ const I = {
 const S = { token: null, me: null, tab: "home", home: null, friends: null, shares: null, search: [], q: "", fseg: "friends", admin: null, aseg: "overview" };
 try { S.token = localStorage.getItem("vex.token"); } catch {}
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
-const ago = (t) => { if (!t) return ""; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? "just now" : m < 60 ? m + " min ago" : m < 1440 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " d ago"; };
+const ago = (t) => { if (!t) return ""; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? T("just now") : m < 60 ? T("{0} min ago", m) : m < 1440 ? T("{0} h ago", Math.round(m / 60)) : T("{0} d ago", Math.round(m / 1440)); };
 const face = (u, size = 40) => {
   const url = u && /^https:\/\/textures\.minecraft\.net\/texture\/[0-9a-f]+$/.test(u.avatar || "") ? u.avatar : null;
   return url ? `<span class="face" style="width:${size}px;height:${size}px"><i class="skin" style="background-image:url('${url}')"></i><i class="hat" style="background-image:url('${url}')"></i></span>`
@@ -141,8 +146,8 @@ function toast(msg, bad) {
 async function api(method, path, body) {
   const r = await fetch(API + path, { method, headers: { "content-type": "application/json", ...(S.token ? { authorization: "Bearer " + S.token } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
   const data = await r.json().catch(() => ({}));
-  if (r.status === 401 && path.startsWith("/v1/")) { signOut(true); throw new Error("Signed out. Connect your phone again."); }
-  if (!r.ok) throw new Error(data.error || "VEX online answered " + r.status);
+  if (r.status === 401 && path.startsWith("/v1/")) { signOut(true); throw new Error(T("Signed out. Connect your phone again.")); }
+  if (!r.ok) throw new Error(data.error || T("VEX online answered {0}", r.status));
   return data;
 }
 function signOut(silent) {
@@ -154,25 +159,25 @@ function signOut(silent) {
 // ---------- pairing ----------
 async function pair(code) {
   code = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (code.length !== 8) return toast("The code has 8 letters and numbers.", true);
-  const btn = document.getElementById("pairBtn"); if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Connecting'; }
+  if (code.length !== 8) return toast(T("The code has 8 letters and numbers."), true);
+  const btn = document.getElementById("pairBtn"); if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>' + T("Connecting"); }
   try {
     const r = await api("POST", "/auth/pair", { code });
     S.token = r.token; try { localStorage.setItem("vex.token", r.token); } catch {}
     history.replaceState(null, "", location.pathname);
     await boot();
-    toast("Connected as " + (S.me?.username || "you"));
-  } catch (e) { toast(e.message, true); if (btn) { btn.disabled = false; btn.textContent = "Connect"; } }
+    toast(T("Connected as {0}", S.me?.username || T("you")));
+  } catch (e) { toast(e.message, true); if (btn) { btn.disabled = false; btn.textContent = T("Connect"); } }
 }
 function renderPair() {
   return `<div class="pair"><div class="pair-card">
     ${LOGO.replace('class="logo"', 'class="logo"')}
-    <h1 style="font-size:28px">VEX on your phone</h1>
-    <p class="muted">Friends, news, Collab and admin, wherever you are.</p>
+    <h1 style="font-size:28px">${T("VEX on your phone")}</h1>
+    <p class="muted">${T("Friends, news, Collab and admin, wherever you are.")}</p>
     <input id="code" class="input code-input" maxlength="9" autocomplete="one-time-code" placeholder="ABCD1234" value="${esc(new URLSearchParams(location.hash.slice(1)).get("code") || "")}">
-    <button id="pairBtn" class="btn primary" style="width:100%;height:48px" onclick="pair(document.getElementById('code').value)">Connect</button>
-    <div class="steps"><span>1. Open <b>VEX CLIENT</b> on your PC.</span><span>2. Go to <b>Settings → Phone app</b> and click <b>Connect a phone</b>.</span><span>3. Scan the QR code, or type the code here.</span></div>
-    <p class="tiny faint">Tip: in your browser menu, choose <b>Add to Home Screen</b> to keep VEX like an app.</p>
+    <button id="pairBtn" class="btn primary" style="width:100%;height:48px" onclick="pair(document.getElementById('code').value)">${T("Connect")}</button>
+    <div class="steps"><span>${T("1. Open <b>VEX CLIENT</b> on your PC.")}</span><span>${T("2. Go to <b>Settings → Phone app</b> and click <b>Connect a phone</b>.")}</span><span>${T("3. Scan the QR code, or type the code here.")}</span></div>
+    <p class="tiny faint">${T("Tip: in your browser menu, choose <b>Add to Home Screen</b> to keep VEX like an app.")}</p>
   </div></div>`;
 }
 
@@ -198,25 +203,25 @@ function homeTab() {
   const online = (f?.friends || []).filter((x) => x.online);
   const feat = h?.featured;
   return `
-  <section class="card hero"><span class="hello">Hey ${esc(S.me?.username)}</span><h2>${online.length ? online.length + (online.length === 1 ? " friend is" : " friends are") + " online" : "VEX online"}</h2>
-    <p class="muted small" style="margin-top:6px">${online.length ? online.slice(0, 3).map((x) => esc(x.username)).join(", ") + (online.length > 3 ? " and more" : "") : "Nobody's online right now."}</p></section>
-  ${feat ? `<section><h2 class="section-title">Featured server</h2><div class="card"><div class="row"><div style="flex:1;min-width:0"><b>${esc(feat.name)}</b><div class="tiny faint">${esc(feat.address)}${feat.version ? " · " + esc(feat.version) : ""}</div></div>
-    <button class="btn sm" onclick="navigator.clipboard?.writeText('${esc(feat.address)}').then(()=>toast('Address copied'))">Copy</button></div>${feat.description ? `<p class="small muted" style="margin-top:8px">${esc(feat.description)}</p>` : ""}</div></section>` : ""}
-  <section><h2 class="section-title">News</h2>${!h ? '<div class="empty"><span class="spinner" style="margin:auto"></span></div>' : h.announcements.length ? `<div class="list">${h.announcements.map((a) => `
-    <div class="card news ${esc(a.kind)}"><b>${esc(a.title)}</b><p class="small muted" style="margin-top:4px;white-space:pre-wrap">${esc(a.body)}</p><div class="tiny faint" style="margin-top:8px">${esc(a.author)} · ${ago(a.createdAt)}</div></div>`).join("")}</div>` : '<div class="empty">No news yet.</div>'}</section>`;
+  <section class="card hero"><span class="hello">${T("Hey {0}", esc(S.me?.username))}</span><h2>${online.length ? (online.length === 1 ? T("1 friend is online") : T("{0} friends are online", online.length)) : "VEX online"}</h2>
+    <p class="muted small" style="margin-top:6px">${online.length ? online.slice(0, 3).map((x) => esc(x.username)).join(", ") + (online.length > 3 ? " " + T("and more") : "") : T("Nobody's online right now.")}</p></section>
+  ${feat ? `<section><h2 class="section-title">${T("Featured server")}</h2><div class="card"><div class="row"><div style="flex:1;min-width:0"><b>${esc(feat.name)}</b><div class="tiny faint">${esc(feat.address)}${feat.version ? " · " + esc(feat.version) : ""}</div></div>
+    <button class="btn sm" onclick="navigator.clipboard?.writeText('${esc(feat.address)}').then(()=>toast(T('Address copied')))">${T("Copy")}</button></div>${feat.description ? `<p class="small muted" style="margin-top:8px">${esc(feat.description)}</p>` : ""}</div></section>` : ""}
+  <section><h2 class="section-title">${T("News")}</h2>${!h ? '<div class="empty"><span class="spinner" style="margin:auto"></span></div>' : h.announcements.length ? `<div class="list">${h.announcements.map((a) => `
+    <div class="card news ${esc(a.kind)}"><b>${esc(a.title)}</b><p class="small muted" style="margin-top:4px;white-space:pre-wrap">${esc(a.body)}</p><div class="tiny faint" style="margin-top:8px">${esc(a.author)} · ${ago(a.createdAt)}</div></div>`).join("")}</div>` : `<div class="empty">${T("No news yet.")}</div>`}</section>`;
 }
 
 function friendsTab() {
   const f = S.friends;
   const inc = f?.incoming || [];
-  const seg = `<div class="seg"><button aria-pressed="${S.fseg === "friends"}" onclick="S.fseg='friends';render()">Friends ${f ? "(" + f.friends.length + ")" : ""}</button><button aria-pressed="${S.fseg === "requests"}" onclick="S.fseg='requests';render()">Requests ${inc.length ? "(" + inc.length + ")" : ""}</button></div>`;
-  const search = `<section><input class="input" placeholder="Add friends: search Minecraft names" value="${esc(S.q)}" oninput="searchPlayers(this.value)">
-    ${S.search.length ? `<div class="list" style="margin-top:8px">${S.search.map((u) => `<div class="item">${face(u)}<div class="grow"><b>${esc(u.username)}</b></div>${u.relation === "friends" ? '<span class="chip ok">Friends</span>' : u.relation === "outgoing" ? '<span class="chip">Sent</span>' : `<button class="btn sm primary" onclick="addFriend('${esc(u.id)}')">${u.relation === "incoming" ? "Accept" : "Add"}</button>`}</div>`).join("")}</div>` : ""}</section>`;
+  const seg = `<div class="seg"><button aria-pressed="${S.fseg === "friends"}" onclick="S.fseg='friends';render()">${T("Friends")} ${f ? "(" + f.friends.length + ")" : ""}</button><button aria-pressed="${S.fseg === "requests"}" onclick="S.fseg='requests';render()">${T("Requests")} ${inc.length ? "(" + inc.length + ")" : ""}</button></div>`;
+  const search = `<section><input class="input" placeholder="${T("Add friends: search Minecraft names")}" value="${esc(S.q)}" oninput="searchPlayers(this.value)">
+    ${S.search.length ? `<div class="list" style="margin-top:8px">${S.search.map((u) => `<div class="item">${face(u)}<div class="grow"><b>${esc(u.username)}</b></div>${u.relation === "friends" ? `<span class="chip ok">${T("Friends")}</span>` : u.relation === "outgoing" ? `<span class="chip">${T("Sent")}</span>` : `<button class="btn sm primary" onclick="addFriend('${esc(u.id)}')">${u.relation === "incoming" ? T("Accept") : T("Add")}</button>`}</div>`).join("")}</div>` : ""}</section>`;
   let body;
   if (!f) body = '<div class="empty"><span class="spinner" style="margin:auto"></span></div>';
-  else if (S.fseg === "friends") body = f.friends.length ? `<div class="list">${f.friends.map((u) => `<div class="item">${face(u)}<div class="grow"><b>${esc(u.username)}</b><span class="tiny faint">${u.online ? esc(u.detail || (u.status === "playing" ? "Playing" : "Online")) : u.lastSeen ? "Seen " + ago(u.lastSeen) : "Offline"}</span></div><span class="dot ${u.online ? (u.status === "playing" ? "play" : "on") : ""}"></span><button class="btn sm ghost" aria-label="Remove" onclick="removeFriend('${esc(u.id)}','${esc(u.username)}')">✕</button></div>`).join("")}</div>` : '<div class="empty">No friends yet. Search above to add some.</div>';
-  else body = (inc.length || f.outgoing.length) ? `<div class="list">${inc.map((u) => `<div class="item">${face(u)}<div class="grow"><b>${esc(u.username)}</b><span class="tiny faint">Wants to be friends</span></div><button class="btn sm primary" onclick="addFriend('${esc(u.id)}')">Accept</button><button class="btn sm ghost" onclick="removeFriend('${esc(u.id)}')">Decline</button></div>`).join("")}
-    ${f.outgoing.map((u) => `<div class="item">${face(u)}<div class="grow"><b>${esc(u.username)}</b><span class="tiny faint">Request sent</span></div><button class="btn sm ghost" onclick="removeFriend('${esc(u.id)}')">Cancel</button></div>`).join("")}</div>` : '<div class="empty">No requests.</div>';
+  else if (S.fseg === "friends") body = f.friends.length ? `<div class="list">${f.friends.map((u) => `<div class="item">${face(u)}<div class="grow"><b>${esc(u.username)}</b><span class="tiny faint">${u.online ? esc(u.detail || (u.status === "playing" ? T("Playing") : T("Online"))) : u.lastSeen ? T("Seen {0}", ago(u.lastSeen)) : T("Offline")}</span></div><span class="dot ${u.online ? (u.status === "playing" ? "play" : "on") : ""}"></span><button class="btn sm ghost" aria-label="${T("Remove")}" onclick="removeFriend('${esc(u.id)}','${esc(u.username)}')">✕</button></div>`).join("")}</div>` : `<div class="empty">${T("No friends yet. Search above to add some.")}</div>`;
+  else body = (inc.length || f.outgoing.length) ? `<div class="list">${inc.map((u) => `<div class="item">${face(u)}<div class="grow"><b>${esc(u.username)}</b><span class="tiny faint">${T("Wants to be friends")}</span></div><button class="btn sm primary" onclick="addFriend('${esc(u.id)}')">${T("Accept")}</button><button class="btn sm ghost" onclick="removeFriend('${esc(u.id)}')">${T("Decline")}</button></div>`).join("")}
+    ${f.outgoing.map((u) => `<div class="item">${face(u)}<div class="grow"><b>${esc(u.username)}</b><span class="tiny faint">${T("Request sent")}</span></div><button class="btn sm ghost" onclick="removeFriend('${esc(u.id)}')">${T("Cancel")}</button></div>`).join("")}</div>` : `<div class="empty">${T("No requests.")}</div>`;
   return search + seg + body;
 }
 let searchT;
@@ -225,69 +230,69 @@ function searchPlayers(q) {
   if (q.trim().length < 2) { S.search = []; return render(true); }
   searchT = setTimeout(async () => { try { S.search = await api("GET", "/v1/users/search?q=" + encodeURIComponent(q.trim())); } catch (e) { toast(e.message, true); } render(true); }, 300);
 }
-async function addFriend(id) { try { const r = await api("POST", "/v1/friends/" + id); toast(r.relation === "friends" ? "You're friends now" : "Request sent"); S.search = S.search.map((u) => u.id === id ? { ...u, relation: r.relation } : u); await load("friends", true); } catch (e) { toast(e.message, true); } }
-async function removeFriend(id, name) { if (name && !confirm("Remove " + name + " from your friends?")) return; try { await api("DELETE", "/v1/friends/" + id); await load("friends", true); } catch (e) { toast(e.message, true); } }
+async function addFriend(id) { try { const r = await api("POST", "/v1/friends/" + id); toast(r.relation === "friends" ? T("You're friends now") : T("Request sent")); S.search = S.search.map((u) => u.id === id ? { ...u, relation: r.relation } : u); await load("friends", true); } catch (e) { toast(e.message, true); } }
+async function removeFriend(id, name) { if (name && !confirm(T("Remove {0} from your friends?", name))) return; try { await api("DELETE", "/v1/friends/" + id); await load("friends", true); } catch (e) { toast(e.message, true); } }
 
 function collabTab() {
   const s = S.shares;
   if (!s) return '<div class="empty"><span class="spinner" style="margin:auto"></span></div>';
   const card = (x, incoming) => `<div class="item"><span class="face" style="background:#101014">${esc(x.instance.loader[0].toUpperCase())}</span><div class="grow"><b>${esc(x.instance.name)}</b>
-    <span class="tiny faint">Minecraft ${esc(x.instance.version)}${x.instance.loader !== "vanilla" ? ", " + esc(x.instance.loader) : ""} · ${x.instance.mods.length} mods · ${incoming ? "from " + esc(x.from.username) : "to " + esc(x.to.username)} · ${ago(x.createdAt)}</span></div>
-    ${incoming ? `<button class="btn sm ghost" onclick="dismissShare(${Number(x.id)})">Dismiss</button>` : ""}</div>`;
-  return `<section><h2 class="section-title">Sent to you</h2>${s.incoming.length ? `<div class="list">${s.incoming.map((x) => card(x, true)).join("")}</div><p class="tiny faint" style="margin-top:8px">Open VEX on your PC to add these instances (Collab page).</p>` : '<div class="empty">Nothing yet. Friends can send you their instance from VEX on PC.</div>'}</section>
-    <section><h2 class="section-title">You sent</h2>${s.sent.length ? `<div class="list">${s.sent.map((x) => card(x, false)).join("")}</div>` : '<div class="empty">You haven\'t shared an instance yet.</div>'}</section>`;
+    <span class="tiny faint">Minecraft ${esc(x.instance.version)}${x.instance.loader !== "vanilla" ? ", " + esc(x.instance.loader) : ""} · ${T("{0} mods", x.instance.mods.length)} · ${incoming ? T("from {0}", esc(x.from.username)) : T("to {0}", esc(x.to.username))} · ${ago(x.createdAt)}</span></div>
+    ${incoming ? `<button class="btn sm ghost" onclick="dismissShare(${Number(x.id)})">${T("Dismiss")}</button>` : ""}</div>`;
+  return `<section><h2 class="section-title">${T("Sent to you")}</h2>${s.incoming.length ? `<div class="list">${s.incoming.map((x) => card(x, true)).join("")}</div><p class="tiny faint" style="margin-top:8px">${T("Open VEX on your PC to add these instances (Collab page).")}</p>` : `<div class="empty">${T("Nothing yet. Friends can send you their instance from VEX on PC.")}</div>`}</section>
+    <section><h2 class="section-title">${T("You sent")}</h2>${s.sent.length ? `<div class="list">${s.sent.map((x) => card(x, false)).join("")}</div>` : `<div class="empty">${T("You haven't shared an instance yet.")}</div>`}</section>`;
 }
 async function dismissShare(id) { try { await api("DELETE", "/v1/shares/" + id); await load("collab", true); } catch (e) { toast(e.message, true); } }
 
 function adminTab() {
   const a = S.admin || {};
-  const seg = `<div class="seg">${[["overview", "Overview"], ["news", "News"], ["bugs", "Bugs"], ["players", "Players"]].map(([k, l]) => `<button aria-pressed="${S.aseg === k}" onclick="S.aseg='${k}';render();load('admin')">${l}</button>`).join("")}</div>`;
+  const seg = `<div class="seg">${[["overview", T("Overview")], ["news", T("News")], ["bugs", T("Bugs")], ["players", T("Players")]].map(([k, l]) => `<button aria-pressed="${S.aseg === k}" onclick="S.aseg='${k}';render();load('admin')">${l}</button>`).join("")}</div>`;
   let body = '<div class="empty"><span class="spinner" style="margin:auto"></span></div>';
   if (S.aseg === "overview" && a.overview) {
     const o = a.overview;
-    body = `<div class="stat"><div><b>${o.users ?? 0}</b><span class="tiny faint">Players</span></div><div><b>${o.online ?? 0}</b><span class="tiny faint">Online</span></div><div><b>${o.openBugs ?? 0}</b><span class="tiny faint">Open bugs</span></div></div>
-      <div class="card small muted">Online service ${esc(o.serverVersion)} · admins: ${esc((o.admins || []).join(", "))}</div>`;
+    body = `<div class="stat"><div><b>${o.users ?? 0}</b><span class="tiny faint">${T("Players")}</span></div><div><b>${o.online ?? 0}</b><span class="tiny faint">${T("Online")}</span></div><div><b>${o.openBugs ?? 0}</b><span class="tiny faint">${T("Open bugs")}</span></div></div>
+      <div class="card small muted">${T("Online service {0} · admins: {1}", esc(o.serverVersion), esc((o.admins || []).join(", ")))}</div>`;
   } else if (S.aseg === "news") {
     const h = S.home;
-    body = `<div class="card stack"><b>Post an announcement</b>
-      <input id="nTitle" class="input" placeholder="Title"><textarea id="nBody" placeholder="What's new?"></textarea>
-      <select id="nKind"><option value="news">News</option><option value="update">Update</option><option value="warning">Warning</option></select>
-      <button class="btn primary" onclick="postNews()">Post to every VEX player</button></div>
-      ${h ? h.announcements.map((x) => `<div class="item"><div class="grow"><b>${esc(x.title)}</b><span class="tiny faint">${ago(x.createdAt)}</span></div><button class="btn sm danger" onclick="deleteNews(${Number(x.id)})">Delete</button></div>`).join("") : ""}
-      <div class="card stack"><b>Featured server</b><input id="fName" class="input" placeholder="Name" value="${esc(h?.featured?.name)}"><input id="fAddr" class="input" placeholder="play.example.net" value="${esc(h?.featured?.address)}">
-      <input id="fDesc" class="input" placeholder="Short description" value="${esc(h?.featured?.description)}"><div class="row"><button class="btn primary" style="flex:1" onclick="saveFeatured()">Save</button>${h?.featured ? '<button class="btn danger" onclick="clearFeatured()">Remove</button>' : ""}</div></div>`;
+    body = `<div class="card stack"><b>${T("Post an announcement")}</b>
+      <input id="nTitle" class="input" placeholder="${T("Title")}"><textarea id="nBody" placeholder="${T("What's new?")}"></textarea>
+      <select id="nKind"><option value="news">${T("News")}</option><option value="update">${T("Update")}</option><option value="warning">${T("Warning")}</option></select>
+      <button class="btn primary" onclick="postNews()">${T("Post to every VEX player")}</button></div>
+      ${h ? h.announcements.map((x) => `<div class="item"><div class="grow"><b>${esc(x.title)}</b><span class="tiny faint">${ago(x.createdAt)}</span></div><button class="btn sm danger" onclick="deleteNews(${Number(x.id)})">${T("Delete")}</button></div>`).join("") : ""}
+      <div class="card stack"><b>${T("Featured server")}</b><input id="fName" class="input" placeholder="${T("Name")}" value="${esc(h?.featured?.name)}"><input id="fAddr" class="input" placeholder="play.example.net" value="${esc(h?.featured?.address)}">
+      <input id="fDesc" class="input" placeholder="${T("Short description")}" value="${esc(h?.featured?.description)}"><div class="row"><button class="btn primary" style="flex:1" onclick="saveFeatured()">${T("Save")}</button>${h?.featured ? `<button class="btn danger" onclick="clearFeatured()">${T("Remove")}</button>` : ""}</div></div>`;
   } else if (S.aseg === "bugs" && a.bugs) {
     body = a.bugs.length ? `<div class="list">${a.bugs.map((b) => `<div class="card"><b>${esc(b.title)}</b><p class="small muted" style="margin-top:4px;white-space:pre-wrap">${esc(b.body)}</p>
-      <div class="row" style="margin-top:10px"><span class="tiny faint" style="flex:1">${esc(b.by)} · ${esc(b.version || "")} · ${ago(b.createdAt)}</span><button class="btn sm primary" onclick="setBug(${Number(b.id)},'fixed')">Fixed</button><button class="btn sm ghost" onclick="setBug(${Number(b.id)},'wontfix')">Won't fix</button></div></div>`).join("")}</div>` : '<div class="empty">No open bug reports.</div>';
+      <div class="row" style="margin-top:10px"><span class="tiny faint" style="flex:1">${esc(b.by)} · ${esc(b.version || "")} · ${ago(b.createdAt)}</span><button class="btn sm primary" onclick="setBug(${Number(b.id)},'fixed')">${T("Fixed")}</button><button class="btn sm ghost" onclick="setBug(${Number(b.id)},'wontfix')">${T("Won't fix")}</button></div></div>`).join("")}</div>` : `<div class="empty">${T("No open bug reports.")}</div>`;
   } else if (S.aseg === "players" && a.users) {
-    body = `<div class="list">${a.users.map((u) => `<div class="item">${face(u)}<div class="grow"><b>${esc(u.username)}${u.admin ? ' <span class="chip ok">admin</span>' : ""}</b><span class="tiny faint">${u.online ? "Online" : u.lastSeen ? "Seen " + ago(u.lastSeen) : "Never online"}</span></div>
-      ${u.admin ? "" : `<button class="btn sm ${u.banned ? "" : "danger"}" onclick="setBan('${esc(u.id)}',${!u.banned})">${u.banned ? "Unban" : "Ban"}</button>`}</div>`).join("")}</div>`;
+    body = `<div class="list">${a.users.map((u) => `<div class="item">${face(u)}<div class="grow"><b>${esc(u.username)}${u.admin ? ' <span class="chip ok">admin</span>' : ""}</b><span class="tiny faint">${u.online ? T("Online") : u.lastSeen ? T("Seen {0}", ago(u.lastSeen)) : T("Never online")}</span></div>
+      ${u.admin ? "" : `<button class="btn sm ${u.banned ? "" : "danger"}" onclick="setBan('${esc(u.id)}',${!u.banned})">${u.banned ? T("Unban") : T("Ban")}</button>`}</div>`).join("")}</div>`;
   }
   return seg + body;
 }
 async function postNews() {
   const title = document.getElementById("nTitle").value, body = document.getElementById("nBody").value, kind = document.getElementById("nKind").value;
-  try { S.home = await api("POST", "/v1/admin/announcements", { title, body, kind }); toast("Posted"); render(); } catch (e) { toast(e.message, true); }
+  try { S.home = await api("POST", "/v1/admin/announcements", { title, body, kind }); toast(T("Posted")); render(); } catch (e) { toast(e.message, true); }
 }
-async function deleteNews(id) { if (!confirm("Delete this announcement?")) return; try { S.home = await api("DELETE", "/v1/admin/announcements/" + id); render(); } catch (e) { toast(e.message, true); } }
+async function deleteNews(id) { if (!confirm(T("Delete this announcement?"))) return; try { S.home = await api("DELETE", "/v1/admin/announcements/" + id); render(); } catch (e) { toast(e.message, true); } }
 async function saveFeatured() {
-  try { S.home = await api("PUT", "/v1/admin/featured", { name: document.getElementById("fName").value, address: document.getElementById("fAddr").value, description: document.getElementById("fDesc").value }); toast("Featured server saved"); render(); } catch (e) { toast(e.message, true); }
+  try { S.home = await api("PUT", "/v1/admin/featured", { name: document.getElementById("fName").value, address: document.getElementById("fAddr").value, description: document.getElementById("fDesc").value }); toast(T("Featured server saved")); render(); } catch (e) { toast(e.message, true); }
 }
 async function clearFeatured() { try { S.home = await api("DELETE", "/v1/admin/featured"); render(); } catch (e) { toast(e.message, true); } }
-async function setBug(id, status) { try { await api("POST", "/v1/admin/bugs/" + id, { status }); S.admin.bugs = S.admin.bugs.filter((b) => b.id !== id); toast(status === "fixed" ? "Marked fixed" : "Marked won't fix"); render(); } catch (e) { toast(e.message, true); } }
-async function setBan(id, banned) { try { await api("POST", "/v1/admin/users/" + id + "/ban", { banned }); S.admin.users = S.admin.users.map((u) => u.id === id ? { ...u, banned } : u); toast(banned ? "Banned" : "Unbanned"); render(); } catch (e) { toast(e.message, true); } }
+async function setBug(id, status) { try { await api("POST", "/v1/admin/bugs/" + id, { status }); S.admin.bugs = S.admin.bugs.filter((b) => b.id !== id); toast(status === "fixed" ? T("Marked fixed") : T("Marked won't fix")); render(); } catch (e) { toast(e.message, true); } }
+async function setBan(id, banned) { try { await api("POST", "/v1/admin/users/" + id + "/ban", { banned }); S.admin.users = S.admin.users.map((u) => u.id === id ? { ...u, banned } : u); toast(banned ? T("Banned") : T("Unbanned")); render(); } catch (e) { toast(e.message, true); } }
 
 function profileSheet() {
   const back = document.createElement("div"); back.className = "sheet-back";
-  back.innerHTML = `<div class="sheet"><div class="grab"></div><div class="row">${face(S.me, 52)}<div style="flex:1"><h3>${esc(S.me?.username)}</h3><span class="tiny faint">${S.me?.admin ? "VEX admin" : "VEX player"}</span></div></div>
-    <p class="small muted" style="margin:14px 0">This phone is connected to VEX online. Disconnecting signs this phone out only.</p>
-    <button class="btn danger" style="width:100%" onclick="this.closest('.sheet-back').remove();signOut()">Disconnect this phone</button>
-    ${window.VexAndroid ? '<button class="btn ghost" style="width:100%;margin-top:8px" onclick="VexAndroid.changeServer()">Change VEX online server</button>' : ""}</div>`;
+  back.innerHTML = `<div class="sheet"><div class="grab"></div><div class="row">${face(S.me, 52)}<div style="flex:1"><h3>${esc(S.me?.username)}</h3><span class="tiny faint">${S.me?.admin ? T("VEX admin") : T("VEX player")}</span></div></div>
+    <p class="small muted" style="margin:14px 0">${T("This phone is connected to VEX online. Disconnecting signs this phone out only.")}</p>
+    <button class="btn danger" style="width:100%" onclick="this.closest('.sheet-back').remove();signOut()">${T("Disconnect this phone")}</button>
+    ${window.VexAndroid ? `<button class="btn ghost" style="width:100%;margin-top:8px" onclick="VexAndroid.changeServer()">${T("Change VEX online server")}</button>` : ""}</div>`;
   back.addEventListener("click", (e) => { if (e.target === back) back.remove(); });
   document.body.appendChild(back);
 }
 
-const TITLES = { home: "Home", friends: "Friends", collab: "Collab", admin: "Admin" };
+const TITLES = { home: T("Home"), friends: T("Friends"), collab: "Collab", admin: T("Admin") };
 function render(keepFocus) {
   const root = document.getElementById("root");
   if (!S.token || !S.me) { root.innerHTML = S.token ? '<div class="pair"><span class="spinner"></span></div>' : renderPair(); return; }
@@ -297,7 +302,7 @@ function render(keepFocus) {
   const inc = S.friends?.incoming?.length || 0;
   const content = S.tab === "home" ? homeTab() : S.tab === "friends" ? friendsTab() : S.tab === "collab" ? collabTab() : adminTab();
   root.innerHTML = `<div class="app">
-    <header>${LOGO}<h1>${TITLES[S.tab]}</h1><button class="btn sm ghost" aria-label="Refresh" onclick="load(S.tab,true)">${I.refresh}</button><button style="border:0;background:none;padding:0" aria-label="Profile" onclick="profileSheet()">${face(S.me, 32)}</button></header>
+    <header>${LOGO}<h1>${TITLES[S.tab]}</h1><button class="btn sm ghost" aria-label="${T("Refresh")}" onclick="load(S.tab,true)">${I.refresh}</button><button style="border:0;background:none;padding:0" aria-label="${T("Profile")}" onclick="profileSheet()">${face(S.me, 32)}</button></header>
     <main ${keepFocus ? 'style="--x:0"' : ""}>${content}</main>
     <nav class="tabs">${tabs.map((t) => `<button aria-current="${S.tab === t ? "page" : "false"}" onclick="go('${t}')">${I[t]}${TITLES[t]}${t === "friends" && inc ? `<span class="badge">${inc}</span>` : ""}</button>`).join("")}</nav></div>`;
   if (keepFocus) {

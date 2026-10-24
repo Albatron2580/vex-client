@@ -77,7 +77,7 @@ public final class VexMenuScreen extends VexScreen {
     private long statusUntil;
 
     public VexMenuScreen(Screen back, Screen root, Page page, int section) {
-        super("VEX CLIENT · " + page.title, root);
+        super("VEX CLIENT · " + L.t(page.title), root);
         this.back = back;
         this.page = page;
         this.section = Math.max(0, Math.min(page.sections.length - 1, section));
@@ -108,7 +108,7 @@ public final class VexMenuScreen extends VexScreen {
     }
 
     private void finishBind() {
-        say(binding.name + " key: " + Modules.keyName(binding.key), Ui.GOOD);
+        say(L.t("{0} key: {1}", L.t(binding.name), Modules.keyName(binding.key)), Ui.GOOD);
         binding = null;
         Modules.save();
     }
@@ -132,8 +132,8 @@ public final class VexMenuScreen extends VexScreen {
         // header: logo, page name, back
         Ui.title(g, this.font, px0 + 12, py0 + 11, 1.3f);
         int tx = px0 + 18 + Ui.titleWidth(this.font, 1.3f);
-        g.drawString(this.font, "›  " + page.title, tx, py0 + 14, Ui.DIM, false);
-        String backLabel = "‹ Menu";
+        g.drawString(this.font, "›  " + L.t(page.title), tx, py0 + 14, Ui.DIM, false);
+        String backLabel = "‹ " + L.t("Menu");
         int bw = this.font.width(backLabel) + 18;
         boolean bh = over(px1 - 10 - bw, py0 + 8, px1 - 10, py0 + 25);
         Ui.chip(g, this.font, px1 - 10 - bw, py0 + 8, px1 - 10, py0 + 25, backLabel, 0, bh, true);
@@ -151,7 +151,7 @@ public final class VexMenuScreen extends VexScreen {
                 boolean sel = i == section, hv = over(px0 + 4, y, sx1 - 4, y + ih);
                 if (sel) { Ui.round(g, px0 + 4, y, sx1 - 4, y + ih, Ui.CARD_HOVER); g.fill(px0 + 4, y + 3, px0 + 6, y + ih - 3, Ui.ORANGE); }
                 else if (hv) Ui.round(g, px0 + 4, y, sx1 - 4, y + ih, Ui.CARD);
-                g.drawString(this.font, page.sections[i], px0 + 12, y + ih / 2 - 4, sel || hv ? Ui.TEXT : Ui.DIM, false);
+                g.drawString(this.font, this.font.plainSubstrByWidth(L.t(page.sections[i]), sx1 - px0 - 16), px0 + 12, y + ih / 2 - 4, sel || hv ? Ui.TEXT : Ui.DIM, false);
                 if (pressed && hv && !sel) { section = i; scroll = 0; binding = null; input.setValue(""); sound(); }
                 y += step;
             }
@@ -196,9 +196,9 @@ public final class VexMenuScreen extends VexScreen {
         // footer
         g.fill(sx1 + 1, py1 - 22, px1 - 1, py1 - 21, Ui.EDGE_SOFT);
         if (status != null && System.currentTimeMillis() < statusUntil) g.drawString(this.font, this.font.plainSubstrByWidth(status, px1 - sx1 - 90), sx1 + 10, py1 - 15, statusColor, false);
-        else g.drawString(this.font, "v" + VERSION + " · Esc = back · Right Shift = close", sx1 + 10, py1 - 15, Ui.alpha(Ui.DIM, 0.75f), false);
+        else g.drawString(this.font, "v" + VERSION + " · " + L.t("Esc = back · Right Shift = close"), sx1 + 10, py1 - 15, Ui.alpha(Ui.DIM, 0.75f), false);
         boolean hv = over(px1 - 62, py1 - 19, px1 - 8, py1 - 5);
-        Ui.chip(g, this.font, px1 - 62, py1 - 19, px1 - 8, py1 - 5, "Done", 1, hv, true);
+        Ui.chip(g, this.font, px1 - 62, py1 - 19, px1 - 8, py1 - 5, L.t("Done"), 1, hv, true);
         if (pressed && hv) { sound(); save(); closeAll(); }
     }
 
@@ -207,6 +207,7 @@ public final class VexMenuScreen extends VexScreen {
     private boolean visible(int y, int h) { return y + h > vy0 - 4 && y < vy1 + 4; }
 
     private void heading(String title, String sub) {
+        title = L.t(title); sub = L.t(sub);
         List<FormattedCharSequence> lines = sub == null ? List.of() : this.font.split(Component.literal(sub), vx1 - vx0 - 4);
         int y = rowY(), h = 16 + lines.size() * 10;
         if (visible(y, h)) {
@@ -218,6 +219,7 @@ public final class VexMenuScreen extends VexScreen {
     }
 
     private void text(String s, int color) {
+        s = L.t(s);
         List<FormattedCharSequence> lines = this.font.split(Component.literal(s), vx1 - vx0 - 4);
         int y = rowY();
         for (int i = 0; i < lines.size(); i++) if (visible(y + i * 10, 10)) g.drawString(this.font, lines.get(i), vx0 + 2, y + i * 10, color, false);
@@ -238,9 +240,10 @@ public final class VexMenuScreen extends VexScreen {
         List<FormattedCharSequence> l = this.font.split(Component.literal(desc), Math.max(40, maxW));
         return l.size() > 2 ? l.subList(0, 2) : l;
     }
-    private int cardH(String desc, int rightSpace) { return desc == null ? 22 : 20 + descLines(desc, vx1 - vx0 - 16 - rightSpace).size() * 10; }
+    private int cardH(String desc, int rightSpace) { desc = L.t(desc); return desc == null ? 22 : 20 + descLines(desc, vx1 - vx0 - 16 - rightSpace).size() * 10; }
 
     private void titleAndDesc(int y, int h, String title, String desc, int rightSpace) {
+        title = L.t(title); desc = L.t(desc);
         int maxW = vx1 - vx0 - 16 - rightSpace;
         if (desc == null) g.drawString(this.font, this.font.plainSubstrByWidth(title, maxW), vx0 + 8, y + h / 2 - 4, Ui.TEXT, false);
         else {
@@ -265,6 +268,7 @@ public final class VexMenuScreen extends VexScreen {
 
     private void sliderRow(String id, String title, double min, double max, double step, DoubleSupplier get, DoubleConsumer set, DoubleFunction<String> fmt) {
         int h = 30, y = cardStart(h, false);
+        title = L.t(title);
         if (visible(y, h)) {
             double v = get.getAsDouble();
             String val = fmt.apply(v);
@@ -286,6 +290,7 @@ public final class VexMenuScreen extends VexScreen {
 
     /** Value chip on the right: left click = next, right click = previous. Returns -1, 0 or +1. */
     private int cycleRow(String title, String desc, String value) {
+        value = L.t(value);
         int cw = Math.max(60, this.font.width(value) + 24);
         int h = cardH(desc, cw + 4), y = cardStart(h, true), r = 0;
         if (visible(y, h)) {
@@ -301,6 +306,7 @@ public final class VexMenuScreen extends VexScreen {
 
     /** Title on the left, a row of options on the right (like 1x / 2x / 3x). Returns the option clicked or -1. */
     private int segmentRow(String title, String desc, String[] options, int selected) {
+        options = options.clone(); for (int i = 0; i < options.length; i++) options[i] = L.t(options[i]);
         int ow = 0;
         for (String o : options) ow = Math.max(ow, this.font.width(o) + 14);
         int total = ow * options.length + 2 * (options.length - 1) + 4;
@@ -339,6 +345,7 @@ public final class VexMenuScreen extends VexScreen {
 
     /** A row of chips; returns the index clicked or -1. style per chip: 0 normal, 1 accent, 2 danger. */
     private int buttons(String[] labels, int[] styles) {
+        labels = labels.clone(); for (int i = 0; i < labels.length; i++) labels[i] = L.t(labels[i]);
         int h = 18, y = rowY(), r = -1;
         if (visible(y, h)) {
             int gap = 4, w = (vx1 - vx0 - gap * (labels.length - 1)) / labels.length;
@@ -354,6 +361,7 @@ public final class VexMenuScreen extends VexScreen {
     }
 
     private boolean itemRow(String title, String desc, int titleColor, String action, int style, boolean enabled) {
+        title = L.t(title); desc = L.t(desc); action = L.t(action);
         int cw = Math.max(48, this.font.width(action) + 16), h = cardH(desc, cw + 4), y = cardStart(h, false);
         boolean clicked = false;
         if (visible(y, h)) {
@@ -371,6 +379,7 @@ public final class VexMenuScreen extends VexScreen {
 
     /** Text field + button; true when the button was clicked (read input.getValue()). */
     private boolean inputRow(String hint, String action) {
+        hint = L.t(hint); action = L.t(action);
         int h = 26, y = cardStart(h, false), bw = Math.max(64, this.font.width(action) + 18);
         boolean clicked = false;
         Ui.round(g, vx0 + 4, y + 4, vx1 - bw - 10, y + 22, Ui.SIDE);
@@ -385,7 +394,7 @@ public final class VexMenuScreen extends VexScreen {
     }
 
     private void moduleRow(Module m) {
-        String keyLabel = binding == m ? "Press a key…" : Modules.keyName(m.key);
+        String keyLabel = binding == m ? L.t("Press a key…") : Modules.keyName(m.key);
         int kw = Math.max(36, this.font.width(keyLabel) + 12);
         int h = cardH(m.description, kw + 40), y = cardStart(h, true);
         if (visible(y, h)) {
@@ -394,8 +403,8 @@ public final class VexMenuScreen extends VexScreen {
             boolean khv = hot(kx0, ky0, kx0 + kw, ky0 + 14);
             Ui.chip(g, this.font, kx0, ky0, kx0 + kw, ky0 + 14, keyLabel, binding == m ? 1 : 0, khv, true);
             Ui.toggle(g, vx1 - 30, y + h / 2 - 5, animate("m." + m.id, m.isEnabled()), hot(vx0, y, vx1, y + h) && !khv);
-            if (khv) tip("Click, then press a key. Esc = no key.");
-            if (click(kx0, ky0, kx0 + kw, ky0 + 14)) { binding = m; say("Press a key for " + m.name + " (Esc = no key)", Ui.WARN); sound(); }
+            if (khv) tip(L.t("Click, then press a key. Esc = no key."));
+            if (click(kx0, ky0, kx0 + kw, ky0 + 14)) { binding = m; say(L.t("Press a key for {0} (Esc = no key)", L.t(m.name)), Ui.WARN); sound(); }
             else if (click(vx0, y, vx1, y + h)) { m.toggle(); Modules.save(); sound(); }
         }
         cardEnd(h);
@@ -406,7 +415,7 @@ public final class VexMenuScreen extends VexScreen {
         int oldX = vx0;
         vx0 += indent;
         if (s instanceof Setting.Bool b) { if (toggleRow(id, b.name, null, b.get())) { b.cycle(true); save.run(); } }
-        else if (s instanceof Setting.Num n) sliderRow(id, n.name, n.min, n.max, n.step, n::get, v -> n.set(v), v -> (n.step >= 1 ? String.valueOf((long) Math.round(v)) : String.format("%.2f", v)) + n.unit);
+        else if (s instanceof Setting.Num n) sliderRow(id, n.name, n.min, n.max, n.step, n::get, v -> n.set(v), v -> (n.step >= 1 ? String.valueOf((long) Math.round(v)) : String.format("%.2f", v)) + L.t(n.unit));
         else if (s instanceof Setting.Color c) colorRow(c.name, c.get(), v -> { c.set(v); save.run(); });
         else if (s instanceof Setting.Choice c) { int r = cycleRow(c.name, null, c.get()); if (r != 0) { c.cycle(r > 0); save.run(); } }
         vx0 = oldX;
@@ -442,7 +451,7 @@ public final class VexMenuScreen extends VexScreen {
                 heading("HUD", "Drag elements around and keep up to three layouts (a dot = empty, starts as a copy).");
                 int b = buttons(new String[]{"Edit layout (drag)", "Reset positions"}, new int[]{1, 0});
                 if (b == 0) { mc.setScreen(new HudEditorScreen(this)); return; }
-                if (b == 1) { Hud.resetPositions(); say("Positions and colours reset", Ui.GOOD); }
+                if (b == 1) { Hud.resetPositions(); say(L.t("Positions and colours reset"), Ui.GOOD); }
                 layoutButtons();
                 heading("Elements", null);
                 for (HudElement e : Hud.ELEMENTS) if (!e.combat) hudRow(e);
@@ -452,13 +461,13 @@ public final class VexMenuScreen extends VexScreen {
                 if (mc.level == null) { text("Join a world or server to add waypoints.", Ui.DIM); return; }
                 if (inputRow("Waypoint name", "Add here")) {
                     Waypoints.Waypoint wp = Waypoints.add(mc, input.getValue());
-                    if (wp != null) { say("Added " + wp.name + " at " + wp.x + " " + wp.y + " " + wp.z, Ui.GOOD); input.setValue(""); }
+                    if (wp != null) { say(L.t("Added {0} at {1}", wp.name, wp.x + " " + wp.y + " " + wp.z), Ui.GOOD); input.setValue(""); }
                 }
                 List<Waypoints.Waypoint> list = new ArrayList<>(Waypoints.here(mc));
                 if (list.isEmpty()) text("No waypoints in this world yet.", Ui.DIM);
                 for (Waypoints.Waypoint wp : list) {
                     int dist = mc.player == null ? 0 : (int) Math.sqrt(Math.pow(wp.x - mc.player.getX(), 2) + Math.pow(wp.z - mc.player.getZ(), 2));
-                    if (itemRow(wp.name, wp.x + " " + wp.y + " " + wp.z + " · " + dist + " m away", Ui.TEXT, "Delete", 2, true)) Waypoints.remove(mc, wp);
+                    if (itemRow(wp.name, wp.x + " " + wp.y + " " + wp.z + " · " + L.t("{0} m away", dist), Ui.TEXT, "Delete", 2, true)) Waypoints.remove(mc, wp);
                 }
             }
             case "Friends" -> {
@@ -466,7 +475,7 @@ public final class VexMenuScreen extends VexScreen {
                 if (inputRow("Player name", "Add friend")) {
                     String name = input.getValue().trim();
                     String err = Friends.add(name);
-                    if (err != null) say(err, Ui.BAD); else { say("Added " + name, Ui.GOOD); input.setValue(""); }
+                    if (err != null) say(err, Ui.BAD); else { say(L.t("Added {0}", name), Ui.GOOD); input.setValue(""); }
                 }
                 List<String> list = new ArrayList<>(Friends.all());
                 if (list.isEmpty()) text("No friends yet.", Ui.DIM);
@@ -478,8 +487,8 @@ public final class VexMenuScreen extends VexScreen {
             case "Controls" -> {
                 heading("Controls", "Click a key, then press the new one. Esc clears it.");
                 for (Module m : Modules.all()) {
-                    String key = binding == m ? "Press a key…" : Modules.keyName(m.key);
-                    if (itemRow(m.name, m.category.label, Ui.TEXT, key, binding == m ? 1 : 0, true)) { binding = m; say("Press a key for " + m.name + " (Esc = no key)", Ui.WARN); }
+                    String key = binding == m ? L.t("Press a key…") : Modules.keyName(m.key);
+                    if (itemRow(m.name, m.category.label, Ui.TEXT, key, binding == m ? 1 : 0, true)) { binding = m; say(L.t("Press a key for {0} (Esc = no key)", L.t(m.name)), Ui.WARN); }
                 }
                 text("The VEX menu opens with Right Shift; change that in Options › Controls › Key Binds.", Ui.DIM);
             }
@@ -491,17 +500,17 @@ public final class VexMenuScreen extends VexScreen {
     private void layoutButtons() {
         String[] slots = new String[Hud.SLOTS];
         int[] st = new int[Hud.SLOTS];
-        for (int s = 1; s <= Hud.SLOTS; s++) { slots[s - 1] = "Layout " + s + (Hud.slotUsed(s) || Hud.activeSlot() == s ? "" : " ·"); st[s - 1] = Hud.activeSlot() == s ? 1 : 0; }
+        for (int s = 1; s <= Hud.SLOTS; s++) { slots[s - 1] = L.t("Layout {0}", s) + (Hud.slotUsed(s) || Hud.activeSlot() == s ? "" : " ·"); st[s - 1] = Hud.activeSlot() == s ? 1 : 0; }
         int pick = buttons(slots, st);
-        if (pick >= 0) { Hud.selectSlot(pick + 1); Hud.rememberForHere(mc); say("Layout " + (pick + 1) + " loaded", Ui.GOOD); }
+        if (pick >= 0) { Hud.selectSlot(pick + 1); Hud.rememberForHere(mc); say(L.t("Layout {0} loaded", pick + 1), Ui.GOOD); }
     }
 
     private void performanceContent() {
         var o = mc.options;
         heading("Performance", "Changes apply instantly and are saved to Minecraft's options.");
-        sliderRow("rd", "Render distance", 2, 32, 1, () -> o.renderDistance().get(), v -> o.renderDistance().set((int) v), v -> (int) v + " chunks");
-        sliderRow("sd", "Simulation distance", 5, 32, 1, () -> o.simulationDistance().get(), v -> o.simulationDistance().set((int) v), v -> (int) v + " chunks");
-        sliderRow("fps", "Max FPS", 10, 260, 10, () -> o.framerateLimit().get(), v -> o.framerateLimit().set((int) v), v -> v >= 260 ? "Unlimited" : (int) v + " FPS");
+        sliderRow("rd", "Render distance", 2, 32, 1, () -> o.renderDistance().get(), v -> o.renderDistance().set((int) v), v -> L.t("{0} chunks", (int) v));
+        sliderRow("sd", "Simulation distance", 5, 32, 1, () -> o.simulationDistance().get(), v -> o.simulationDistance().set((int) v), v -> L.t("{0} chunks", (int) v));
+        sliderRow("fps", "Max FPS", 10, 260, 10, () -> o.framerateLimit().get(), v -> o.framerateLimit().set((int) v), v -> v >= 260 ? L.t("Unlimited") : (int) v + " FPS");
         if (toggleRow("vsync", "VSync", "Stops tearing; caps FPS at your screen's refresh rate", o.enableVsync().get())) { o.enableVsync().set(!o.enableVsync().get()); o.save(); }
         if (toggleRow("shadows", "Entity shadows", "Turning this off gives a few FPS in crowded places", o.entityShadows().get())) { o.entityShadows().set(!o.entityShadows().get()); o.save(); }
         heading("Performance mods", "Add them to this instance in the VEX launcher (MODS).");
@@ -570,12 +579,12 @@ public final class VexMenuScreen extends VexScreen {
         }
         mods.sort((a, b) -> a.getMetadata().getName().compareToIgnoreCase(b.getMetadata().getName()));
         boolean hasModMenu = FabricLoader.getInstance().isModLoaded("modmenu");
-        heading("Mod Menu", mods.size() + " mods loaded. Add or remove mods in the VEX launcher (Instances › MODS).");
+        heading("Mod Menu", L.t("{0} mods loaded. Add or remove mods in the VEX launcher (Instances › MODS).", mods.size()));
         if (hasModMenu) {
             if (buttons(new String[]{"Open Mod Menu (mod settings)"}, new int[]{1}) == 0) {
                 Screen s = modMenuScreen(this);
                 if (s != null) { mc.setScreen(s); return; }
-                say("Couldn't open Mod Menu", Ui.BAD);
+                say(L.t("Couldn't open Mod Menu"), Ui.BAD);
             }
         } else text("Tip: add Mod Menu in the launcher to change other mods' settings from here.", Ui.DIM);
         for (ModContainer m : mods) {
@@ -615,7 +624,7 @@ public final class VexMenuScreen extends VexScreen {
         if (toggleRow("g.auto", GUI_SETTINGS[8][0], GUI_SETTINGS[8][1], c.autoSwitchProfiles)) {
             c.autoSwitchProfiles = !c.autoSwitchProfiles;
             VexConfig.save();
-            if (c.autoSwitchProfiles) { Hud.rememberForHere(mc); say(mc.level != null ? "This place now uses Layout " + Hud.activeSlot() : "Join a server and pick a layout: it's remembered there", Ui.GOOD); }
+            if (c.autoSwitchProfiles) { Hud.rememberForHere(mc); say(mc.level != null ? L.t("This place now uses Layout {0}", Hud.activeSlot()) : L.t("Join a server and pick a layout: it's remembered there"), Ui.GOOD); }
         }
         if (c.autoSwitchProfiles) layoutButtons();
     }
@@ -632,26 +641,26 @@ public final class VexMenuScreen extends VexScreen {
             heading("Shaders", "Iris isn't installed, so shaders can't run.");
             text("Add Iris and Sodium to this instance in the VEX launcher (MODS), then start the game again.", Ui.WARN);
         } else {
-            heading("Shaders", "Iris " + Shaders.irisVersion() + (Shaders.sodiumLoaded() ? " with Sodium" : " · Sodium missing (Iris needs it)"));
+            heading("Shaders", "Iris " + Shaders.irisVersion() + (Shaders.sodiumLoaded() ? " " + L.t("with Sodium") : " · " + L.t("Sodium missing (Iris needs it)")));
             Boolean on = Shaders.enabled();
             if (toggleRow("shaders", "Shaders", on == null ? "Iris didn't report its state" : "Turning them on costs FPS", on != null && on)) {
                 String err = Shaders.setEnabled(on == null || !on);
-                if (err != null) say(err, Ui.BAD); else say("Shaders " + (on == null || !on ? "on" : "off"), Ui.GOOD);
+                if (err != null) say(err, Ui.BAD); else say(on == null || !on ? L.t("Shaders on") : L.t("Shaders off"), Ui.GOOD);
             }
         }
         int b = buttons(iris ? new String[]{"Iris shader settings", "Open shaderpacks folder"} : new String[]{"Open shaderpacks folder"}, iris ? new int[]{1, 0} : new int[]{0});
         if (iris && b == 0) {
             Screen s = Shaders.irisScreen(this);
             if (s != null) { mc.setScreen(s); return; }
-            say("Couldn't open Iris's screen; use Options › Video › Shader Packs", Ui.BAD);
+            say(L.t("Couldn't open Iris's screen; use Options › Video › Shader Packs"), Ui.BAD);
         } else if (b >= 0) Shaders.openFolder();
-        heading("Packs", packsCache.isEmpty() ? "No shader packs yet: put .zip packs in the shaderpacks folder." : packsCache.size() + " in your shaderpacks folder");
+        heading("Packs", packsCache.isEmpty() ? "No shader packs yet: put .zip packs in the shaderpacks folder." : L.t("{0} in your shaderpacks folder", packsCache.size()));
         for (Shaders.Pack p : packsCache) {
             boolean current = p.name().equals(selectedCache);
-            String sub = p.warning() != null ? "⚠ " + p.warning() : (p.folder() ? "Folder" : "Zip") + " · works with Iris";
+            String sub = p.warning() != null ? "⚠ " + p.warning() : L.t(p.folder() ? "Folder" : "Zip") + " · " + L.t("works with Iris");
             if (itemRow((current ? "★ " : "") + p.name(), sub, current ? Ui.ORANGE : p.warning() != null ? Ui.WARN : Ui.TEXT, current ? "In use" : "Use", current ? 0 : 1, iris && !current)) {
                 String err = Shaders.select(p.name());
-                if (err != null) say(err, Ui.BAD); else say("Loading " + p.name() + "… (can take a few seconds)", Ui.GOOD);
+                if (err != null) say(err, Ui.BAD); else say(L.t("Loading {0}… (can take a few seconds)", p.name()), Ui.GOOD);
                 packsAt = 0;
             }
         }

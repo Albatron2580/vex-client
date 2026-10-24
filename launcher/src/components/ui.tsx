@@ -1,3 +1,4 @@
+import { tr } from "../lib/i18n";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
@@ -105,7 +106,7 @@ export function Modal({ title, onClose, children, wide }: { title: string; onClo
   return createPortal(
     <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && close.current()}>
       <div ref={ref} className={`card glow modal ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
-        <h2 className="card-title">{title}<button className="btn ghost sm icon x" onClick={() => close.current()} aria-label="Close"><Icon name="close" size={16} /></button></h2>
+        <h2 className="card-title">{title}<button className="btn ghost sm icon x" onClick={() => close.current()} aria-label={tr("Close")}><Icon name="close" size={16} /></button></h2>
         {children}
       </div>
     </div>,
@@ -118,9 +119,9 @@ export function ColorPicker({ value, onChange, palette = PALETTE, label }: { val
   return (
     <div className="swatches" role="group" aria-label={label}>
       {palette.map((c) => <button key={c} type="button" className="swatch" style={{ background: c }} aria-label={c} aria-pressed={c.toLowerCase() === value.toLowerCase()} onClick={() => onChange(c)} />)}
-      <Tooltip text="Custom colour">
+      <Tooltip text={tr("Custom colour")}>
         <span className="color-input" style={{ background: palette.includes(value) ? undefined : value }}>
-          <input type="color" aria-label={`${label}: custom`} value={value} onChange={(e) => onChange(e.target.value)} />
+          <input type="color" aria-label={tr("{0}: custom", label)} value={value} onChange={(e) => onChange(e.target.value)} />
         </span>
       </Tooltip>
     </div>

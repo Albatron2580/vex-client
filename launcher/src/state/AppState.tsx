@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS, type LauncherSettings, type Instance } from "../../el
 import type { AppInfo, AccountState, MsStatus, GameEvent } from "../vex";
 import { applyTheme, resolveTheme } from "../lib/theme";
 import { hasBridge, vex, errMsg } from "../lib/bridge";
-import { translator } from "../lib/i18n";
+import { tr, translator, resolveLanguage, syncLanguage } from "../lib/i18n";
 
 export type ToastKind = "success" | "error" | "info";
 export interface Toast { id: number; kind: ToastKind; title: string; body?: string }
@@ -23,7 +23,7 @@ interface Ctx {
 }
 export interface GameUi { state: "idle" | "starting" | "running"; profileId?: string; status?: string; task?: { label: string; pct: number | null } }
 const AppCtx = createContext<Ctx | null>(null);
-export const useApp = () => { const c = useContext(AppCtx); if (!c) throw new Error("useApp outside provider"); return c; };
+export const useApp = () => { const c = useContext(AppCtx); if (!c) throw new Error(tr("useApp outside provider")); return c; };
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const desktop = hasBridge();
@@ -62,11 +62,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       else if (ev.type === "status") setGame((g) => ({ ...g, status: ev.text }));
       else if (ev.type === "task") setGame((g) => ({ ...g, task: ev.done ? undefined : { label: ev.label, pct: ev.total ? Math.min(100, Math.floor(((ev.received ?? 0) / ev.total) * 100)) : null } }));
       else if (ev.type === "game") {
-        if (ev.state === "starting") setGame({ state: "starting", profileId: ev.profileId, status: "Starting…" });
-        else if (ev.state === "running") setGame({ state: "running", profileId: ev.profileId, status: "Minecraft is running" });
+        if (ev.state === "starting") setGame({ state: "starting", profileId: ev.profileId, status: tr("Starting…") });
+        else if (ev.state === "running") setGame({ state: "running", profileId: ev.profileId, status: tr("Minecraft is running") });
         else {
           setGame({ state: "idle" });
-          if (ev.state === "closed" && ev.crashed) toast("error", "Minecraft closed right after starting", "Open the game log (Settings → Game) to see why.");
+          if (ev.state === "closed" && ev.crashed) toast("error", tr("Minecraft closed right after starting"), tr("Open the game log (Settings → Game) to see why."));
         }
       }
     });
@@ -74,9 +74,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [refreshMs, refreshInstances, toast]);
 
   const play = useCallback(async (id: string, join?: { host: string; port: number }) => {
-    setGame({ state: "starting", profileId: id, status: "Getting ready…" });
+    setGame({ state: "starting", profileId: id, status: tr("Getting ready…") });
     try { await vex().game.launch(id, join); }
-    catch (e) { setGame({ state: "idle" }); toast("error", "Couldn't start Minecraft", errMsg(e)); refreshMs(); }
+    catch (e) { setGame({ state: "idle" }); toast("error", tr("Couldn't start Minecraft"), errMsg(e)); refreshMs(); }
   }, [toast, refreshMs]);
 
   useEffect(() => {
@@ -86,7 +86,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const [s, i, inf] = await Promise.all([vex().settings.get(), vex().instances.list(), vex().appInfo()]);
           setSettings(s); setInstances(i); setInfo(inf);
         }
-      } catch (e) { toast("error", "Couldn't load your settings", errMsg(e)); }
+      } catch (e) { toast("error", tr("Couldn't load your settings"), errMsg(e)); }
       finally { setReady(true); }
     })();
   }, [desktop, toast]);
@@ -100,15 +100,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     root.style.setProperty("--ui-scale", String(settings.uiScale));
     root.dataset.anim = settings.animations;
-    root.lang = settings.language;
+    root.lang = resolveLanguage(settings.language);
   }, [settings.themeId, settings.customThemes, settings.uiScale, settings.animations, settings.language]);
+
+  // Language changes reload the window so every text (also those in constants) is translated.
+  useEffect(() => { if (ready) syncLanguage(settings.language); }, [ready, settings.language]);
 
   const update = useCallback(async (patch: Partial<LauncherSettings>) => {
     const next = { ...settingsRef.current, ...patch };
     setSettings(next); // optimistic
     if (!desktop) return;
     try { setSettings(await vex().settings.set(next)); }
-    catch (e) { toast("error", "Couldn't save settings", errMsg(e)); }
+    catch (e) { toast("error", tr("Couldn't save settings"), errMsg(e)); }
   }, [desktop, toast]);
 
   const value = useMemo<Ctx>(() => ({

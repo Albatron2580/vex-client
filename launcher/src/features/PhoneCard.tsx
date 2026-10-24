@@ -1,3 +1,4 @@
+import { tr } from "../lib/i18n";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Card, Notice } from "../components/ui";
@@ -23,26 +24,26 @@ export function PhoneCard() {
     } catch (e) { setError(errMsg(e)); } finally { setBusy(false); }
   };
   return (
-    <Card title="Phone app" icon="friends" sub="Friends, news, Collab and admin on your phone. Works on iPhone and Android, nothing to install from a store.">
-      {!account?.signedIn ? <Notice>Connect to VEX online first (it happens by itself once you're signed in with Microsoft).</Notice>
+    <Card title={tr("Phone app")} icon="friends" sub={tr("Friends, news, Collab and admin on your phone. Works on iPhone and Android, nothing to install from a store.")}>
+      {!account?.signedIn ? <Notice>{tr("Connect to VEX online first (it happens by itself once you're signed in with Microsoft).")}</Notice>
         : pair && left > 0 ? (
           <div className="phone-pair">
-            <img src={pair.qr} alt="QR code that opens the VEX phone app" width={180} height={180} />
+            <img src={pair.qr} alt={tr("QR code that opens the VEX phone app")} width={180} height={180} />
             <div className="stack" style={{ gap: 8, minWidth: 0 }}>
-              <b>Scan this with your phone's camera</b>
-              <span className="small muted">Or open <span className="mono">{pair.appUrl}</span> on your phone and type:</span>
+              <b>{tr("Scan this with your phone's camera")}</b>
+              <span className="small muted">{tr("Or open")}{" "}<span className="mono">{pair.appUrl}</span> {tr("on your phone and type:")}</span>
               <span className="phone-code">{pair.code}</span>
-              <span className="tiny faint">Works once, for {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")} more. Then choose “Add to Home Screen” in your phone's browser to keep VEX as an app.</span>
-              <div className="row"><button className="btn sm" onClick={make} disabled={busy}><Icon name="refresh" size={14} />New code</button></div>
+              <span className="tiny faint">{tr("Works once, for {0} more. Then choose “Add to Home Screen” in your phone's browser to keep VEX as an app.", `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`)}</span>
+              <div className="row"><button className="btn sm" onClick={make} disabled={busy}><Icon name="refresh" size={14} />{tr("New code")}</button></div>
             </div>
           </div>
         ) : (
           <div className="row wrap">
-            <button className="btn primary" disabled={!desktop || busy} onClick={make}>{busy ? <span className="spinner" /> : <Icon name="plus" size={16} />}Connect a phone</button>
-            {pair && <span className="small faint">That code expired. Make a new one.</span>}
+            <button className="btn primary" disabled={!desktop || busy} onClick={make}>{busy ? <span className="spinner" /> : <Icon name="plus" size={16} />}{tr("Connect a phone")}</button>
+            {pair && <span className="small faint">{tr("That code expired. Make a new one.")}</span>}
           </div>
         )}
-      {error && <Notice kind="danger">{/404/.test(error) ? "Your online service is older than this VEX. Update it (VEX does this by itself on the PC that set it up)." : error}</Notice>}
+      {error && <Notice kind="danger">{/404/.test(error) ? tr("Your online service is older than this VEX. Update it (VEX does this by itself on the PC that set it up).") : error}</Notice>}
     </Card>
   );
 }

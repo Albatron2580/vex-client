@@ -50,23 +50,28 @@ public final class VexRadialScreen extends VexScreen {
         List<Hit> out = new ArrayList<>();
         if (s.isEmpty()) return out;
         for (Module m : Modules.all()) {
-            boolean hit = m.name.toLowerCase(Locale.ROOT).contains(s) || m.description.toLowerCase(Locale.ROOT).contains(s);
-            if (hit) out.add(new Hit(m.name, m.category.label, () -> { m.toggle(); Modules.save(); }, m.isEnabled()));
-            for (var st : m.settings) if (st.name.toLowerCase(Locale.ROOT).contains(s))
-                out.add(new Hit(m.name + " › " + st.name, m.category.label, () -> open(pageOf(m.category), m.category == Module.Category.COMBAT ? 1 : 0), null));
+            boolean hit = has(m.name, s) || has(m.description, s);
+            if (hit) out.add(new Hit(L.t(m.name), L.t(m.category.label), () -> { m.toggle(); Modules.save(); }, m.isEnabled()));
+            for (var st : m.settings) if (has(st.name, s))
+                out.add(new Hit(L.t(m.name) + " › " + L.t(st.name), L.t(m.category.label), () -> open(pageOf(m.category), m.category == Module.Category.COMBAT ? 1 : 0), null));
         }
-        for (HudElement e : Hud.ELEMENTS) if (e.name.toLowerCase(Locale.ROOT).contains(s))
-            out.add(new Hit(e.name, e.combat ? "Combat HUD" : "HUD", () -> { e.enabled = !e.enabled; Hud.save(); }, e.enabled));
-        for (String[] gs : VexMenuScreen.GUI_SETTINGS) if (gs[0].toLowerCase(Locale.ROOT).contains(s) || gs[1].toLowerCase(Locale.ROOT).contains(s))
-            out.add(new Hit(gs[0], "GUI Settings", () -> open(VexMenuScreen.Page.GUI, 0), null));
+        for (HudElement e : Hud.ELEMENTS) if (has(e.name, s))
+            out.add(new Hit(L.t(e.name), L.t(e.combat ? "Combat HUD" : "HUD"), () -> { e.enabled = !e.enabled; Hud.save(); }, e.enabled));
+        for (String[] gs : VexMenuScreen.GUI_SETTINGS) if (has(gs[0], s) || has(gs[1], s))
+            out.add(new Hit(L.t(gs[0]), L.t("GUI Settings"), () -> open(VexMenuScreen.Page.GUI, 0), null));
         for (VexMenuScreen.Page p : VexMenuScreen.Page.values()) {
-            if (p.title.toLowerCase(Locale.ROOT).contains(s)) out.add(new Hit(p.title, "Page", () -> open(p, 0), null));
-            for (int i = 0; i < p.sections.length; i++) if (p.sections.length > 1 && p.sections[i].toLowerCase(Locale.ROOT).contains(s)) {
+            if (has(p.title, s)) out.add(new Hit(L.t(p.title), L.t("Page"), () -> open(p, 0), null));
+            for (int i = 0; i < p.sections.length; i++) if (p.sections.length > 1 && has(p.sections[i], s)) {
                 int idx = i;
-                out.add(new Hit(p.sections[i], p.title, () -> open(p, idx), null));
+                out.add(new Hit(L.t(p.sections[i]), L.t(p.title), () -> open(p, idx), null));
             }
         }
         return out.size() > 8 ? out.subList(0, 8) : out;
+    }
+
+    /** Search matches the English text and the translated one. */
+    private static boolean has(String english, String q) {
+        return english.toLowerCase(Locale.ROOT).contains(q) || L.t(english).toLowerCase(Locale.ROOT).contains(q);
     }
 
     private static VexMenuScreen.Page pageOf(Module.Category c) {
@@ -105,8 +110,9 @@ public final class VexRadialScreen extends VexScreen {
             Ui.glassCircle(g, px, py, rr, t);
             Petal p = PETALS[i];
             Ui.icon(g, p.icon, px, py - 7, 0xFFFFFFFF);
-            g.drawString(this.font, p.name, Math.round(px) - this.font.width(p.name) / 2, Math.round(py + 9), 0xFFFFFFFF, true);
-            if (hv) tip(p.tip);
+            String pn = L.t(p.name);
+            g.drawString(this.font, pn, Math.round(px) - this.font.width(pn) / 2, Math.round(py + 9), 0xFFFFFFFF, true);
+            if (hv) tip(L.t(p.tip));
             if (hv && pressed) { open(p.page, 0); return; }
         }
 
@@ -133,11 +139,11 @@ public final class VexRadialScreen extends VexScreen {
         Ui.card(g, -tw / 2, 0, tw / 2, 12, Ui.alpha(Ui.ORANGE, 0.55f), Ui.alpha(0xFFFFFFFF, 0.85f));
         g.drawString(this.font, tag, -this.font.width(tag) / 2, 2, 0xFFFFFFFF, false);
         pose.popMatrix();
-        if (ch) tip("Every module and HUD element on one page");
+        if (ch) tip(L.t("Every module and HUD element on one page"));
         if (ch && pressed) { open(VexMenuScreen.Page.ALL, 0); return; }
 
         // bottom: a small hint; typing turns it into a search
-        String hint = "Click a section · click your face for every module · type to search · Esc to close";
+        String hint = L.t("Click a section · click your face for every module · type to search · Esc to close");
         if (!typing) {
             pose.pushMatrix();
             pose.translate(cx, H - 11);
@@ -155,7 +161,7 @@ public final class VexRadialScreen extends VexScreen {
         int rh = 16, n = Math.max(1, hits.size());
         int ry1 = pillY - 4, ry0 = ry1 - n * rh - 6;
         Ui.card(g, bx0, ry0, bx1, ry1, Ui.alpha(0xFF000000, 0.65f), Ui.alpha(0xFFFFFFFF, 0.5f));
-        if (hits.isEmpty()) g.drawString(this.font, "Nothing found for “" + input.getValue() + "”", bx0 + 10, ry0 + 7, Ui.alpha(0xFFFFFFFF, 0.6f), false);
+        if (hits.isEmpty()) g.drawString(this.font, L.t("Nothing found for “{0}”", input.getValue()), bx0 + 10, ry0 + 7, Ui.alpha(0xFFFFFFFF, 0.6f), false);
         for (int i = 0; i < hits.size(); i++) {
             Hit h = hits.get(i);
             int y0 = ry0 + 3 + i * rh;
