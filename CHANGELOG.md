@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2.10.0 — 2026-10-24
+- VEX for Android: the phone app as a real Android app (APK to install now, AAB for Google Play).
+- Admin → Android app: set up Play Store signing, build, download the store kit, follow the Google Play checklist and make review codes.
+- VEX online now has a privacy policy page for the store listing.
+
+## 2.10.0 — 2026-10-24
 - **VEX for Android.** The phone app is now a real Android app, built by GitHub: an APK you can install straight away and an AAB for Google Play.
 - **Admin → Android app:**
   - **Set up Play Store signing:** makes the Google Play upload key on your PC (backup in Documents → "VEX Play Store upload key"), gives GitHub an encrypted copy and builds the signed app.
