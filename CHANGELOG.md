@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.10.0 — 2026-10-24
+- **VEX for Android.** The phone app is now a real Android app, built by GitHub: an APK you can install straight away and an AAB for Google Play.
+- **Admin → Android app:**
+  - **Set up Play Store signing:** makes the Google Play upload key on your PC (backup in Documents → "VEX Play Store upload key"), gives GitHub an encrypted copy and builds the signed app.
+  - **Build again**, download the APK/AAB and the **store kit** (icon, feature graphic, 6 screenshots, texts, data safety and content-rating answers).
+  - A step-by-step Google Play checklist with copy buttons, and **review codes** for Google's testers (30 days, signed in as a demo player, never as you).
+- VEX online now has a **privacy policy page** (your address + /privacy) for the store listing.
+- The phone app can switch servers inside the Android app.
+
 ## 2.9.0 — 2026-10-24
 - VEX on your phone: friends, news, Collab and admin on iPhone and Android.
 - Settings → Phone app → Connect a phone, scan the QR code, then Add to Home Screen.

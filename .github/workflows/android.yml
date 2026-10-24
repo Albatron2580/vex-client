@@ -63,7 +63,7 @@ jobs:
           cp android/app/build/outputs/bundle/release/app-release.aab vex-android.aab
           (cd android/store && zip -qr ../../vex-play-store-kit.zip .)
           sha256sum vex-android.apk vex-android.aab > ANDROID-SHA256SUMS.txt
-          if [ "$SIGNED" = "true" ]; then NOTE="Signed with the VEX upload key: vex-android.aab is ready for Google Play."; else NOTE="Not signed for Google Play yet (VEX → Admin → Phone app → Set up Play Store signing). vex-android.apk can still be installed directly."; fi
+          if [ "$SIGNED" = "true" ]; then NOTE="Signed with the VEX upload key: vex-android.aab is ready for Google Play."; else NOTE="Not signed for Google Play yet (VEX → Admin → Android app → Set up Play Store signing). vex-android.apk can still be installed directly."; fi
           gh release view android >/dev/null 2>&1 || gh release create android --prerelease --latest=false --title "VEX for Android" --notes "VEX for Android"
           gh release upload android vex-android.apk vex-android.aab vex-play-store-kit.zip ANDROID-SHA256SUMS.txt --clobber
           gh release edit android --notes "Built from ${GITHUB_SHA::7} on $(date -u +%F). $NOTE"
