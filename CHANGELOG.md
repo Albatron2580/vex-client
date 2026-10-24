@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2.8.0 — 2026-10-24
+- Every instance now has its own pixel Minecraft block icon that shows its loader.
+- Bigger Home banner with quick buttons for mods, folder and logs, and when you last played.
+- Home always shows your instances; a soft light follows your mouse over cards.
+
+## 2.8.0 — 2026-10-24
 - **Pixel block icons for instances:** every instance gets its own little Minecraft block in a slot. The block shows the loader (grass for vanilla, your theme colour for Fabric, iron and copper for Forge, amethyst for Quilt) and its texture is unique to that instance. Shown on Home, Instances and the Play bar.
 - **Bigger Home banner:** a floating block for your instance, plus quick buttons for its mods (with the count), its folder and the Minecraft Logs window, and when you last played.
 - Home always shows your instances: recently played first, otherwise all of them.
