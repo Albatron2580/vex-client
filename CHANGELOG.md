@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.11.0 — 2026-10-24
+- VEX now speaks 17 languages
+- Settings → Language: System language (follows your PC), English, Nederlands, Deutsch, Français, Español, Português (Brasil), Italiano, Polski, Türkçe, Русский, Українська, Čeština, Svenska, Română, 日本語, 한국어 and 简体中文
+- The in-game VEX menu follows Minecraft's language (Options → Language)
+- The phone app follows your phone's language
+
 ## 2.10.0 — 2026-10-24
 - VEX for Android: the phone app as a real Android app (APK to install now, AAB for Google Play).
 - Admin → Android app: set up Play Store signing, build, download the store kit, follow the Google Play checklist and make review codes.
