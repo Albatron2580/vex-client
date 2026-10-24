@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2.9.0 — 2026-10-24
+- VEX on your phone: friends, news, Collab and admin on iPhone and Android.
+- Settings → Phone app → Connect a phone, scan the QR code, then Add to Home Screen.
+- Your online service updates itself for this.
+
+## 2.9.0 — 2026-10-24
 - **VEX on your phone.** A phone app for iPhone and Android, nothing to install from a store. It has:
   - **Home:** who's online, the featured server (copy its address) and VEX news.
   - **Friends:** see who's online and what they play, search and add friends, accept or decline requests.
