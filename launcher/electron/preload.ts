@@ -100,6 +100,14 @@ const api = {
       return () => { ipcRenderer.removeListener("collab:progress", h); };
     },
   },
+  android: {
+    status: () => ipcRenderer.invoke("android:status"),
+    setupSigning: () => ipcRenderer.invoke("android:setupSigning"),
+    build: () => ipcRenderer.invoke("android:build"),
+    reviewCode: () => ipcRenderer.invoke("android:reviewCode"),
+    openBackup: () => ipcRenderer.invoke("android:openBackup"),
+    open: (url: string) => ipcRenderer.invoke("android:open", url),
+  },
   admin: {
     overview: () => ipcRenderer.invoke("admin:overview"),
     users: (q: string, filter: string) => ipcRenderer.invoke("admin:users", q, filter),

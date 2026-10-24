@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VEX</title>
+<style>
+:root { --accent: #ff6fb5; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #0c0c0f; color: #f4f1f4; font: 500 15px/1.45 system-ui, sans-serif; }
+.c { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 14px; text-align: center; align-items: center; animation: rise .5s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+svg { width: 72px; height: 72px; animation: float 5s ease-in-out infinite; } @keyframes float { 50% { transform: translateY(-8px); } }
+h1 { margin: 0; font-size: 28px; letter-spacing: -.02em; }
+p { margin: 0; color: #a7a7b2; }
+input { width: 100%; height: 50px; padding: 0 14px; border-radius: 10px; border: 1px solid rgb(255 255 255 / .1); background: #17171c; color: inherit; font: inherit; outline: none; }
+input:focus { border-color: var(--accent); }
+button { width: 100%; height: 50px; border: 0; border-radius: 10px; background: var(--accent); color: #2a0618; font: 800 16px system-ui; box-shadow: inset 0 -3px 0 rgb(0 0 0 / .22); }
+button.ghost { background: #202027; color: #f4f1f4; box-shadow: none; }
+.box { width: 100%; text-align: left; color: #a7a7b2; font-size: 14px; background: #17171c; border: 1px solid rgb(255 255 255 / .08); border-radius: 12px; padding: 14px 16px; }
+.box b { color: #f4f1f4; }
+.off { display: none; } body.offline .off { display: flex; } body.offline .on { display: none; }
+</style></head>
+<body>
+<div class="c on">
+  <svg viewBox="0 0 64 64"><path d="M8 10h14l10 30 10-30h14L38 56H26z" fill="#8f8f96"/></svg>
+  <h1>Welcome to VEX</h1>
+  <p>Friends, news, Collab and admin for VEX CLIENT.</p>
+  <input id="u" inputmode="url" autocapitalize="off" autocorrect="off" placeholder="vex-online.yourname.workers.dev">
+  <button onclick="go()">Continue</button>
+  <div class="box">Ask whoever runs your VEX online for its address, or find it in VEX on your PC: <b>Settings → VEX online → Online service address</b>.</div>
+</div>
+<div class="c off" style="flex-direction:column">
+  <svg viewBox="0 0 64 64"><path d="M8 10h14l10 30 10-30h14L38 56H26z" fill="#8f8f96"/></svg>
+  <h1>No connection</h1>
+  <p>VEX online can't be reached right now. Check your internet connection.</p>
+  <button onclick="VexAndroid.retry()">Try again</button>
+  <button class="ghost" onclick="document.body.classList.remove('offline')">Change server</button>
+</div>
+<script>
+if (location.hash === "#offline") document.body.classList.add("offline");
+try { document.getElementById("u").value = (window.VexAndroid && VexAndroid.server()) || ""; } catch (e) {}
+function go() { var v = document.getElementById("u").value.trim(); if (v) VexAndroid.setServer(v); }
+</script>
+</body></html>

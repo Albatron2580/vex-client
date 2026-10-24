@@ -1,6 +1,6 @@
 {
   "name": "vex-online",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "private": true,
   "description": "VEX CLIENT online service: Modrinth sign-in, friends and presence. Cloudflare Worker + D1.",
   "scripts": {

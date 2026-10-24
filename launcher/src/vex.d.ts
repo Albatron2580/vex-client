@@ -1,10 +1,12 @@
 import type { LauncherSettings, Instance } from "../electron/shared/settingsModel";
 import type { FoundInstance, ImportPart } from "../electron/ipc/importers";
 import type { SearchHit, ProjectType } from "../electron/ipc/modrinth";
+import type { AndroidStatus } from "../electron/ipc/android";
 import type { SetupState } from "../electron/ipc/onlineSetup";
 export type { SetupState };
 export type { FoundInstance, ImportPart };
 export type { SearchHit, ProjectType } from "../electron/ipc/modrinth";
+export type { AndroidStatus } from "../electron/ipc/android";
 
 export interface AppInfo { version: string; platform: string; totalMemMb: number; defaultMinecraftDir: string; defaultMinecraftDirExists: boolean; downloadsDir: string }
 export type SkinLookupResult =
@@ -103,6 +105,10 @@ declare global {
         share(instanceId: string, friendId: string): Promise<{ mods: number; missing: string[] }>;
         install(recipe: Recipe): Promise<{ instance: Instance; installed: number; failed: string[] }>;
         onProgress(cb: (p: { done: number; total: number; title: string }) => void): () => void;
+      };
+      android: {
+        status(): Promise<AndroidStatus>; setupSigning(): Promise<AndroidStatus>; build(): Promise<AndroidStatus>;
+        reviewCode(): Promise<{ code: string; expiresAt: number; url: string; appUrl: string }>; openBackup(): Promise<string>; open(url: string): Promise<void>;
       };
       admin: {
         overview(): Promise<AdminOverview>; users(q: string, filter: string): Promise<AdminUser[]>; ban(id: string, banned: boolean): Promise<unknown>;

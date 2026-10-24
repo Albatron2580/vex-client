@@ -6,13 +6,15 @@ import { useApp } from "../state/AppState";
 import { vex, errMsg } from "../lib/bridge";
 import { OnlineSetupWizard } from "../features/OnlineSetupWizard";
 import { isAdminName } from "../../electron/shared/settingsModel";
+import { AndroidApp } from "../features/AndroidApp";
 import type { AdminOverview, AdminUser, Announcement, BugReport, Featured, GithubStatus, PublicHome } from "../vex";
 
-type Tab = "overview" | "news" | "server" | "players" | "bugs" | "publish";
+type Tab = "overview" | "news" | "server" | "players" | "bugs" | "publish" | "android";
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "overview", label: "Overview", icon: "home" }, { id: "news", label: "Announcements", icon: "megaphone" },
   { id: "server", label: "Featured server", icon: "server" }, { id: "players", label: "Players", icon: "friends" },
   { id: "bugs", label: "Bug reports", icon: "bug" }, { id: "publish", label: "Publish update", icon: "upload" },
+  { id: "android", label: "Android app", icon: "phone" },
 ];
 const when = (t: number | string | null | undefined) => (t ? new Date(t).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—");
 
@@ -25,7 +27,7 @@ export function AdminPage() {
     <div className="page"><Card><div className="empty" style={{ border: 0 }}><Icon name="shield" size={36} /><b style={{ color: "var(--text)" }}>Admins only</b>
       <span className="small">Switch to an admin Minecraft account (HAckerbest11, RaxMc or UNCdel) in the account menu.</span><button className="btn sm" onClick={() => go("home")}>Back home</button></div></Card></div>
   );
-  const needsOnline = !onlineAdmin && tab !== "publish" && tab !== "overview";
+  const needsOnline = !onlineAdmin && tab !== "publish" && tab !== "overview" && tab !== "android";
   return (
     <div className="page">
       <div className="page-head"><div><h1>Admin</h1><p>Signed in as <b>{mcName}</b></p></div></div>
@@ -39,6 +41,7 @@ export function AdminPage() {
       {onlineAdmin && tab === "players" && <Players />}
       {onlineAdmin && tab === "bugs" && <Bugs />}
       {tab === "publish" && <Publish />}
+      {tab === "android" && <AndroidApp />}
     </div>
   );
 }

@@ -16,7 +16,7 @@ export interface Env {
   ADMINS?: string;        // comma-separated Minecraft UUIDs or names; defaults to DEFAULT_ADMINS
 }
 
-const SERVER_VERSION = "2.5.0";
+const SERVER_VERSION = "2.6.0";
 // Admins are checked against the Minecraft account the player linked — the server verifies that
 // account with Mojang itself, so nobody can make themselves an admin by renaming anything.
 // HAckerbest11 and RaxMc by UUID (can't be faked by renaming); UNCdel by name until its UUID is added.
@@ -129,10 +129,13 @@ async function authVerify(req: Request, env: Env) {
 
 // ---------- Phone app ----------
 const PAIR_TTL_MS = 5 * 60_000;
+const REVIEW_TTL_MS = 30 * 86_400_000; // Google Play reviewers sign in with these
+const REVIEWER_ID = "00000000000000000000000000000001"; // the demo player review codes sign in to
 async function authPair(req: Request, env: Env) {
   const code = String(((await req.json().catch(() => ({}))) as { code?: string }).code ?? "").toUpperCase();
   if (!/^[A-Z0-9]{8}$/.test(code)) return fail(400, "The code has 8 letters and numbers.");
-  const row = await env.DB.prepare("DELETE FROM pair_codes WHERE code = ? AND created_at > ? RETURNING user_id").bind(code, now() - PAIR_TTL_MS).first<{ user_id: string }>();
+  const row = (await env.DB.prepare("SELECT user_id FROM pair_codes WHERE code = ? AND reusable = 1 AND expires_at > ?").bind(code, now()).first<{ user_id: string }>())
+    ?? await env.DB.prepare("DELETE FROM pair_codes WHERE code = ? AND reusable = 0 AND created_at > ? RETURNING user_id").bind(code, now() - PAIR_TTL_MS).first<{ user_id: string }>();
   if (!row) return fail(400, "That code is wrong or expired. Make a new one in VEX on your PC.");
   const user = await env.DB.prepare("SELECT banned FROM users WHERE id = ?").bind(row.user_id).first<{ banned: number }>();
   if (!user || user.banned) return fail(403, "This account can't use VEX online.");
@@ -151,6 +154,20 @@ function phoneApp(path: string) {
     "x-content-type-options": "nosniff",
     ...(f.type.startsWith("text/html") ? { "content-security-policy": "default-src 'self'; img-src 'self' https://textures.minecraft.net data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'", "referrer-policy": "no-referrer" } : {}),
   } });
+}
+
+// Privacy policy (linked from the Play Store listing of the VEX app).
+function privacyPage() {
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>VEX privacy</title>
+<style>body{margin:0;background:#0c0c0f;color:#f4f1f4;font:16px/1.6 system-ui,sans-serif}main{max-width:680px;margin:0 auto;padding:40px 20px}h1{font-size:30px;margin:0 0 6px}h2{font-size:19px;margin:28px 0 6px}p,li{color:#c9c9d2}a{color:#ff6fb5}</style></head><body><main>
+<h1>VEX privacy</h1><p>VEX CLIENT and the VEX app (Android) use this VEX online service for friends, news, Collab and admin tools.</p>
+<h2>What is stored</h2><ul><li>Your Minecraft name, Minecraft UUID and the link to your Minecraft skin.</li><li>When you were last online and a short status (for example "Playing").</li><li>Your friends and friend requests, instances you share with friends, and bug reports you send.</li><li>Sign-in sessions (only a scrambled form of the session key).</li></ul>
+<h2>What is not stored</h2><ul><li>Your Microsoft password or Minecraft login. Sign-in is checked with Mojang's own signature; the Minecraft token never reaches VEX online.</li><li>No email address, phone number, location, contacts, advertising ID or payment details.</li></ul>
+<h2>Who can see it</h2><p>Friends see your Minecraft name, skin and whether you're online. VEX admins can see the player list and bug reports to keep VEX running. Nothing is sold or shared with advertisers. There are no ads and no trackers.</p>
+<h2>Deleting your data</h2><p>Disconnect the app or sign out in VEX to end a session. To have your account and everything above deleted, ask a VEX admin (in VEX: Settings → Report a bug) and it will be removed.</p>
+<h2>Children</h2><p>VEX is for Minecraft players and is not directed at children under 13.</p>
+<p style="margin-top:32px;color:#6f6f7b">Last updated October 2026.</p></main></body></html>`;
+  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=3600" } });
 }
 
 // ---------- Sign-in with Minecraft's chat-signing certificate ----------
@@ -323,14 +340,21 @@ async function api(req: Request, url: URL, env: Env, me: UserRow) {
 
   // Phone app: a one-time code (8 characters, 5 minutes) that signs a phone in as you.
   if (p === "/v1/pair" && req.method === "POST") {
+    const review = ((await req.json().catch(() => ({}))) as { review?: boolean }).review === true;
+    if (review && !isAdmin(env, me)) return fail(403, "Only admins can make review codes.");
     const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     const bytes = crypto.getRandomValues(new Uint8Array(8));
     const code = [...bytes].map((b) => A[b % A.length]).join("");
+    const expiresAt = now() + (review ? REVIEW_TTL_MS : PAIR_TTL_MS);
+    // review codes sign in to a separate demo player (never an admin), not to the admin who made the code
+    const owner = review ? REVIEWER_ID : me.id;
+    if (review) await env.DB.prepare(`INSERT INTO users (id, username, username_lower, avatar_url, created_at) VALUES (?1, 'PlayReviewer', 'playreviewer', NULL, ?2)
+      ON CONFLICT (id) DO NOTHING`).bind(REVIEWER_ID, now()).run();
     await env.DB.batch([
-      env.DB.prepare("DELETE FROM pair_codes WHERE created_at < ? OR user_id = ?").bind(now() - PAIR_TTL_MS, me.id),
-      env.DB.prepare("INSERT INTO pair_codes (code, user_id, created_at) VALUES (?, ?, ?)").bind(code, me.id, now()),
+      env.DB.prepare("DELETE FROM pair_codes WHERE (reusable = 0 AND (created_at < ? OR user_id = ?)) OR (reusable = 1 AND expires_at < ?)").bind(now() - PAIR_TTL_MS, me.id, now()),
+      env.DB.prepare("INSERT INTO pair_codes (code, user_id, created_at, reusable, expires_at) VALUES (?, ?, ?, ?, ?)").bind(code, owner, now(), review ? 1 : 0, expiresAt),
     ]);
-    return json({ code, expiresAt: now() + PAIR_TTL_MS });
+    return json({ code, expiresAt });
   }
 
   // Bug reports from players.
@@ -551,6 +575,7 @@ export default {
       if (url.pathname === "/auth/minecraft/cert" && req.method === "POST") return await authCert(req, env);
       if (url.pathname === "/auth/pair" && req.method === "POST") return await authPair(req, env);
       if (url.pathname === "/app" || url.pathname.startsWith("/app/")) { const r = phoneApp(url.pathname); if (r) return r; }
+      if (url.pathname === "/privacy") return privacyPage();
       if (url.pathname === "/auth/start") return await authStart(url, env);
       if (url.pathname === "/auth/callback") return await authCallback(url, env);
       if (url.pathname.startsWith("/v1/")) {

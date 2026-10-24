@@ -281,7 +281,8 @@ function profileSheet() {
   const back = document.createElement("div"); back.className = "sheet-back";
   back.innerHTML = `<div class="sheet"><div class="grab"></div><div class="row">${face(S.me, 52)}<div style="flex:1"><h3>${esc(S.me?.username)}</h3><span class="tiny faint">${S.me?.admin ? "VEX admin" : "VEX player"}</span></div></div>
     <p class="small muted" style="margin:14px 0">This phone is connected to VEX online. Disconnecting signs this phone out only.</p>
-    <button class="btn danger" style="width:100%" onclick="this.closest('.sheet-back').remove();signOut()">Disconnect this phone</button></div>`;
+    <button class="btn danger" style="width:100%" onclick="this.closest('.sheet-back').remove();signOut()">Disconnect this phone</button>
+    ${window.VexAndroid ? '<button class="btn ghost" style="width:100%;margin-top:8px" onclick="VexAndroid.changeServer()">Change VEX online server</button>' : ""}</div>`;
   back.addEventListener("click", (e) => { if (e.target === back) back.remove(); });
   document.body.appendChild(back);
 }

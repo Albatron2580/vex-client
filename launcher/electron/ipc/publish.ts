@@ -12,11 +12,11 @@ export const REPO = "Albatron2580/vex-client";
 const API = "https://api.github.com";
 const file = () => path.join(app.getPath("userData"), "admin-github.bin");
 
-function getToken(): string | null {
+export function getToken(): string | null {
   try { return fs.existsSync(file()) ? safeStorage.decryptString(fs.readFileSync(file())) : null; } catch { return null; }
 }
 
-async function gh<T>(method: string, route: string, body?: unknown, token = getToken()): Promise<T> {
+export async function gh<T>(method: string, route: string, body?: unknown, token = getToken()): Promise<T> {
   if (!token) throw new Error("Connect GitHub first.");
   let r: Response;
   try {
@@ -27,7 +27,7 @@ async function gh<T>(method: string, route: string, body?: unknown, token = getT
     });
   } catch { throw new Error("Can't reach GitHub. Check your internet connection."); }
   if (r.status === 401) throw new Error("GitHub refused the token — it may have expired. Connect GitHub again.");
-  if (r.status === 403 || r.status === 404) throw new Error(`GitHub: not allowed. The token needs access to ${REPO} with Contents and Actions set to “Read and write”.`);
+  if (r.status === 403 || r.status === 404) throw new Error(`GitHub: not allowed. The token needs access to ${REPO} with Contents, Actions and Secrets set to “Read and write”.`);
   if (!r.ok) { const j: any = await r.json().catch(() => ({})); throw new Error(`GitHub answered ${r.status}: ${j.message ?? r.statusText}`); }
   return (r.status === 204 ? null : await r.json()) as T;
 }

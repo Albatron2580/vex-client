@@ -734,3 +734,7 @@ body, .login-screen, .logs-app { background: var(--ink); }
 .phone-pair img { flex: none; border-radius: 10px; background: #fff; padding: 6px; box-shadow: 0 0 0 1px var(--line), 0 18px 40px -20px #000; animation: pop 500ms var(--spring); }
 .phone-code { font: 800 28px ui-monospace, "Cascadia Code", Consolas, monospace; letter-spacing: 0.22em; color: var(--accent); user-select: all; }
 @media (max-width: 700px) { .phone-pair { flex-direction: column; align-items: flex-start; } }
+.play-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 12px; }
+.play-steps li { color: var(--text-dim); font-size: var(--fs-sm); padding-left: 4px; }
+.play-steps li b { color: var(--text); }
+.play-steps li::marker { color: var(--accent); font-weight: 800; }

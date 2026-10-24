@@ -98,8 +98,8 @@ const num = (v: unknown) => { const n = Number(v); if (!Number.isInteger(n) || n
 export const online = {
   reportBug: (title: string, body: string, version: string) => call("POST", "/v1/bugs", { title, body, version }),
   /** A one-time code for the phone app, and the link its QR code opens. */
-  pairPhone: async () => {
-    const r = await call<{ code: string; expiresAt: number }>("POST", "/v1/pair");
+  pairPhone: async (review = false) => {
+    const r = await call<{ code: string; expiresAt: number }>("POST", "/v1/pair", { review });
     return { ...r, url: `${serviceUrl}/app#code=${r.code}`, appUrl: `${serviceUrl}/app` };
   },
   shares: () => call("GET", "/v1/shares"),

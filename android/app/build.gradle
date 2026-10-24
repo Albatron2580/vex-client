@@ -1,0 +1,38 @@
+plugins { id "com.android.application" }
+
+// Set by CI: the VEX online address baked into the app, the version, and the Play upload key.
+def env = { String k, String d = "" -> System.getenv(k) ?: d }
+
+android {
+    namespace "net.vexclient.app"
+    compileSdk 36
+    defaultConfig {
+        applicationId "net.vexclient.app"
+        minSdk 24
+        targetSdk 36
+        versionCode Integer.parseInt(env("VEX_VERSION_CODE", "1"))
+        versionName env("VEX_VERSION_NAME", "1.0.0")
+        buildConfigField "String", "VEX_URL", "\"" + env("VEX_ONLINE_URL").replaceAll(/[^A-Za-z0-9:\/._-]/, "") + "\""
+    }
+    buildFeatures { buildConfig true }
+    signingConfigs {
+        upload {
+            def ks = env("VEX_KEYSTORE_FILE")
+            if (ks) {
+                storeFile file(ks)
+                storeType "pkcs12"
+                storePassword env("VEX_KEYSTORE_PASSWORD")
+                keyAlias env("VEX_KEY_ALIAS", "vex-upload")
+                keyPassword env("VEX_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (env("VEX_KEYSTORE_FILE")) signingConfig signingConfigs.upload
+            else signingConfig signingConfigs.debug   // installable test build when no upload key is set up yet
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
